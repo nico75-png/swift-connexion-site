@@ -17,6 +17,15 @@ import MentionsLegales from "./pages/MentionsLegales";
 import CGV from "./pages/CGV";
 import Cookies from "./pages/Cookies";
 import NotFound from "./pages/NotFound";
+import ClientDashboard from "./pages/client/Dashboard";
+import ClientOrders from "./pages/client/Orders";
+import ClientOrderDetail from "./pages/client/OrderDetail";
+import CreateOrder from "./pages/client/CreateOrder";
+import ClientInvoices from "./pages/client/Invoices";
+import ClientExpenses from "./pages/client/Expenses";
+import ClientMessages from "./pages/client/Messages";
+import ClientProfile from "./pages/client/Profile";
+import ClientPreferences from "./pages/client/Preferences";
 
 const queryClient = new QueryClient();
 
@@ -35,7 +44,15 @@ const App = () => (
           <Route path="/inscription" element={<Inscription />} />
           <Route path="/connexion" element={<Connexion />} />
           <Route path="/commande-sans-compte" element={<CommandeSansCompte />} />
-          <Route path="/espace-client" element={<EspaceClient />} />
+          <Route path="/espace-client" element={<ClientDashboard />} />
+          <Route path="/espace-client/commandes" element={<ClientOrders />} />
+          <Route path="/espace-client/commandes/:id" element={<ClientOrderDetail />} />
+          <Route path="/espace-client/creer-commande" element={<CreateOrder />} />
+          <Route path="/espace-client/factures" element={<ClientInvoices />} />
+          <Route path="/espace-client/depenses" element={<ClientExpenses />} />
+          <Route path="/espace-client/messages" element={<ClientMessages />} />
+          <Route path="/espace-client/profil" element={<ClientProfile />} />
+          <Route path="/espace-client/preferences" element={<ClientPreferences />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/mentions-legales" element={<MentionsLegales />} />
           <Route path="/cgv" element={<CGV />} />

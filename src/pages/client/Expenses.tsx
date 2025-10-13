@@ -1,6 +1,7 @@
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import ClientSidebar from "@/components/dashboard/ClientSidebar";
 import Topbar from "@/components/dashboard/Topbar";
+import CreateOrderButton from "@/components/dashboard/CreateOrderButton";
 import StatsCard from "@/components/dashboard/StatsCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -45,20 +46,23 @@ const ClientExpenses = () => {
     >
       <div className="space-y-6">
         {/* En-tête */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold mb-2">Dépenses</h1>
             <p className="text-muted-foreground">Analysez vos coûts de transport</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline">
-              <FileSpreadsheet className="h-4 w-4 mr-2" />
-              Export CSV
-            </Button>
-            <Button variant="cta">
-              <Download className="h-4 w-4 mr-2" />
-              Synthèse PDF
-            </Button>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 sm:justify-end">
+            <CreateOrderButton className="mt-3 sm:mt-0" />
+            <div className="mt-2 flex flex-col gap-2 sm:mt-0 sm:flex-row">
+              <Button variant="outline">
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
+              <Button variant="cta">
+                <Download className="h-4 w-4 mr-2" />
+                Synthèse PDF
+              </Button>
+            </div>
           </div>
         </div>
 

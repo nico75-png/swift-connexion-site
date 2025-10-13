@@ -1,6 +1,7 @@
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import ClientSidebar from "@/components/dashboard/ClientSidebar";
 import Topbar from "@/components/dashboard/Topbar";
+import CreateOrderButton from "@/components/dashboard/CreateOrderButton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -92,14 +93,12 @@ const ClientOrders = () => {
     >
       <div className="space-y-6">
         {/* En-tête */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold mb-2">Mes commandes</h1>
             <p className="text-muted-foreground">Gérez et suivez vos livraisons</p>
           </div>
-          <Button variant="cta" asChild>
-            <Link to="/espace-client/creer-commande">Nouvelle commande</Link>
-          </Button>
+          <CreateOrderButton className="mt-3 sm:mt-0" />
         </div>
 
         {/* Filtres */}

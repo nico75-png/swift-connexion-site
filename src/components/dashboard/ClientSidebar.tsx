@@ -1,14 +1,13 @@
 import { NavLink } from "react-router-dom";
-import { 
-  LayoutDashboard, 
-  Package, 
-  PlusCircle, 
-  FileText, 
-  TrendingUp, 
-  MessageSquare, 
-  User, 
-  Settings, 
-  LogOut 
+import {
+  LayoutDashboard,
+  Package,
+  FileText,
+  TrendingUp,
+  MessageSquare,
+  User,
+  Settings,
+  LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +19,6 @@ const ClientSidebar = () => {
   const menuItems = [
     { icon: LayoutDashboard, label: "Tableau de bord", path: "/espace-client" },
     { icon: Package, label: "Mes commandes", path: "/espace-client/commandes" },
-    { icon: PlusCircle, label: "Créer une commande", path: "/espace-client/creer-commande" },
     { icon: FileText, label: "Factures", path: "/espace-client/factures" },
     { icon: TrendingUp, label: "Dépenses", path: "/espace-client/depenses" },
     { icon: MessageSquare, label: "Messages", path: "/espace-client/messages" },

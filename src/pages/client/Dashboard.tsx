@@ -1,6 +1,7 @@
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import ClientSidebar from "@/components/dashboard/ClientSidebar";
 import Topbar from "@/components/dashboard/Topbar";
+import CreateOrderButton from "@/components/dashboard/CreateOrderButton";
 import StatsCard from "@/components/dashboard/StatsCard";
 import { Package, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,9 +49,12 @@ const ClientDashboard = () => {
     >
       <div className="space-y-6">
         {/* En-tête */}
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Tableau de bord</h1>
-          <p className="text-muted-foreground">Aperçu de votre activité</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Tableau de bord</h1>
+            <p className="text-muted-foreground">Aperçu de votre activité</p>
+          </div>
+          <CreateOrderButton className="mt-3 sm:mt-0" />
         </div>
 
         {/* Stats KPI */}

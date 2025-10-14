@@ -14,7 +14,12 @@ const AdminSettings = () => {
       <div className="grid gap-6 max-w-4xl">
         <Card className="border-none shadow-soft">
           <CardHeader><CardTitle>Zones desservies</CardTitle></CardHeader>
-          <CardContent><p className="text-muted-foreground">Paris, Petite Couronne, Grande Couronne</p></CardContent>
+          <CardContent className="space-y-2 text-sm text-muted-foreground">
+            <p>Paris, Petite Couronne, Grande Couronne.</p>
+            <p className="text-primary">
+              Information : les zones n'imposent aucune restriction d'affectation. Tous les chauffeurs couvrent toutes les zones.
+            </p>
+          </CardContent>
         </Card>
 
         <Card className="border-none shadow-soft">

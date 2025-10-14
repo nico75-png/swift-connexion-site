@@ -1,4 +1,4 @@
-import { DriverStatus, Driver } from "@/lib/stores/driversOrders.store";
+import { DriverStatus } from "@/lib/stores/driversOrders.store";
 
 export const driverStatusLabel: Record<DriverStatus, string> = {
   AVAILABLE: "Disponible",
@@ -12,8 +12,3 @@ export const driverStatusBadgeClass: Record<DriverStatus, string> = {
   PAUSED: "bg-amber-100 text-amber-700 border-amber-200",
 };
 
-export const zoneLabels: Record<Driver["zone"], string> = {
-  INTRA_PARIS: "Intra-Paris",
-  PETITE_COURONNE: "Petite Couronne",
-  GRANDE_COURONNE: "Grande Couronne",
-};

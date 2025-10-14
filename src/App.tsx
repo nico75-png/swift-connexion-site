@@ -26,6 +26,15 @@ import ClientExpenses from "./pages/client/Expenses";
 import ClientMessages from "./pages/client/Messages";
 import ClientProfile from "./pages/client/Profile";
 import ClientPreferences from "./pages/client/Preferences";
+import AdminOrders from "./pages/admin/Orders";
+import AdminOrderDetail from "./pages/admin/OrderDetail";
+import AdminClients from "./pages/admin/Clients";
+import AdminClientProfile from "./pages/admin/ClientProfile";
+import AdminDrivers from "./pages/admin/Drivers";
+import AdminInvoices from "./pages/admin/Invoices";
+import AdminStats from "./pages/admin/Stats";
+import AdminMessages from "./pages/admin/Messages";
+import AdminSettings from "./pages/admin/Settings";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +63,15 @@ const App = () => (
           <Route path="/espace-client/profil" element={<ClientProfile />} />
           <Route path="/espace-client/preferences" element={<ClientPreferences />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/admin/commandes" element={<AdminOrders />} />
+          <Route path="/admin/commandes/:id" element={<AdminOrderDetail />} />
+          <Route path="/admin/clients" element={<AdminClients />} />
+          <Route path="/admin/clients/:id" element={<AdminClientProfile />} />
+          <Route path="/admin/chauffeurs" element={<AdminDrivers />} />
+          <Route path="/admin/factures" element={<AdminInvoices />} />
+          <Route path="/admin/statistiques" element={<AdminStats />} />
+          <Route path="/admin/messages" element={<AdminMessages />} />
+          <Route path="/admin/parametres" element={<AdminSettings />} />
           <Route path="/mentions-legales" element={<MentionsLegales />} />
           <Route path="/cgv" element={<CGV />} />
           <Route path="/cookies" element={<Cookies />} />

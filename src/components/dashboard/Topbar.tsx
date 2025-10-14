@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 interface TopbarProps {
-  userName: string;
+  userName?: string;
+  title?: string;
   notifications?: Array<{
     id: string;
     message: string;
@@ -22,7 +23,7 @@ interface TopbarProps {
 /**
  * Topbar avec notifications, thème et profil utilisateur
  */
-const Topbar = ({ userName, notifications = [] }: TopbarProps) => {
+const Topbar = ({ userName, title, notifications = [] }: TopbarProps) => {
   const [darkMode, setDarkMode] = useState(false);
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -35,7 +36,7 @@ const Topbar = ({ userName, notifications = [] }: TopbarProps) => {
     <header className="h-16 border-b border-border bg-card flex items-center justify-between px-6">
       {/* Titre de page ou breadcrumb */}
       <div>
-        <h2 className="text-lg font-semibold">Bienvenue, {userName}</h2>
+        <h2 className="text-lg font-semibold">{title || `Bienvenue, ${userName || 'Admin'}`}</h2>
       </div>
 
       {/* Actions */}

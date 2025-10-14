@@ -380,12 +380,25 @@ const overlaps = (startA: string, endA: string, startB: string, endB: string) =>
   return sA < eB && sB < eA;
 };
 
-export const isDriverAvailable = (driverId: string, start: string, end: string) => {
+interface AvailabilityOptions {
+  excludeAssignmentOrderId?: string;
+  excludeScheduledId?: string;
+}
+
+export const isDriverAvailable = (
+  driverId: string,
+  start: string,
+  end: string,
+  options: AvailabilityOptions = {},
+) => {
   const assignments = getAssignments();
   const scheduled = getScheduledAssignments();
 
   const hasAssignmentConflict = assignments.some(
-    (assignment) => assignment.driverId === driverId && overlaps(assignment.start, assignment.end, start, end),
+    (assignment) =>
+      assignment.driverId === driverId &&
+      assignment.orderId !== options.excludeAssignmentOrderId &&
+      overlaps(assignment.start, assignment.end, start, end),
   );
 
   if (hasAssignmentConflict) {
@@ -394,7 +407,10 @@ export const isDriverAvailable = (driverId: string, start: string, end: string) 
 
   const hasScheduledConflict = scheduled.some(
     (schedule) =>
-      schedule.driverId === driverId && schedule.status === "SCHEDULED" && overlaps(schedule.start, schedule.end, start, end),
+      schedule.driverId === driverId &&
+      schedule.status === "SCHEDULED" &&
+      schedule.id !== options.excludeScheduledId &&
+      overlaps(schedule.start, schedule.end, start, end),
   );
 
   return !hasScheduledConflict;
@@ -658,7 +674,10 @@ export const processScheduledAssignments = () => {
     .forEach((item) => {
       const triggerTime = parseISO(item.scheduledAt);
       if (isBefore(triggerTime, addMilliseconds(now, 1)) || isEqual(triggerTime, now)) {
-        const available = isDriverAvailable(item.driverId, item.start, item.end);
+        const available = isDriverAvailable(item.driverId, item.start, item.end, {
+          excludeAssignmentOrderId: item.orderId,
+          excludeScheduledId: item.id,
+        });
         if (available) {
           assignDriverNow(item.orderId, item.driverId, {
             start: item.start,

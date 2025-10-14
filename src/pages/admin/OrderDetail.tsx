@@ -51,11 +51,13 @@ const AdminOrderDetail = () => {
   const [modalMode, setModalMode] = useState<"now" | "later">("now");
   const [modalScheduleId, setModalScheduleId] = useState<string | null>(null);
 
+  const orderStatus = order?.status;
+
   useEffect(() => {
-    if (order) {
-      setCurrentStatus(order.status);
+    if (orderStatus) {
+      setCurrentStatus(orderStatus);
     }
-  }, [order?.status]);
+  }, [orderStatus]);
 
   const pendingSchedule = useMemo(
     () =>

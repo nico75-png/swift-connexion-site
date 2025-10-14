@@ -139,7 +139,12 @@ const AssignDriverModal = ({ order, open, onClose, initialMode = "now", schedule
             ? order.windowEnd
             : fallbackEnd;
 
-        if (!isDriverAvailable(driver.id, start, end)) {
+        if (
+          !isDriverAvailable(driver.id, start, end, {
+            excludeAssignmentOrderId: order.id,
+            excludeScheduledId: order.scheduledAssignmentId,
+          })
+        ) {
           setError("Chauffeur indisponible sur ce créneau");
           setSubmitting(false);
           return;
@@ -175,7 +180,12 @@ const AssignDriverModal = ({ order, open, onClose, initialMode = "now", schedule
           ? { start: order.windowStart, end: order.windowEnd }
           : { start: scheduledAtIso, end: new Date(scheduledAtLocal.getTime() + 60 * 60 * 1000).toISOString() };
 
-        if (!isDriverAvailable(driver.id, window.start, window.end)) {
+        if (
+          !isDriverAvailable(driver.id, window.start, window.end, {
+            excludeAssignmentOrderId: order.id,
+            excludeScheduledId: scheduledAssignment?.id ?? order.scheduledAssignmentId,
+          })
+        ) {
           setError(`Conflit horaire détecté avec la commande ${order.id}`);
           setSubmitting(false);
           return;
@@ -220,14 +230,16 @@ const AssignDriverModal = ({ order, open, onClose, initialMode = "now", schedule
   const renderDriverCard = (driver: Driver) => {
     const disabled = !driver.isActive || driver.status === "En pause";
     const selected = selectedDriver === driver.id;
+    const containerClasses = [
+      "block rounded-lg border p-4 transition-base cursor-pointer focus-within:ring-2 focus-within:ring-primary/50",
+      selected ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
+      disabled ? "opacity-60 cursor-not-allowed" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
 
     return (
-      <label
-        key={driver.id}
-        className={`block rounded-lg border p-4 transition-base cursor-pointer focus-within:ring-2 focus-within:ring-primary/50 ${
-          selected ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
-        } ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
-      >
+      <label key={driver.id} className={containerClasses}>
         <input
           type="radio"
           name="driver"

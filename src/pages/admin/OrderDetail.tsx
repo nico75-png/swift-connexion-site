@@ -25,18 +25,26 @@ import {
   cancelScheduledAssignment,
   formatDateTime,
   removeDriverFromOrder,
+  updateOrderAdminNotes,
   type ActivityEntry,
+  type Driver,
   type ScheduledAssignment,
 } from "@/lib/mockData";
 
 const formatMaybe = (value?: string) => (value ? formatDateTime(value) : "—");
+
+const driverStatusStyles: Record<string, string> = {
+  Disponible: "bg-success/10 text-success border-success/20",
+  "En course": "bg-info/10 text-info border-info/20",
+  "En pause": "bg-warning/10 text-warning border-warning/20",
+};
 
 /**
  * Page admin - Détail d'une commande
  * Timeline modifiable, affectation chauffeur, notes internes, historique
  */
 const AdminOrderDetail = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
   const order = useOrder(id);
   const drivers = useDrivers();
@@ -45,19 +53,29 @@ const AdminOrderDetail = () => {
   const scheduledAssignments = useScheduledAssignments();
   const notifications = useNotifications("admin");
 
-  const [notes, setNotes] = useState("Client préfère les livraisons en matinée");
+  const [notes, setNotes] = useState(order?.adminNotes ?? "");
   const [currentStatus, setCurrentStatus] = useState(order?.status ?? "En attente");
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"now" | "later">("now");
   const [modalScheduleId, setModalScheduleId] = useState<string | null>(null);
 
   const orderStatus = order?.status;
+  const orderId = order?.id;
+  const orderAdminNotes = order?.adminNotes ?? "";
 
   useEffect(() => {
     if (orderStatus) {
       setCurrentStatus(orderStatus);
     }
   }, [orderStatus]);
+
+  useEffect(() => {
+    if (orderId) {
+      setNotes(orderAdminNotes);
+    } else {
+      setNotes("");
+    }
+  }, [orderAdminNotes, orderId]);
 
   const pendingSchedule = useMemo(
     () =>
@@ -87,10 +105,17 @@ const AdminOrderDetail = () => {
     [scheduledAssignments, order?.id],
   );
 
-  const orderActivities = useMemo(
-    () => activities.filter((activity) => activity.orderId === order?.id),
-    [activities, order?.id],
-  );
+  const orderActivities = useMemo(() => {
+    if (!order) {
+      return [];
+    }
+
+    const timestamp = (activity: ActivityEntry) => activity.at ?? activity.scheduledAt ?? "";
+
+    return activities
+      .filter((activity) => activity.orderId === order.id)
+      .sort((a, b) => new Date(timestamp(b)).getTime() - new Date(timestamp(a)).getTime());
+  }, [activities, order]);
 
   const driver = useMemo(
     () => drivers.find((item) => item.id === order?.driverId) ?? null,
@@ -200,6 +225,24 @@ const AdminOrderDetail = () => {
   };
 
   const handleSaveNotes = () => {
+    if (!order) {
+      return;
+    }
+
+    const trimmed = notes.trim();
+    const result = updateOrderAdminNotes(order.id, trimmed);
+
+    if (!result.success) {
+      toast({
+        title: "Impossible d'enregistrer",
+        description: "La commande n'a pas été trouvée.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setNotes(trimmed);
+
     toast({
       title: "Notes enregistrées",
       description: "Les notes internes ont été mises à jour.",
@@ -274,7 +317,7 @@ const AdminOrderDetail = () => {
               <div className="flex items-center justify-between">
                 <CardTitle>Détails de la commande</CardTitle>
                 <Badge variant="outline" className="text-base px-4 py-1">
-                  {order.status}
+                  {currentStatus}
                 </Badge>
               </div>
             </CardHeader>
@@ -294,7 +337,7 @@ const AdminOrderDetail = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Montant</p>
-                  <p className="text-2xl font-bold text-primary">{order.amount}€</p>
+                  <p className="text-2xl font-bold text-primary">{order.amount.toFixed(2)}€</p>
                 </div>
               </div>
 
@@ -369,31 +412,32 @@ const AdminOrderDetail = () => {
                 {orderActivities.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Aucune activité enregistrée pour le moment.</p>
                 ) : (
-                  orderActivities
-                    .slice()
-                    .reverse()
-                    .map((log) => {
-                      const { label, details } = mapActivity(log);
-                      return (
-                        <div key={log.id} className="flex gap-4 pb-4 border-b last:border-0">
-                          <div className="flex-shrink-0">
-                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                              <Edit className="h-5 w-5 text-primary" />
-                            </div>
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-1">
-                              <p className="font-semibold">{label}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {log.at ? formatDateTime(log.at) : log.scheduledAt ? formatDateTime(log.scheduledAt) : ""}
-                              </p>
-                            </div>
-                            {details && <p className="text-sm text-muted-foreground mb-1">{details}</p>}
-                            <p className="text-xs text-muted-foreground">Par {log.by}</p>
+                  orderActivities.map((log) => {
+                    const { label, details } = mapActivity(log, drivers);
+                    const timeLabel = log.at
+                      ? formatDateTime(log.at)
+                      : log.scheduledAt
+                      ? formatDateTime(log.scheduledAt)
+                      : "";
+
+                    return (
+                      <div key={log.id} className="flex gap-4 pb-4 border-b last:border-0">
+                        <div className="flex-shrink-0">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Edit className="h-5 w-5 text-primary" />
                           </div>
                         </div>
-                      );
-                    })
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="font-semibold">{label}</p>
+                            <p className="text-xs text-muted-foreground">{timeLabel}</p>
+                          </div>
+                          {details && <p className="text-sm text-muted-foreground mb-1">{details}</p>}
+                          <p className="text-xs text-muted-foreground">Par {log.by}</p>
+                        </div>
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </CardContent>
@@ -419,7 +463,10 @@ const AdminOrderDetail = () => {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Téléphone</p>
-                    <a href={`tel:${driver.phone}`} className="flex items-center gap-2 text-primary hover:underline">
+                    <a
+                      href={`tel:${driver.phone.replace(/\s+/g, "")}`}
+                      className="flex items-center gap-2 text-primary hover:underline"
+                    >
                       <Phone className="h-4 w-4" />
                       {driver.phone}
                     </a>
@@ -428,13 +475,30 @@ const AdminOrderDetail = () => {
                     <p className="text-sm text-muted-foreground mb-1">Véhicule</p>
                     <p className="font-medium">{driver.vehicle}</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Zone</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline" className={driverStatusStyles[driver.status] ?? ""}>
+                      {driver.status}
+                    </Badge>
                     <Badge variant="outline">{driver.zone}</Badge>
                   </div>
+                  {driver.nextSlot ? (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Prochain créneau</p>
+                      <p className="font-medium">
+                        {formatMaybe(driver.nextSlot.start)} → {formatMaybe(driver.nextSlot.end)}
+                      </p>
+                    </div>
+                  ) : null}
                   {orderDriverAssignment && (
                     <div className="rounded-md bg-muted/40 p-3 text-xs text-muted-foreground">
                       Affecté le {formatDateTime(orderDriverAssignment.createdAt)}
+                      {orderDriverAssignment.start && orderDriverAssignment.end ? (
+                        <span>
+                          {" "}· Créneau {formatDateTime(orderDriverAssignment.start)} →
+                          {" "}
+                          {formatDateTime(orderDriverAssignment.end)}
+                        </span>
+                      ) : null}
                     </div>
                   )}
                   <div className="flex flex-col gap-2 sm:flex-row">
@@ -535,37 +599,64 @@ const AdminOrderDetail = () => {
   );
 };
 
-const mapActivity = (activity: ActivityEntry) => {
+const mapActivity = (activity: ActivityEntry, drivers: Driver[]) => {
+  const driverName = activity.driverId
+    ? drivers.find((item) => item.id === activity.driverId)?.name ?? activity.driverId
+    : undefined;
+
   switch (activity.type) {
     case "ASSIGN_NOW":
       return {
         label: "Affectation immédiate",
-        details: activity.driverId ? `Chauffeur ${activity.driverId} assigné` : undefined,
+        details: driverName ? `Chauffeur ${driverName} assigné` : undefined,
       };
     case "ASSIGN_SCHEDULED":
       return {
         label: "Affectation planifiée",
-        details: activity.scheduledAt ? `Exécution prévue le ${formatDateTime(activity.scheduledAt)}` : undefined,
+        details: activity.scheduledAt
+          ? `Exécution prévue le ${formatDateTime(activity.scheduledAt)}`
+          : driverName
+          ? `Chauffeur ${driverName}`
+          : undefined,
       };
     case "EXECUTION":
       return {
         label: "Affectation exécutée",
-        details: activity.driverId ? `Chauffeur ${activity.driverId} confirmé` : undefined,
+        details: driverName ? `Chauffeur ${driverName} confirmé` : undefined,
       };
     case "FAILED":
       return {
         label: "Échec de l'affectation",
-        details: activity.payload?.reason ? String(activity.payload.reason) : undefined,
+        details: activity.payload?.reason
+          ? String(activity.payload.reason)
+          : driverName
+          ? `Chauffeur ${driverName}`
+          : undefined,
       };
     case "CANCELLED":
       return {
         label: "Planification annulée",
-        details: activity.driverId ? `Chauffeur ${activity.driverId}` : undefined,
+        details: driverName ? `Chauffeur ${driverName}` : undefined,
       };
     case "ASSIGN_REMOVED":
       return {
         label: "Chauffeur retiré",
-        details: undefined,
+        details: driverName ? `Chauffeur ${driverName}` : undefined,
+      };
+    case "NOTES_UPDATED":
+      return {
+        label: "Notes internes mises à jour",
+        details: (() => {
+          if (typeof activity.payload?.notes !== "string") {
+            return undefined;
+          }
+          const trimmed = activity.payload.notes.trim();
+          if (trimmed.length === 0) {
+            return undefined;
+          }
+          const snippet = trimmed.length > 140 ? `${trimmed.slice(0, 140)}…` : trimmed;
+          return `Notes : ${snippet}`;
+        })(),
       };
     default:
       return { label: activity.type, details: undefined };

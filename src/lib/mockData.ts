@@ -8,7 +8,8 @@ type ActivityType =
   | "EXECUTION"
   | "FAILED"
   | "CANCELLED"
-  | "ASSIGN_REMOVED";
+  | "ASSIGN_REMOVED"
+  | "NOTES_UPDATED";
 
 type NotificationAudience = "admin" | "client" | "driver";
 
@@ -38,6 +39,7 @@ export interface Order {
   weight: string;
   volume: string;
   instructions?: string;
+  adminNotes?: string;
   driverId?: string;
   driverAssignedAt?: string;
   driverAssignmentWindow?: {
@@ -162,6 +164,7 @@ const seedData = () => {
       weight: "2.5 kg",
       volume: "0.05 m³",
       instructions: "Sonnez à l'interphone, code 1234",
+      adminNotes: "Client préfère les livraisons en matinée",
       windowStart: `${today}T14:00:00.000Z`,
       windowEnd: `${today}T16:00:00.000Z`,
     },
@@ -184,6 +187,7 @@ const seedData = () => {
         start: addHours(now, -3).toISOString(),
         end: addHours(now, -2).toISOString(),
       },
+      adminNotes: "Client régulier — vérifier facture mensuelle",
     },
     {
       id: "CMD-245",
@@ -198,6 +202,7 @@ const seedData = () => {
       volume: "0.06 m³",
       windowStart: `${today}T11:30:00.000Z`,
       windowEnd: `${today}T12:30:00.000Z`,
+      adminNotes: "Prévoir emballage isotherme",
     },
     {
       id: "CMD-244",
@@ -218,6 +223,7 @@ const seedData = () => {
         start: addHours(now, -4).toISOString(),
         end: addHours(now, -3).toISOString(),
       },
+      adminNotes: "Client sensible au délai",
     },
     {
       id: "CMD-243",
@@ -238,6 +244,7 @@ const seedData = () => {
         start: addHours(now, -5).toISOString(),
         end: addHours(now, -4).toISOString(),
       },
+      adminNotes: "Remettre les documents au responsable de boutique",
     },
     {
       id: "CMD-242",
@@ -252,6 +259,7 @@ const seedData = () => {
       volume: "0.04 m³",
       windowStart: `${tomorrow}T08:00:00.000Z`,
       windowEnd: `${tomorrow}T09:00:00.000Z`,
+      adminNotes: "Confirmer la présence du contact sur place",
     },
   ];
 
@@ -660,6 +668,28 @@ export const removeDriverFromOrder = (orderId: string) => {
     at: new Date().toISOString(),
     by: "admin",
   });
+};
+
+export const updateOrderAdminNotes = (orderId: string, adminNotes: string) => {
+  const orders = getOrders();
+  if (!orders.some((order) => order.id === orderId)) {
+    return { success: false as const };
+  }
+
+  updateOrder(orderId, (current) => ({
+    ...current,
+    adminNotes,
+  }));
+
+  appendActivity({
+    type: "NOTES_UPDATED",
+    orderId,
+    at: new Date().toISOString(),
+    by: "admin",
+    payload: { notes: adminNotes },
+  });
+
+  return { success: true as const };
 };
 
 const addMilliseconds = (date: Date, amount: number) => new Date(date.getTime() + amount);

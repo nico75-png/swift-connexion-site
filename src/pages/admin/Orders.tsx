@@ -12,13 +12,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import CreateOrderButton from "@/components/dashboard/CreateOrderButton";
 import AssignDriverModal from "@/components/admin/AssignDriverModal";
 import { useDrivers, useNotifications, useOrders, useScheduledAssignments } from "@/hooks/useMockData";
-import { formatDateTime } from "@/lib/mockData";
+import { formatDateTime, type ScheduledAssignment } from "@/lib/mockData";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 /**
  * Page admin - Liste des commandes
  * Tableau filtrable avec actions (voir, modifier, annuler, affecter chauffeur)
  */
+
+const driverStatusStyles: Record<string, string> = {
+  Disponible: "bg-success/10 text-success border-success/20",
+  "En course": "bg-info/10 text-info border-info/20",
+  "En pause": "bg-warning/10 text-warning border-warning/20",
+};
+
 const AdminOrders = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -46,6 +53,12 @@ const AdminOrders = () => {
   const clients = useMemo(() => {
     const unique = new Set<string>();
     orders.forEach((order) => unique.add(order.client));
+    return Array.from(unique).sort((a, b) => a.localeCompare(b));
+  }, [orders]);
+
+  const statusOptions = useMemo(() => {
+    const unique = new Set<string>();
+    orders.forEach((order) => unique.add(order.status));
     return Array.from(unique).sort((a, b) => a.localeCompare(b));
   }, [orders]);
 
@@ -90,6 +103,14 @@ const AdminOrders = () => {
     [notifications],
   );
 
+  const scheduledByOrder = useMemo(() => {
+    const map = new Map<string, ScheduledAssignment>();
+    scheduledAssignments
+      .filter((assignment) => assignment.status === "SCHEDULED")
+      .forEach((assignment) => map.set(assignment.orderId, assignment));
+    return map;
+  }, [scheduledAssignments]);
+
   return (
     <DashboardLayout
       sidebar={<AdminSidebar />}
@@ -121,11 +142,11 @@ const AdminOrders = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tous les statuts</SelectItem>
-            <SelectItem value="En attente">En attente</SelectItem>
-            <SelectItem value="Enlevé">Enlevé</SelectItem>
-            <SelectItem value="En cours">En cours</SelectItem>
-            <SelectItem value="Livré">Livré</SelectItem>
-            <SelectItem value="Annulé">Annulé</SelectItem>
+            {statusOptions.map((status) => (
+              <SelectItem key={status} value={status}>
+                {status}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
@@ -161,71 +182,86 @@ const AdminOrders = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredOrders.map((order) => (
-                <TableRow key={order.id} className="hover:bg-muted/30">
-                  <TableCell className="font-mono font-semibold">{order.id}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{formatDateTime(order.date)}</TableCell>
-                  <TableCell>{order.client}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{order.type}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={getStatusColor(order.status)}>
-                      {order.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {order.driverId ? (
-                      drivers.find((driver) => driver.id === order.driverId)?.name || "-"
-                    ) : (
-                      "-"
-                    )}
-                    {(() => {
-                      const scheduled = scheduledAssignments.find(
-                        (item) => item.orderId === order.id && item.status === "SCHEDULED",
-                      );
-                      if (!scheduled) {
-                        return null;
-                      }
-                      return (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Badge variant="secondary" className="ml-2 bg-info/10 text-info border-info/20">
-                              <Clock className="h-3 w-3 mr-1" /> Planifiée
+              {filteredOrders.map((order) => {
+                const driver = order.driverId
+                  ? drivers.find((item) => item.id === order.driverId) ?? null
+                  : null;
+                const scheduled = scheduledByOrder.get(order.id);
+
+                return (
+                  <TableRow key={order.id} className="hover:bg-muted/30">
+                    <TableCell className="font-mono font-semibold">{order.id}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{formatDateTime(order.date)}</TableCell>
+                    <TableCell>{order.client}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{order.type}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={getStatusColor(order.status)}>
+                        {order.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {driver ? (
+                        <div className="space-y-1">
+                          <p className="font-medium leading-tight">{driver.name}</p>
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <Badge variant="outline" className={driverStatusStyles[driver.status] ?? ""}>
+                              {driver.status}
                             </Badge>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            Affectation prévue le {formatDateTime(scheduled.scheduledAt)}
-                          </TooltipContent>
-                        </Tooltip>
-                      );
-                    })()}
-                  </TableCell>
-                  <TableCell className="text-right font-semibold">{order.amount}€</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Link to={`/admin/commandes/${order.id}`}>
-                        <Button variant="ghost" size="sm">Voir</Button>
-                      </Link>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="btn-assign-driver"
-                        data-order-id={order.id}
-                        onClick={() =>
-                          handleOpenModal(
-                            order.id,
-                            order.driverId ? "now" : "later",
-                            order.scheduledAssignmentId ?? undefined,
-                          )
-                        }
-                      >
-                        Affecter
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                            <Badge variant="outline">{driver.zone}</Badge>
+                            {driver.nextSlot ? (
+                              <span className="inline-flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {formatDateTime(driver.nextSlot.start)}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">Non assigné</span>
+                      )}
+                      {scheduled ? (
+                        <div className="mt-2">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="secondary" className="bg-info/10 text-info border-info/20">
+                                <Clock className="h-3 w-3 mr-1" /> Planifiée
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Affectation prévue le {formatDateTime(scheduled.scheduledAt)}
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      ) : null}
+                    </TableCell>
+                    <TableCell className="text-right font-semibold">{order.amount.toFixed(2)}€</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Link to={`/admin/commandes/${order.id}`}>
+                          <Button variant="ghost" size="sm">Voir</Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="btn-assign-driver"
+                          data-order-id={order.id}
+                          onClick={() =>
+                            handleOpenModal(
+                              order.id,
+                              order.driverId ? "now" : scheduled ? "later" : "now",
+                              scheduled?.id ?? order.scheduledAssignmentId ?? undefined,
+                            )
+                          }
+                        >
+                          {driver || scheduled ? "Modifier" : "Affecter"}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Filter, Plus, Phone, Car } from "lucide-react";
+import { Search, Plus, Phone, Car, Info } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import AdminSidebar from "@/components/dashboard/AdminSidebar";
 import Topbar from "@/components/dashboard/Topbar";
@@ -8,32 +8,29 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 /**
  * Page admin - Gestion des chauffeurs
- * Liste des chauffeurs avec filtres (zone, statut)
+ * Liste des chauffeurs avec filtres (statut)
  */
 const AdminDrivers = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [zoneFilter, setZoneFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
   const drivers = [
-    { id: 1, name: "Marc Dubois", phone: "06 12 34 56 78", vehicle: "Renault Kangoo", plate: "AB-123-CD", zone: "Paris Centre", status: "Actif", availability: "Disponible" },
-    { id: 2, name: "Julie Leclerc", phone: "06 23 45 67 89", vehicle: "Citroën Berlingo", plate: "BC-234-DE", zone: "Petite Couronne", status: "Actif", availability: "En livraison" },
-    { id: 3, name: "Pierre Martin", phone: "06 34 56 78 90", vehicle: "Peugeot Partner", plate: "CD-345-EF", zone: "Paris Centre", status: "Actif", availability: "Disponible" },
-    { id: 4, name: "Sophie Rousseau", phone: "06 45 67 89 01", vehicle: "Renault Kangoo", plate: "DE-456-FG", zone: "Grande Couronne", status: "Actif", availability: "En pause" },
-    { id: 5, name: "Thomas Bernard", phone: "06 56 78 90 12", vehicle: "Ford Transit", plate: "EF-567-GH", zone: "Petite Couronne", status: "Inactif", availability: "Indisponible" },
+    { id: 1, name: "Marc Dubois", phone: "06 12 34 56 78", vehicle: "Renault Kangoo", plate: "AB-123-CD", status: "Actif", availability: "Disponible" },
+    { id: 2, name: "Julie Leclerc", phone: "06 23 45 67 89", vehicle: "Citroën Berlingo", plate: "BC-234-DE", status: "Actif", availability: "En livraison" },
+    { id: 3, name: "Pierre Martin", phone: "06 34 56 78 90", vehicle: "Peugeot Partner", plate: "CD-345-EF", status: "Actif", availability: "Disponible" },
+    { id: 4, name: "Sophie Rousseau", phone: "06 45 67 89 01", vehicle: "Renault Kangoo", plate: "DE-456-FG", status: "Actif", availability: "En pause" },
+    { id: 5, name: "Thomas Bernard", phone: "06 56 78 90 12", vehicle: "Ford Transit", plate: "EF-567-GH", status: "Inactif", availability: "Indisponible" },
   ];
-
-  const zones = ["Paris Centre", "Petite Couronne", "Grande Couronne"];
 
   const filteredDrivers = drivers.filter(driver => {
     const matchesSearch = driver.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          driver.vehicle.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesZone = zoneFilter === "all" || driver.zone === zoneFilter;
     const matchesStatus = statusFilter === "all" || driver.status === statusFilter;
-    return matchesSearch && matchesZone && matchesStatus;
+    return matchesSearch && matchesStatus;
   });
 
   const getAvailabilityColor = (availability: string) => {
@@ -56,6 +53,15 @@ const AdminDrivers = () => {
         <p className="text-muted-foreground mt-1">Gérez vos chauffeurs et leur disponibilité</p>
       </div>
 
+      <Alert className="mb-6 bg-primary/5 border-primary/20">
+        <div className="flex items-start gap-3">
+          <Info className="h-5 w-5 text-primary" aria-hidden />
+          <AlertDescription className="text-sm text-primary">
+            Tous les chauffeurs peuvent intervenir sur toutes les zones.
+          </AlertDescription>
+        </div>
+      </Alert>
+
       {/* Filtres et recherche */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="flex-1 relative">
@@ -67,20 +73,6 @@ const AdminDrivers = () => {
             className="pl-10"
           />
         </div>
-        
-        <Select value={zoneFilter} onValueChange={setZoneFilter}>
-          <SelectTrigger className="w-full md:w-48">
-            <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Zone" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Toutes les zones</SelectItem>
-            {zones.map(zone => (
-              <SelectItem key={zone} value={zone}>{zone}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full md:w-48">
             <SelectValue placeholder="Statut" />
@@ -108,7 +100,6 @@ const AdminDrivers = () => {
                 <TableHead className="font-semibold">Téléphone</TableHead>
                 <TableHead className="font-semibold">Véhicule</TableHead>
                 <TableHead className="font-semibold">Immatriculation</TableHead>
-                <TableHead className="font-semibold">Zone</TableHead>
                 <TableHead className="font-semibold">Disponibilité</TableHead>
                 <TableHead className="font-semibold">Statut</TableHead>
                 <TableHead className="font-semibold text-right">Actions</TableHead>
@@ -131,9 +122,6 @@ const AdminDrivers = () => {
                     </div>
                   </TableCell>
                   <TableCell className="font-mono text-sm">{driver.plate}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{driver.zone}</Badge>
-                  </TableCell>
                   <TableCell>
                     <Badge variant="outline" className={getAvailabilityColor(driver.availability)}>
                       {driver.availability}

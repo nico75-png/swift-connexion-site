@@ -2,6 +2,8 @@ import { differenceInMinutes, parseISO } from "date-fns";
 
 export type DriverStatus = "AVAILABLE" | "ON_TRIP" | "PAUSED";
 
+export type ZoneCode = "INTRA_PARIS" | "PETITE_COURONNE" | "GRANDE_COURONNE";
+
 export interface Driver {
   id: string;
   name: string;
@@ -11,10 +13,18 @@ export interface Driver {
     capacity: string;
     registration?: string;
   };
-  zone: "INTRA_PARIS" | "PETITE_COURONNE" | "GRANDE_COURONNE";
   status: DriverStatus;
   nextFreeSlot: string;
   active: boolean;
+  /**
+   * @deprecated Tous les chauffeurs couvrent toutes les zones.
+   * Ce champ est conservé pour compatibilité mais n'est plus utilisé.
+   */
+  zone?: ZoneCode | string;
+  /**
+   * Indicateur interne pour rappeler la règle métier : tous les chauffeurs couvrent toutes les zones.
+   */
+  coversAllZones?: true;
 }
 
 export interface OrderSchedule {
@@ -31,12 +41,26 @@ export interface Order {
   schedule: OrderSchedule;
   pickupAddress: string;
   dropoffAddress: string;
-  zoneRequirement: Driver["zone"];
+  zoneRequirement: ZoneCode;
   volumeRequirement: string;
   weight: string;
   instructions?: string;
   driverId?: string | null;
   driverAssignedAt?: string | null;
+}
+
+export type ScheduledAssignmentStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "CANCELLED" | "FAILED";
+
+export interface ScheduledAssignment {
+  id: string;
+  orderId: string;
+  driverId: string;
+  start: string;
+  end: string;
+  executeAt: string;
+  createdAt: string;
+  status: ScheduledAssignmentStatus;
+  failureReason?: string;
 }
 
 export interface Assignment {
@@ -77,6 +101,7 @@ const STORAGE_KEYS = {
   orders: "oc_orders",
   drivers: "oc_drivers",
   assignments: "oc_assignments",
+  scheduledAssignments: "oc_scheduled_assignments",
   activity: "oc_activity_log",
   notifications: "oc_notifications",
 } as const;
@@ -95,40 +120,40 @@ const defaultDrivers: Driver[] = [
     name: "Marc Dubois",
     phone: "06 12 34 56 78",
     vehicle: { type: "Fourgon", capacity: "5 m³", registration: "AB-123-CD" },
-    zone: "INTRA_PARIS",
     status: "AVAILABLE",
     nextFreeSlot: "Aujourd'hui · 16:00",
     active: true,
+    coversAllZones: true,
   },
   {
     id: "DRV-102",
     name: "Julie Lambert",
     phone: "06 98 76 54 32",
     vehicle: { type: "Scooter", capacity: "0.5 m³" },
-    zone: "PETITE_COURONNE",
     status: "ON_TRIP",
     nextFreeSlot: "Aujourd'hui · 18:15",
     active: true,
+    coversAllZones: true,
   },
   {
     id: "DRV-103",
     name: "Sophie Renard",
     phone: "07 11 22 33 44",
     vehicle: { type: "Voiture", capacity: "1.2 m³", registration: "CD-456-EF" },
-    zone: "GRANDE_COURONNE",
     status: "PAUSED",
     nextFreeSlot: "Demain · 08:00",
     active: true,
+    coversAllZones: true,
   },
   {
     id: "DRV-104",
     name: "Pierre Martin",
     phone: "06 55 44 33 22",
     vehicle: { type: "Camionnette", capacity: "8 m³", registration: "GH-789-IJ" },
-    zone: "INTRA_PARIS",
     status: "AVAILABLE",
     nextFreeSlot: "Aujourd'hui · 15:30",
     active: true,
+    coversAllZones: true,
   },
 ];
 
@@ -275,6 +300,8 @@ const defaultAssignments: Assignment[] = [
   },
 ];
 
+const defaultScheduledAssignments: ScheduledAssignment[] = [];
+
 const defaultActivity: ActivityEntry[] = [
   {
     id: "ACT-1",
@@ -344,6 +371,7 @@ const ensureInitialized = () => {
   initStore(STORAGE_KEYS.orders, defaultOrders);
   initStore(STORAGE_KEYS.drivers, defaultDrivers);
   initStore(STORAGE_KEYS.assignments, defaultAssignments);
+  initStore(STORAGE_KEYS.scheduledAssignments, defaultScheduledAssignments);
   initStore(STORAGE_KEYS.activity, defaultActivity);
   initStore(STORAGE_KEYS.notifications, defaultNotifications);
 };
@@ -381,6 +409,13 @@ export const saveAssignments = (list: Assignment[]) => {
   writeStore(STORAGE_KEYS.assignments, list);
 };
 
+export const getScheduledAssignments = (): ScheduledAssignment[] =>
+  readStore(STORAGE_KEYS.scheduledAssignments, defaultScheduledAssignments);
+
+export const saveScheduledAssignments = (list: ScheduledAssignment[]) => {
+  writeStore(STORAGE_KEYS.scheduledAssignments, list);
+};
+
 export const getActivityLog = (): ActivityEntry[] => readStore(STORAGE_KEYS.activity, defaultActivity);
 
 export const appendActivity = (entry: ActivityEntry) => {
@@ -415,6 +450,7 @@ export const resetMockStores = () => {
   writeStore(STORAGE_KEYS.orders, defaultOrders);
   writeStore(STORAGE_KEYS.drivers, defaultDrivers);
   writeStore(STORAGE_KEYS.assignments, defaultAssignments);
+  writeStore(STORAGE_KEYS.scheduledAssignments, defaultScheduledAssignments);
   writeStore(STORAGE_KEYS.activity, defaultActivity);
   writeStore(STORAGE_KEYS.notifications, defaultNotifications);
 };

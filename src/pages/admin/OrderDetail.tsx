@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import AssignDriverModal from "@/components/admin/orders/AssignDriverModal";
 import { useActivityLogStore, useDriversStore, useNotificationsStore, useOrdersStore } from "@/providers/AdminDataProvider";
-import { driverStatusBadgeClass, driverStatusLabel, zoneLabels } from "@/components/admin/orders/driverUtils";
+import { driverStatusBadgeClass, driverStatusLabel } from "@/components/admin/orders/driverUtils";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -361,9 +361,6 @@ const AdminOrderDetail = () => {
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="outline" className={cn("text-xs", driverStatusBadgeClass[driver.status])}>
                       {driverStatusLabel[driver.status]}
-                    </Badge>
-                    <Badge variant="outline" className="text-xs">
-                      {zoneLabels[driver.zone]}
                     </Badge>
                     <Badge variant="outline" className="text-xs">
                       Prochain créneau : {driver.nextFreeSlot}

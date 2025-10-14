@@ -3,15 +3,19 @@ import {
   appendNotifications,
   Assignment,
   Driver,
+  NotificationEntry,
+  Order,
+  ScheduledAssignment,
+  ScheduledAssignmentStatus,
   generateId,
   getAssignments,
   getDrivers,
   getOrders,
-  NotificationEntry,
-  Order,
+  getScheduledAssignments,
+  hasTimeOverlap,
   saveAssignments,
   saveOrders,
-  hasTimeOverlap,
+  saveScheduledAssignments,
 } from "@/lib/stores/driversOrders.store";
 
 interface ServiceResult {
@@ -22,34 +26,53 @@ interface ServiceResult {
   order?: Order;
 }
 
+interface ScheduleResult extends ServiceResult {
+  scheduledAssignment?: ScheduledAssignment;
+}
+
 const nowIso = () => new Date().toISOString();
 
 const resolveDriver = (driverId: string, drivers: Driver[]) => drivers.find((driver) => driver.id === driverId);
 
-const buildNotification = (
-  channel: NotificationEntry["channel"],
-  message: string,
-  orderId: string,
-  driverId?: string,
-): NotificationEntry => ({
-  id: generateId(),
-  channel,
-  orderId,
-  driverId,
-  read: false,
-  message,
-  createdAt: nowIso(),
-});
+const resolveOrder = (orderId: string, orders: Order[]) => orders.find((order) => order.id === orderId);
 
-export const isDriverAvailable = (driverId: string, dateStart: string, dateEnd: string) => {
+const isBlockingScheduledStatus = (status: ScheduledAssignmentStatus) =>
+  status === "PENDING" || status === "PROCESSING";
+
+export const isDriverAvailable = (
+  driverId: string,
+  dateStart: string,
+  dateEnd: string,
+  options: { ignoreScheduledId?: string } = {},
+) => {
+  const drivers = getDrivers();
+  const driver = resolveDriver(driverId, drivers);
+  if (!driver || !driver.active || driver.status === "PAUSED") {
+    return false;
+  }
+
   const assignments = getAssignments();
-  const overlapping = assignments.some(
+  const overlappingAssignment = assignments.some(
     (assignment) =>
       assignment.driverId === driverId &&
       !assignment.endedAt &&
       hasTimeOverlap(dateStart, dateEnd, assignment.start, assignment.end),
   );
-  return !overlapping;
+
+  if (overlappingAssignment) {
+    return false;
+  }
+
+  const scheduledAssignments = getScheduledAssignments();
+  const overlappingScheduled = scheduledAssignments.some(
+    (assignment) =>
+      assignment.driverId === driverId &&
+      assignment.id !== options.ignoreScheduledId &&
+      isBlockingScheduledStatus(assignment.status) &&
+      hasTimeOverlap(dateStart, dateEnd, assignment.start, assignment.end),
+  );
+
+  return !overlappingScheduled;
 };
 
 const findConflictingAssignment = (driverId: string, dateStart: string, dateEnd: string) => {
@@ -58,6 +81,22 @@ const findConflictingAssignment = (driverId: string, dateStart: string, dateEnd:
     (assignment) =>
       assignment.driverId === driverId &&
       !assignment.endedAt &&
+      hasTimeOverlap(dateStart, dateEnd, assignment.start, assignment.end),
+  );
+};
+
+const findConflictingScheduledAssignment = (
+  driverId: string,
+  dateStart: string,
+  dateEnd: string,
+  options: { ignoreScheduledId?: string } = {},
+) => {
+  const scheduledAssignments = getScheduledAssignments();
+  return scheduledAssignments.find(
+    (assignment) =>
+      assignment.driverId === driverId &&
+      assignment.id !== options.ignoreScheduledId &&
+      isBlockingScheduledStatus(assignment.status) &&
       hasTimeOverlap(dateStart, dateEnd, assignment.start, assignment.end),
   );
 };
@@ -77,22 +116,29 @@ const guardDriverStatus = (driver: Driver): { valid: boolean; error?: string } =
 const guardAvailability = (
   driverId: string,
   schedule: Order["schedule"],
+  options: { ignoreScheduledId?: string } = {},
 ): { valid: boolean; conflictOrderId?: string; error?: string } => {
-  const isAvailable = isDriverAvailable(driverId, schedule.start, schedule.end);
+  const isAvailable = isDriverAvailable(driverId, schedule.start, schedule.end, options);
   if (!isAvailable) {
     const conflict = findConflictingAssignment(driverId, schedule.start, schedule.end);
-    return {
-      valid: false,
-      conflictOrderId: conflict?.orderId,
-      error: conflict ? `Conflit horaire détecté avec la commande #${conflict.orderId}` : "Ce chauffeur est indisponible sur ce créneau",
-    };
-  }
-  return { valid: true };
-};
+    if (conflict) {
+      return {
+        valid: false,
+        conflictOrderId: conflict.orderId,
+        error: `Conflit horaire détecté avec la commande #${conflict.orderId}`,
+      };
+    }
 
-const guardZoneAndCapacity = (driver: Driver, order: Order): { valid: boolean; error?: string } => {
-  if (driver.zone !== order.zoneRequirement) {
-    return { valid: false, error: "Ce chauffeur n'intervient pas sur la zone demandée" };
+    const scheduledConflict = findConflictingScheduledAssignment(driverId, schedule.start, schedule.end, options);
+    if (scheduledConflict) {
+      return {
+        valid: false,
+        conflictOrderId: scheduledConflict.orderId,
+        error: `Conflit horaire détecté avec une planification pour la commande #${scheduledConflict.orderId}`,
+      };
+    }
+
+    return { valid: false, error: "Conflit horaire détecté pour ce chauffeur" };
   }
   return { valid: true };
 };
@@ -118,18 +164,36 @@ const generateActivity = (orderId: string, driverId: string, type: "ASSIGN" | "U
   });
 };
 
+const buildNotification = (
+  channel: NotificationEntry["channel"],
+  message: string,
+  orderId: string,
+  driverId?: string,
+): NotificationEntry => ({
+  id: generateId(),
+  channel,
+  orderId,
+  driverId,
+  read: false,
+  message,
+  createdAt: nowIso(),
+});
+
 const pushAssignmentNotifications = (order: Order, driver: Driver, type: "ASSIGN" | "UNASSIGN") => {
-  const baseMessage = type === "ASSIGN"
-    ? `Un chauffeur a été affecté à votre commande #${order.id}`
-    : `Le chauffeur a été retiré de votre commande #${order.id}`;
+  const baseMessage =
+    type === "ASSIGN"
+      ? `Un chauffeur a été affecté à votre commande #${order.id}`
+      : `Le chauffeur a été retiré de votre commande #${order.id}`;
 
-  const adminMessage = type === "ASSIGN"
-    ? `Chauffeur ${driver.name} affecté à #${order.id}`
-    : `Chauffeur ${driver.name} retiré de #${order.id}`;
+  const adminMessage =
+    type === "ASSIGN"
+      ? `Chauffeur ${driver.name} affecté à #${order.id}`
+      : `Chauffeur ${driver.name} retiré de #${order.id}`;
 
-  const driverMessage = type === "ASSIGN"
-    ? `Nouvelle mission : #${order.id} — ${order.pickupAddress} → ${order.dropoffAddress}`
-    : `Mission #${order.id} annulée / retirée`;
+  const driverMessage =
+    type === "ASSIGN"
+      ? `Nouvelle mission : #${order.id} — ${order.pickupAddress} → ${order.dropoffAddress}`
+      : `Mission #${order.id} annulée / retirée`;
 
   const notifications: NotificationEntry[] = [
     buildNotification("CLIENT", baseMessage, order.id, driver.id),
@@ -143,7 +207,18 @@ const pushAssignmentNotifications = (order: Order, driver: Driver, type: "ASSIGN
   appendNotifications(notifications);
 };
 
-export const assignDriver = (orderId: string, driverId: string): ServiceResult => {
+const updateScheduledAssignment = (id: string, patch: Partial<ScheduledAssignment>) => {
+  const scheduledAssignments = getScheduledAssignments();
+  const updated = scheduledAssignments.map((item) => (item.id === id ? { ...item, ...patch } : item));
+  saveScheduledAssignments(updated);
+  return updated.find((item) => item.id === id);
+};
+
+export const assignDriver = (
+  orderId: string,
+  driverId: string,
+  options: { ignoreScheduledId?: string } = {},
+): ServiceResult => {
   const orders = getOrders();
   const drivers = getDrivers();
 
@@ -163,12 +238,7 @@ export const assignDriver = (orderId: string, driverId: string): ServiceResult =
     return { success: false, error: statusCheck.error };
   }
 
-  const zoneCheck = guardZoneAndCapacity(driver, order);
-  if (!zoneCheck.valid) {
-    return { success: false, error: zoneCheck.error };
-  }
-
-  const availabilityCheck = guardAvailability(driver.id, order.schedule);
+  const availabilityCheck = guardAvailability(driver.id, order.schedule, options);
   if (!availabilityCheck.valid) {
     return {
       success: false,
@@ -243,4 +313,136 @@ export const reassignDriver = (orderId: string, newDriverId: string): ServiceRes
     unassignDriver(orderId);
   }
   return assignDriver(orderId, newDriverId);
+};
+
+export const scheduleDriverAssignment = (
+  orderId: string,
+  driverId: string,
+  executeAt: string,
+): ScheduleResult => {
+  const orders = getOrders();
+  const drivers = getDrivers();
+
+  const order = resolveOrder(orderId, orders);
+  if (!order) {
+    return { success: false, error: "Commande introuvable" };
+  }
+
+  const driver = resolveDriver(driverId, drivers);
+  if (!driver) {
+    return { success: false, error: "Chauffeur introuvable" };
+  }
+
+  const executionDate = new Date(executeAt);
+  if (Number.isNaN(executionDate.getTime()) || executionDate.getTime() <= Date.now()) {
+    return { success: false, error: "La planification doit être programmée dans le futur" };
+  }
+
+  const statusCheck = guardDriverStatus(driver);
+  if (!statusCheck.valid) {
+    return { success: false, error: statusCheck.error };
+  }
+
+  const availabilityCheck = guardAvailability(driver.id, order.schedule);
+  if (!availabilityCheck.valid) {
+    return {
+      success: false,
+      error: availabilityCheck.error,
+      conflictOrderId: availabilityCheck.conflictOrderId,
+    };
+  }
+
+  const scheduledAssignment: ScheduledAssignment = {
+    id: generateId(),
+    orderId: order.id,
+    driverId: driver.id,
+    start: order.schedule.start,
+    end: order.schedule.end,
+    executeAt: executionDate.toISOString(),
+    createdAt: nowIso(),
+    status: "PENDING",
+  };
+
+  const scheduledAssignments = getScheduledAssignments();
+  saveScheduledAssignments([scheduledAssignment, ...scheduledAssignments]);
+
+  return { success: true, driver, order, scheduledAssignment };
+};
+
+export const cancelScheduledAssignment = (scheduledId: string): ScheduleResult => {
+  const scheduledAssignments = getScheduledAssignments();
+  const target = scheduledAssignments.find((item) => item.id === scheduledId);
+  if (!target) {
+    return { success: false, error: "Planification introuvable" };
+  }
+
+  if (!isBlockingScheduledStatus(target.status)) {
+    return { success: false, error: "Cette planification ne peut plus être annulée" };
+  }
+
+  const updated = scheduledAssignments.map((item) =>
+    item.id === scheduledId ? { ...item, status: "CANCELLED", failureReason: undefined } : item,
+  );
+  saveScheduledAssignments(updated);
+
+  return {
+    success: true,
+    scheduledAssignment: updated.find((item) => item.id === scheduledId),
+  };
+};
+
+export const processScheduledAssignments = () => {
+  const scheduledAssignments = getScheduledAssignments();
+  const dueAssignments = scheduledAssignments.filter(
+    (assignment) => assignment.status === "PENDING" && new Date(assignment.executeAt).getTime() <= Date.now(),
+  );
+
+  if (dueAssignments.length === 0) {
+    return;
+  }
+
+  for (const assignment of dueAssignments) {
+    updateScheduledAssignment(assignment.id, { status: "PROCESSING", failureReason: undefined });
+
+    const drivers = getDrivers();
+    const driver = resolveDriver(assignment.driverId, drivers);
+    const orders = getOrders();
+    const order = resolveOrder(assignment.orderId, orders);
+
+    if (!driver || !order) {
+      updateScheduledAssignment(assignment.id, {
+        status: "FAILED",
+        failureReason: "Commande ou chauffeur introuvable",
+      });
+      continue;
+    }
+
+    const statusCheck = guardDriverStatus(driver);
+    if (!statusCheck.valid) {
+      updateScheduledAssignment(assignment.id, {
+        status: "FAILED",
+        failureReason: statusCheck.error,
+      });
+      continue;
+    }
+
+    const availabilityCheck = guardAvailability(driver.id, order.schedule, { ignoreScheduledId: assignment.id });
+    if (!availabilityCheck.valid) {
+      updateScheduledAssignment(assignment.id, {
+        status: "FAILED",
+        failureReason: availabilityCheck.error,
+      });
+      continue;
+    }
+
+    const result = assignDriver(order.id, driver.id, { ignoreScheduledId: assignment.id });
+    if (result.success) {
+      updateScheduledAssignment(assignment.id, { status: "COMPLETED", failureReason: undefined });
+    } else {
+      updateScheduledAssignment(assignment.id, {
+        status: "FAILED",
+        failureReason: result.error,
+      });
+    }
+  }
 };

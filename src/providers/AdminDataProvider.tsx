@@ -5,26 +5,38 @@ import {
   Driver,
   NotificationEntry,
   Order,
+  ScheduledAssignment,
   getActivityLog,
   getAssignments,
   getDrivers,
   getNotifications,
   getOrders,
+  getScheduledAssignments,
   saveNotifications,
 } from "@/lib/stores/driversOrders.store";
-import { assignDriver as assignDriverService, reassignDriver as reassignDriverService, unassignDriver as unassignDriverService } from "@/lib/services/assign.service";
+import {
+  assignDriver as assignDriverService,
+  cancelScheduledAssignment as cancelScheduledAssignmentService,
+  processScheduledAssignments,
+  reassignDriver as reassignDriverService,
+  scheduleDriverAssignment as scheduleDriverAssignmentService,
+  unassignDriver as unassignDriverService,
+} from "@/lib/services/assign.service";
 
 interface AdminDataContextValue {
   ready: boolean;
   orders: Order[];
   drivers: Driver[];
   assignments: Assignment[];
+  scheduledAssignments: ScheduledAssignment[];
   activityLog: ActivityEntry[];
   notifications: NotificationEntry[];
   refreshAll: () => void;
   assignDriver: typeof assignDriverService;
   reassignDriver: typeof reassignDriverService;
   unassignDriver: typeof unassignDriverService;
+  scheduleDriverAssignment: typeof scheduleDriverAssignmentService;
+  cancelScheduledAssignment: typeof cancelScheduledAssignmentService;
   markNotificationAsRead: (id: string) => void;
   markAllNotificationsAsRead: () => void;
 }
@@ -35,6 +47,7 @@ const storageKeys = new Set([
   "oc_orders",
   "oc_drivers",
   "oc_assignments",
+  "oc_scheduled_assignments",
   "oc_activity_log",
   "oc_notifications",
 ]);
@@ -44,6 +57,7 @@ export const AdminDataProvider = ({ children }: { children: React.ReactNode }) =
   const [orders, setOrders] = useState<Order[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [scheduledAssignments, setScheduledAssignments] = useState<ScheduledAssignment[]>([]);
   const [activityLog, setActivityLog] = useState<ActivityEntry[]>([]);
   const [notifications, setNotifications] = useState<NotificationEntry[]>([]);
 
@@ -51,6 +65,7 @@ export const AdminDataProvider = ({ children }: { children: React.ReactNode }) =
     setOrders(getOrders());
     setDrivers(getDrivers());
     setAssignments(getAssignments());
+    setScheduledAssignments(getScheduledAssignments());
     setActivityLog(getActivityLog());
     setNotifications(getNotifications());
   }, []);
@@ -62,6 +77,11 @@ export const AdminDataProvider = ({ children }: { children: React.ReactNode }) =
     hydrate();
     setReady(true);
 
+    const interval = window.setInterval(() => {
+      processScheduledAssignments();
+      hydrate();
+    }, 45000);
+
     const handleStorage = (event: StorageEvent) => {
       if (event.key && storageKeys.has(event.key)) {
         hydrate();
@@ -69,7 +89,10 @@ export const AdminDataProvider = ({ children }: { children: React.ReactNode }) =
     };
 
     window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.clearInterval(interval);
+    };
   }, [hydrate]);
 
   const refreshAll = useCallback(() => {
@@ -90,6 +113,18 @@ export const AdminDataProvider = ({ children }: { children: React.ReactNode }) =
 
   const unassignDriver = useCallback<AdminDataContextValue["unassignDriver"]>((orderId) => {
     const result = unassignDriverService(orderId);
+    refreshAll();
+    return result;
+  }, [refreshAll]);
+
+  const scheduleDriverAssignment = useCallback<AdminDataContextValue["scheduleDriverAssignment"]>((orderId, driverId, executeAt) => {
+    const result = scheduleDriverAssignmentService(orderId, driverId, executeAt);
+    refreshAll();
+    return result;
+  }, [refreshAll]);
+
+  const cancelScheduledAssignment = useCallback<AdminDataContextValue["cancelScheduledAssignment"]>((scheduledId) => {
+    const result = cancelScheduledAssignmentService(scheduledId);
     refreshAll();
     return result;
   }, [refreshAll]);
@@ -117,15 +152,34 @@ export const AdminDataProvider = ({ children }: { children: React.ReactNode }) =
     orders,
     drivers,
     assignments,
+    scheduledAssignments,
     activityLog,
     notifications,
     refreshAll,
     assignDriver,
     reassignDriver,
     unassignDriver,
+    scheduleDriverAssignment,
+    cancelScheduledAssignment,
     markNotificationAsRead,
     markAllNotificationsAsRead,
-  }), [ready, orders, drivers, assignments, activityLog, notifications, refreshAll, assignDriver, reassignDriver, unassignDriver, markNotificationAsRead, markAllNotificationsAsRead]);
+  }), [
+    ready,
+    orders,
+    drivers,
+    assignments,
+    scheduledAssignments,
+    activityLog,
+    notifications,
+    refreshAll,
+    assignDriver,
+    reassignDriver,
+    unassignDriver,
+    scheduleDriverAssignment,
+    cancelScheduledAssignment,
+    markNotificationAsRead,
+    markAllNotificationsAsRead,
+  ]);
 
   return (
     <AdminDataContext.Provider value={value}>
@@ -143,8 +197,30 @@ const useAdminDataContext = () => {
 };
 
 export const useOrdersStore = () => {
-  const { ready, orders, assignments, assignDriver, reassignDriver, unassignDriver, refreshAll } = useAdminDataContext();
-  return { ready, orders, assignments, assignDriver, reassignDriver, unassignDriver, refreshAll };
+  const {
+    ready,
+    orders,
+    assignments,
+    scheduledAssignments,
+    assignDriver,
+    reassignDriver,
+    unassignDriver,
+    scheduleDriverAssignment,
+    cancelScheduledAssignment,
+    refreshAll,
+  } = useAdminDataContext();
+  return {
+    ready,
+    orders,
+    assignments,
+    scheduledAssignments,
+    assignDriver,
+    reassignDriver,
+    unassignDriver,
+    scheduleDriverAssignment,
+    cancelScheduledAssignment,
+    refreshAll,
+  };
 };
 
 export const useDriversStore = () => {

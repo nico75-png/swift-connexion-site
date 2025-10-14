@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import CreateOrderButton from "@/components/dashboard/CreateOrderButton";
 import AssignDriverModal from "@/components/admin/orders/AssignDriverModal";
-import { driverStatusBadgeClass, driverStatusLabel, zoneLabels } from "@/components/admin/orders/driverUtils";
+import { driverStatusBadgeClass, driverStatusLabel } from "@/components/admin/orders/driverUtils";
 import { useDriversStore, useNotificationsStore, useOrdersStore } from "@/providers/AdminDataProvider";
 import { cn } from "@/lib/utils";
 
@@ -185,7 +185,7 @@ const AdminOrders = () => {
                               {driverStatusLabel[driver.status]}
                             </Badge>
                             <Badge variant="outline" className="text-xs">
-                              {zoneLabels[driver.zone]}
+                              {driver.vehicle.type} · {driver.vehicle.capacity}
                             </Badge>
                           </div>
                         </div>

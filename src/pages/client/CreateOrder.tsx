@@ -30,8 +30,8 @@ const CreateOrder = () => {
   const [estimation, setEstimation] = useState<number | null>(null);
 
   const calculateEstimation = () => {
-    let base = 25;
-    let distance = 15.5; // Simulé
+    const base = 25;
+    const distance = 15.5; // Simulé
     let options = 0;
     
     if (formData.express) options += base * 0.3;

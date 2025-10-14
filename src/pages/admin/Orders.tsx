@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Search, Filter, Plus } from "lucide-react";
+import { Search, Filter, Clock } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import AdminSidebar from "@/components/dashboard/AdminSidebar";
 import Topbar from "@/components/dashboard/Topbar";
@@ -10,6 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import CreateOrderButton from "@/components/dashboard/CreateOrderButton";
+import AssignDriverModal from "@/components/admin/AssignDriverModal";
+import { useDrivers, useNotifications, useOrders, useScheduledAssignments } from "@/hooks/useMockData";
+import { formatDateTime } from "@/lib/mockData";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 /**
  * Page admin - Liste des commandes
@@ -19,18 +23,31 @@ const AdminOrders = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [clientFilter, setClientFilter] = useState("all");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<"now" | "later">("now");
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null);
 
-  // Mock data
-  const orders = [
-    { id: "CMD-247", date: "2025-01-15 14:30", client: "Cabinet Dupont", type: "Express", status: "En cours", driver: "Marc D.", amount: 45.50 },
-    { id: "CMD-246", date: "2025-01-15 13:15", client: "Optique Vision", type: "Standard", status: "Livré", driver: "Julie L.", amount: 38.00 },
-    { id: "CMD-245", date: "2025-01-15 12:00", client: "Lab Médical", type: "Fragile", status: "En attente", driver: "-", amount: 52.00 },
-    { id: "CMD-244", date: "2025-01-15 10:45", client: "Avocat & Associés", type: "Express", status: "Enlevé", driver: "Pierre M.", amount: 41.00 },
-    { id: "CMD-243", date: "2025-01-15 09:20", client: "Pharmacie Centrale", type: "Standard", status: "Livré", driver: "Sophie R.", amount: 35.00 },
-    { id: "CMD-242", date: "2025-01-14 17:30", client: "Cabinet Martin", type: "Express", status: "Annulé", driver: "-", amount: 48.00 },
-  ];
+  const orders = useOrders();
+  const drivers = useDrivers();
+  const scheduledAssignments = useScheduledAssignments();
+  const notifications = useNotifications("admin");
 
-  const clients = ["Cabinet Dupont", "Optique Vision", "Lab Médical", "Avocat & Associés", "Pharmacie Centrale", "Cabinet Martin"];
+  const selectedOrder = useMemo(
+    () => orders.find((order) => order.id === selectedOrderId) ?? null,
+    [orders, selectedOrderId],
+  );
+
+  const selectedSchedule = useMemo(
+    () => scheduledAssignments.find((item) => item.id === selectedScheduleId) ?? null,
+    [scheduledAssignments, selectedScheduleId],
+  );
+
+  const clients = useMemo(() => {
+    const unique = new Set<string>();
+    orders.forEach((order) => unique.add(order.client));
+    return Array.from(unique).sort((a, b) => a.localeCompare(b));
+  }, [orders]);
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -39,23 +56,52 @@ const AdminOrders = () => {
       "Enlevé": "bg-secondary/10 text-secondary border-secondary/20",
       "En attente": "bg-warning/10 text-warning border-warning/20",
       "Annulé": "bg-destructive/10 text-destructive border-destructive/20",
+      "A VALIDER": "bg-primary/10 text-primary border-primary/20",
     };
     return colors[status] || "";
   };
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.client.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
-    const matchesClient = clientFilter === "all" || order.client === clientFilter;
-    return matchesSearch && matchesStatus && matchesClient;
-  });
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      const search = searchTerm.toLowerCase();
+      const matchesSearch =
+        order.id.toLowerCase().includes(search) || order.client.toLowerCase().includes(search);
+      const matchesStatus = statusFilter === "all" || order.status === statusFilter;
+      const matchesClient = clientFilter === "all" || order.client === clientFilter;
+      return matchesSearch && matchesStatus && matchesClient;
+    });
+  }, [orders, searchTerm, statusFilter, clientFilter]);
+
+  const handleOpenModal = (orderId: string, mode: "now" | "later" = "now", scheduleId?: string) => {
+    setSelectedOrderId(orderId);
+    setSelectedScheduleId(scheduleId ?? null);
+    setModalMode(mode);
+    setModalOpen(true);
+  };
+
+  const mappedNotifications = useMemo(
+    () =>
+      notifications.map((notification) => ({
+        id: notification.id,
+        message: notification.message,
+        time: formatDateTime(notification.createdAt),
+        read: notification.read,
+      })),
+    [notifications],
+  );
 
   return (
     <DashboardLayout
       sidebar={<AdminSidebar />}
-      topbar={<Topbar title="Gestion des commandes" />}
+      topbar={<Topbar title="Gestion des commandes" notifications={mappedNotifications} />}
     >
+      <AssignDriverModal
+        order={selectedOrder}
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        initialMode={modalMode}
+        scheduledAssignment={selectedSchedule}
+      />
       {/* Filtres et recherche */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="flex-1 relative">
@@ -118,7 +164,7 @@ const AdminOrders = () => {
               {filteredOrders.map((order) => (
                 <TableRow key={order.id} className="hover:bg-muted/30">
                   <TableCell className="font-mono font-semibold">{order.id}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{order.date}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{formatDateTime(order.date)}</TableCell>
                   <TableCell>{order.client}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{order.type}</Badge>
@@ -128,14 +174,54 @@ const AdminOrders = () => {
                       {order.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm">{order.driver}</TableCell>
+                  <TableCell className="text-sm">
+                    {order.driverId ? (
+                      drivers.find((driver) => driver.id === order.driverId)?.name || "-"
+                    ) : (
+                      "-"
+                    )}
+                    {(() => {
+                      const scheduled = scheduledAssignments.find(
+                        (item) => item.orderId === order.id && item.status === "SCHEDULED",
+                      );
+                      if (!scheduled) {
+                        return null;
+                      }
+                      return (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge variant="secondary" className="ml-2 bg-info/10 text-info border-info/20">
+                              <Clock className="h-3 w-3 mr-1" /> Planifiée
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Affectation prévue le {formatDateTime(scheduled.scheduledAt)}
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    })()}
+                  </TableCell>
                   <TableCell className="text-right font-semibold">{order.amount}€</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Link to={`/admin/commandes/${order.id}`}>
                         <Button variant="ghost" size="sm">Voir</Button>
                       </Link>
-                      <Button variant="ghost" size="sm">Affecter</Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="btn-assign-driver"
+                        data-order-id={order.id}
+                        onClick={() =>
+                          handleOpenModal(
+                            order.id,
+                            order.driverId ? "now" : "later",
+                            order.scheduledAssignmentId ?? undefined,
+                          )
+                        }
+                      >
+                        Affecter
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

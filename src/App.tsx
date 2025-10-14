@@ -35,6 +35,7 @@ import AdminInvoices from "./pages/admin/Invoices";
 import AdminStats from "./pages/admin/Stats";
 import AdminMessages from "./pages/admin/Messages";
 import AdminSettings from "./pages/admin/Settings";
+import SchedulerRunner from "@/components/dashboard/SchedulerRunner";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <SchedulerRunner />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/expertises" element={<Expertises />} />

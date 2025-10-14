@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Search, Filter, Plus } from "lucide-react";
+import { Filter, Search } from "lucide-react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import AdminSidebar from "@/components/dashboard/AdminSidebar";
 import Topbar from "@/components/dashboard/Topbar";
@@ -10,27 +12,58 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import CreateOrderButton from "@/components/dashboard/CreateOrderButton";
+import AssignDriverModal from "@/components/admin/orders/AssignDriverModal";
+import { driverStatusBadgeClass, driverStatusLabel, zoneLabels } from "@/components/admin/orders/driverUtils";
+import { useDriversStore, useNotificationsStore, useOrdersStore } from "@/providers/AdminDataProvider";
+import { cn } from "@/lib/utils";
 
-/**
- * Page admin - Liste des commandes
- * Tableau filtrable avec actions (voir, modifier, annuler, affecter chauffeur)
- */
 const AdminOrders = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [clientFilter, setClientFilter] = useState("all");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
 
-  // Mock data
-  const orders = [
-    { id: "CMD-247", date: "2025-01-15 14:30", client: "Cabinet Dupont", type: "Express", status: "En cours", driver: "Marc D.", amount: 45.50 },
-    { id: "CMD-246", date: "2025-01-15 13:15", client: "Optique Vision", type: "Standard", status: "Livré", driver: "Julie L.", amount: 38.00 },
-    { id: "CMD-245", date: "2025-01-15 12:00", client: "Lab Médical", type: "Fragile", status: "En attente", driver: "-", amount: 52.00 },
-    { id: "CMD-244", date: "2025-01-15 10:45", client: "Avocat & Associés", type: "Express", status: "Enlevé", driver: "Pierre M.", amount: 41.00 },
-    { id: "CMD-243", date: "2025-01-15 09:20", client: "Pharmacie Centrale", type: "Standard", status: "Livré", driver: "Sophie R.", amount: 35.00 },
-    { id: "CMD-242", date: "2025-01-14 17:30", client: "Cabinet Martin", type: "Express", status: "Annulé", driver: "-", amount: 48.00 },
-  ];
+  const { orders, ready } = useOrdersStore();
+  const { drivers } = useDriversStore();
+  const { notifications } = useNotificationsStore();
 
-  const clients = ["Cabinet Dupont", "Optique Vision", "Lab Médical", "Avocat & Associés", "Pharmacie Centrale", "Cabinet Martin"];
+  const clients = useMemo(
+    () => Array.from(new Set(orders.map((order) => order.client))).sort(),
+    [orders],
+  );
+
+  const statusOptions = useMemo(
+    () => Array.from(new Set(orders.map((order) => order.status))).sort(),
+    [orders],
+  );
+
+  const filteredOrders = useMemo(
+    () =>
+      orders.filter((order) => {
+        const term = searchTerm.toLowerCase();
+        const matchesSearch =
+          order.id.toLowerCase().includes(term) || order.client.toLowerCase().includes(term);
+        const matchesStatus = statusFilter === "all" || order.status === statusFilter;
+        const matchesClient = clientFilter === "all" || order.client === clientFilter;
+        return matchesSearch && matchesStatus && matchesClient;
+      }),
+    [orders, searchTerm, statusFilter, clientFilter],
+  );
+
+  const topbarNotifications = useMemo(
+    () =>
+      notifications.map((notification) => ({
+        id: notification.id,
+        message: notification.message,
+        time: new Date(notification.createdAt).toLocaleString("fr-FR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        read: notification.read,
+      })),
+    [notifications],
+  );
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -43,43 +76,54 @@ const AdminOrders = () => {
     return colors[status] || "";
   };
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.client.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
-    const matchesClient = clientFilter === "all" || order.client === clientFilter;
-    return matchesSearch && matchesStatus && matchesClient;
-  });
+  const openAssignModal = (orderId: string) => {
+    setCurrentOrderId(orderId);
+    setIsModalOpen(true);
+  };
+
+  const closeAssignModal = () => {
+    setIsModalOpen(false);
+    setCurrentOrderId(null);
+  };
+
+  const formatDate = (isoDate: string) =>
+    format(new Date(isoDate), "dd MMM yyyy · HH'h'mm", { locale: fr });
+
+  const driverForOrder = (driverId: string | null | undefined) =>
+    driverId ? drivers.find((driver) => driver.id === driverId) ?? null : null;
 
   return (
-    <DashboardLayout
-      sidebar={<AdminSidebar />}
-      topbar={<Topbar title="Gestion des commandes" />}
-    >
+    <DashboardLayout sidebar={<AdminSidebar />} topbar={<Topbar title="Gestion des commandes" notifications={topbarNotifications} />}>
+      {!ready && (
+        <div className="mb-4 rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+          Chargement des données...
+        </div>
+      )}
+
       {/* Filtres et recherche */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="mb-6 flex flex-col gap-4 md:flex-row">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Rechercher par N° ou client..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(event) => setSearchTerm(event.target.value)}
             className="pl-10"
           />
         </div>
-        
+
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full md:w-48">
-            <Filter className="h-4 w-4 mr-2" />
+            <Filter className="mr-2 h-4 w-4" />
             <SelectValue placeholder="Statut" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tous les statuts</SelectItem>
-            <SelectItem value="En attente">En attente</SelectItem>
-            <SelectItem value="Enlevé">Enlevé</SelectItem>
-            <SelectItem value="En cours">En cours</SelectItem>
-            <SelectItem value="Livré">Livré</SelectItem>
-            <SelectItem value="Annulé">Annulé</SelectItem>
+            {statusOptions.map((status) => (
+              <SelectItem key={status} value={status}>
+                {status}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
@@ -89,8 +133,10 @@ const AdminOrders = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tous les clients</SelectItem>
-            {clients.map(client => (
-              <SelectItem key={client} value={client}>{client}</SelectItem>
+            {clients.map((client) => (
+              <SelectItem key={client} value={client}>
+                {client}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -99,7 +145,7 @@ const AdminOrders = () => {
       </div>
 
       {/* Tableau des commandes */}
-      <div className="bg-card rounded-lg border border-border shadow-soft overflow-hidden">
+      <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -110,70 +156,101 @@ const AdminOrders = () => {
                 <TableHead className="font-semibold">Type</TableHead>
                 <TableHead className="font-semibold">Statut</TableHead>
                 <TableHead className="font-semibold">Chauffeur</TableHead>
-                <TableHead className="font-semibold text-right">Montant</TableHead>
-                <TableHead className="font-semibold text-right">Actions</TableHead>
+                <TableHead className="text-right font-semibold">Montant</TableHead>
+                <TableHead className="text-right font-semibold">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredOrders.map((order) => (
-                <TableRow key={order.id} className="hover:bg-muted/30">
-                  <TableCell className="font-mono font-semibold">{order.id}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{order.date}</TableCell>
-                  <TableCell>{order.client}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{order.type}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={getStatusColor(order.status)}>
-                      {order.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm">{order.driver}</TableCell>
-                  <TableCell className="text-right font-semibold">{order.amount}€</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Link to={`/admin/commandes/${order.id}`}>
-                        <Button variant="ghost" size="sm">Voir</Button>
-                      </Link>
-                      <Button variant="ghost" size="sm">Affecter</Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {filteredOrders.map((order) => {
+                const driver = driverForOrder(order.driverId);
+                return (
+                  <TableRow key={order.id} className="hover:bg-muted/30">
+                    <TableCell className="font-mono font-semibold">{order.id}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{formatDate(order.schedule.start)}</TableCell>
+                    <TableCell>{order.client}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{order.type}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={getStatusColor(order.status)}>
+                        {order.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {driver ? (
+                        <div className="space-y-1">
+                          <p className="font-medium leading-tight">{driver.name}</p>
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <Badge variant="outline" className={cn("text-xs", driverStatusBadgeClass[driver.status])}>
+                              {driverStatusLabel[driver.status]}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {zoneLabels[driver.zone]}
+                            </Badge>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">Non assigné</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right font-semibold">{order.amount.toFixed(2)}€</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Link to={`/admin/commandes/${order.id}`}>
+                          <Button variant="ghost" size="sm">
+                            Voir
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="btn-assign-driver"
+                          data-order-id={order.id}
+                          onClick={() => openAssignModal(order.id)}
+                        >
+                          {driver ? "Modifier" : "Affecter"}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
 
         {filteredOrders.length === 0 && (
-          <div className="text-center py-12">
+          <div className="py-12 text-center">
             <p className="text-muted-foreground">Aucune commande trouvée</p>
           </div>
         )}
       </div>
 
       {/* Stats rapides */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6">
-        <div className="p-4 bg-card rounded-lg border border-border">
-          <p className="text-xs text-muted-foreground mb-1">Total</p>
+      <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-5">
+        <div className="rounded-lg border border-border bg-card p-4">
+          <p className="mb-1 text-xs text-muted-foreground">Total</p>
           <p className="text-2xl font-bold">{orders.length}</p>
         </div>
-        <div className="p-4 bg-warning/10 rounded-lg border border-warning/20">
-          <p className="text-xs text-warning mb-1">En attente</p>
-          <p className="text-2xl font-bold text-warning">{orders.filter(o => o.status === "En attente").length}</p>
+        <div className="rounded-lg border border-warning/20 bg-warning/10 p-4">
+          <p className="mb-1 text-xs text-warning">En attente</p>
+          <p className="text-2xl font-bold text-warning">{orders.filter((order) => order.status === "En attente").length}</p>
         </div>
-        <div className="p-4 bg-info/10 rounded-lg border border-info/20">
-          <p className="text-xs text-info mb-1">En cours</p>
-          <p className="text-2xl font-bold text-info">{orders.filter(o => o.status === "En cours").length}</p>
+        <div className="rounded-lg border border-info/20 bg-info/10 p-4">
+          <p className="mb-1 text-xs text-info">En cours</p>
+          <p className="text-2xl font-bold text-info">{orders.filter((order) => order.status === "En cours").length}</p>
         </div>
-        <div className="p-4 bg-success/10 rounded-lg border border-success/20">
-          <p className="text-xs text-success mb-1">Livrées</p>
-          <p className="text-2xl font-bold text-success">{orders.filter(o => o.status === "Livré").length}</p>
+        <div className="rounded-lg border border-success/20 bg-success/10 p-4">
+          <p className="mb-1 text-xs text-success">Livrées</p>
+          <p className="text-2xl font-bold text-success">{orders.filter((order) => order.status === "Livré").length}</p>
         </div>
-        <div className="p-4 bg-destructive/10 rounded-lg border border-destructive/20">
-          <p className="text-xs text-destructive mb-1">Annulées</p>
-          <p className="text-2xl font-bold text-destructive">{orders.filter(o => o.status === "Annulé").length}</p>
+        <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4">
+          <p className="mb-1 text-xs text-destructive">Annulées</p>
+          <p className="text-2xl font-bold text-destructive">{orders.filter((order) => order.status === "Annulé").length}</p>
         </div>
       </div>
+
+      <AssignDriverModal orderId={currentOrderId} open={isModalOpen} onOpenChange={(open) => (open ? setIsModalOpen(true) : closeAssignModal())} />
     </DashboardLayout>
   );
 };

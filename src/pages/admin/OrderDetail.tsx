@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Download, Edit, MapPin, Phone, User } from "lucide-react";
+import { ArrowLeft, Download, MapPin, Phone, User, Edit, UserMinus, UserPlus } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import AdminSidebar from "@/components/dashboard/AdminSidebar";
 import Topbar from "@/components/dashboard/Topbar";
@@ -11,44 +11,110 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import AssignDriverModal from "@/components/admin/orders/AssignDriverModal";
+import { useActivityLogStore, useDriversStore, useNotificationsStore, useOrdersStore } from "@/providers/AdminDataProvider";
+import { driverStatusBadgeClass, driverStatusLabel, zoneLabels } from "@/components/admin/orders/driverUtils";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
-/**
- * Page admin - Détail d'une commande
- * Timeline modifiable, affectation chauffeur, notes internes, historique
- */
+const formatDateTime = (iso: string) => format(new Date(iso), "dd MMM yyyy · HH'h'mm", { locale: fr });
+
 const AdminOrderDetail = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
-  const [notes, setNotes] = useState("Client préfère les livraisons en matinée");
-  const [currentStatus, setCurrentStatus] = useState("En cours");
+  const { ready, orders, assignments, unassignDriver } = useOrdersStore();
+  const { drivers } = useDriversStore();
+  const { activityLog } = useActivityLogStore();
+  const { notifications } = useNotificationsStore();
 
-  // Mock data
-  const order = {
-    id: id || "CMD-247",
-    date: "2025-01-15 14:30",
-    client: "Cabinet Dupont",
-    type: "Express",
-    status: currentStatus,
-    pickup: "12 rue de la Paix, 75002 Paris",
-    delivery: "45 avenue des Champs-Élysées, 75008 Paris",
-    weight: "2.5 kg",
-    volume: "0.05 m³",
-    instructions: "Sonnez à l'interphone, code 1234",
-    amount: 45.50,
-    driver: {
-      name: "Marc Dubois",
-      phone: "06 12 34 56 78",
-      vehicle: "Renault Kangoo - AB-123-CD",
-      zone: "Paris Centre",
-    },
-  };
+  const order = useMemo(() => orders.find((item) => item.id === id) ?? null, [orders, id]);
+  const driver = useMemo(() => (order?.driverId ? drivers.find((item) => item.id === order.driverId) ?? null : null), [drivers, order]);
+  const assignment = useMemo(() => (order ? assignments.find((item) => item.orderId === order.id) ?? null : null), [assignments, order]);
 
-  const activityLog = [
-    { date: "2025-01-15 14:30", user: "Système", action: "Commande créée", details: "Création automatique via formulaire client" },
-    { date: "2025-01-15 14:35", user: "Admin Sophie", action: "Chauffeur affecté", details: "Marc D. affecté à la commande" },
-    { date: "2025-01-15 14:45", user: "Marc D.", action: "Statut modifié", details: "Enlevé → En cours" },
-    { date: "2025-01-15 14:50", user: "Admin Sophie", action: "Note ajoutée", details: "Client préfère les livraisons en matinée" },
-  ];
+  const [currentStatus, setCurrentStatus] = useState(order?.status ?? "En attente");
+  const [notes, setNotes] = useState(order?.instructions ?? "");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (order?.status) {
+      setCurrentStatus(order.status);
+    }
+  }, [order?.status]);
+
+  useEffect(() => {
+    setNotes(order?.instructions ?? "");
+  }, [order?.instructions]);
+
+  const topbarNotifications = useMemo(
+    () =>
+      notifications.map((notification) => ({
+        id: notification.id,
+        message: notification.message,
+        time: new Date(notification.createdAt).toLocaleString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
+        read: notification.read,
+      })),
+    [notifications],
+  );
+
+  const timelineSteps = useMemo(() => {
+    if (!order) {
+      return [
+        { label: "En attente", time: "", status: "pending" as const },
+        { label: "Enlevé", time: "", status: "pending" as const },
+        { label: "En cours", time: "", status: "pending" as const },
+        { label: "Livré", time: "", status: "pending" as const },
+      ];
+    }
+
+    const baseStatuses = ["En attente", "Enlevé", "En cours", "Livré"];
+    const currentIndex = baseStatuses.findIndex((status) => status === order.status);
+    const scheduleStart = formatDateTime(order.schedule.start);
+    const pickupTime = assignment ? formatDateTime(assignment.start) : "";
+    const deliveryTime = assignment ? formatDateTime(assignment.end) : "";
+
+    const steps = baseStatuses.map((label, index) => {
+      let status: "done" | "current" | "pending" | "cancelled" = "pending";
+      if (order.status === "Annulé") {
+        status = index === 0 ? "done" : "cancelled";
+      } else if (currentIndex === -1) {
+        status = "pending";
+      } else if (index < currentIndex) {
+        status = "done";
+      } else if (index === currentIndex) {
+        status = "current";
+      }
+
+      const time =
+        index === 0
+          ? scheduleStart
+          : index === 1
+            ? pickupTime
+            : index === 2
+              ? pickupTime || scheduleStart
+              : index === 3
+                ? deliveryTime
+                : "";
+
+      return { label, time, status };
+    });
+
+    if (order.status === "Annulé") {
+      steps.push({ label: "Annulée", time: formatDateTime(order.schedule.end), status: "cancelled" as const });
+    }
+
+    return steps;
+  }, [order, assignment]);
+
+  const orderActivities = useMemo(
+    () =>
+      order
+        ? activityLog
+            .filter((entry) => entry.orderId === order.id)
+            .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+        : [],
+    [activityLog, order],
+  );
 
   const handleStatusChange = (newStatus: string) => {
     setCurrentStatus(newStatus);
@@ -72,95 +138,131 @@ const AdminOrderDetail = () => {
     });
   };
 
+  const handleUnassignDriver = () => {
+    if (!order) return;
+    const result = unassignDriver(order.id);
+    if (!result.success) {
+      toast({
+        title: "Impossible de retirer le chauffeur",
+        description: result.error ?? "Veuillez réessayer.",
+        variant: "destructive",
+      });
+      return;
+    }
+    toast({
+      title: "Chauffeur retiré",
+      description: `Le chauffeur a été retiré de la commande ${order.id}.`,
+    });
+  };
+
+  const driverVehicle = driver ? `${driver.vehicle.type} · ${driver.vehicle.capacity}${driver.vehicle.registration ? ` · ${driver.vehicle.registration}` : ""}` : "";
+
+  if (!ready && !order) {
+    return (
+      <DashboardLayout sidebar={<AdminSidebar />} topbar={<Topbar title="Commande" notifications={topbarNotifications} />}>
+        <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+          Chargement des informations de la commande...
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!order) {
+    return (
+      <DashboardLayout sidebar={<AdminSidebar />} topbar={<Topbar title="Commande introuvable" notifications={topbarNotifications} />}>
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-6 text-center text-destructive">
+          La commande demandée est introuvable.
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
-    <DashboardLayout
-      sidebar={<AdminSidebar />}
-      topbar={<Topbar title={`Commande ${order.id}`} />}
-    >
+    <DashboardLayout sidebar={<AdminSidebar />} topbar={<Topbar title={`Commande ${order.id}`} notifications={topbarNotifications} />}>
       {/* Header avec retour */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <Link to="/admin/commandes">
           <Button variant="ghost">
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="mr-2 h-4 w-4" />
             Retour aux commandes
           </Button>
         </Link>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => handleDownloadPDF("Bon de commande")}>
-            <Download className="h-4 w-4 mr-2" />
+            <Download className="mr-2 h-4 w-4" />
             Bon de commande
           </Button>
           <Button variant="outline" onClick={() => handleDownloadPDF("Preuve de livraison")}>
-            <Download className="h-4 w-4 mr-2" />
+            <Download className="mr-2 h-4 w-4" />
             Preuve livraison
           </Button>
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid gap-6 lg:grid-cols-3">
         {/* Colonne principale */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-6 lg:col-span-2">
           {/* Détails de la commande */}
           <Card className="border-none shadow-soft">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Détails de la commande</CardTitle>
-                <Badge variant="outline" className="text-base px-4 py-1">
-                  {order.status}
+                <Badge variant="outline" className="px-4 py-1 text-base">
+                  {currentStatus}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid gap-6 md:grid-cols-2">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Client</p>
+                  <p className="mb-1 text-sm text-muted-foreground">Client</p>
                   <p className="font-semibold">{order.client}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Date & Heure</p>
-                  <p className="font-semibold">{order.date}</p>
+                  <p className="mb-1 text-sm text-muted-foreground">Date & Heure</p>
+                  <p className="font-semibold">{formatDateTime(order.schedule.start)}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Type de transport</p>
+                  <p className="mb-1 text-sm text-muted-foreground">Type de transport</p>
                   <Badge variant="outline">{order.type}</Badge>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Montant</p>
-                  <p className="text-2xl font-bold text-primary">{order.amount}€</p>
+                  <p className="mb-1 text-sm text-muted-foreground">Montant</p>
+                  <p className="text-2xl font-bold text-primary">{order.amount.toFixed(2)}€</p>
                 </div>
               </div>
 
-              <div className="pt-4 border-t space-y-4">
+              <div className="space-y-4 border-t pt-4">
                 <div className="flex gap-3">
-                  <MapPin className="h-5 w-5 text-primary flex-shrink-0 mt-1" />
+                  <MapPin className="mt-1 h-5 w-5 flex-shrink-0 text-primary" />
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Départ</p>
-                    <p className="font-medium">{order.pickup}</p>
+                    <p className="mb-1 text-sm text-muted-foreground">Départ</p>
+                    <p className="font-medium">{order.pickupAddress}</p>
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <MapPin className="h-5 w-5 text-success flex-shrink-0 mt-1" />
+                  <MapPin className="mt-1 h-5 w-5 flex-shrink-0 text-success" />
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Arrivée</p>
-                    <p className="font-medium">{order.delivery}</p>
+                    <p className="mb-1 text-sm text-muted-foreground">Arrivée</p>
+                    <p className="font-medium">{order.dropoffAddress}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-4 pt-4 border-t">
+              <div className="grid gap-4 border-t pt-4 md:grid-cols-2">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Poids</p>
+                  <p className="mb-1 text-sm text-muted-foreground">Poids</p>
                   <p className="font-medium">{order.weight}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Volume</p>
-                  <p className="font-medium">{order.volume}</p>
+                  <p className="mb-1 text-sm text-muted-foreground">Volume</p>
+                  <p className="font-medium">{order.volumeRequirement}</p>
                 </div>
               </div>
 
               {order.instructions && (
-                <div className="pt-4 border-t">
-                  <p className="text-sm text-muted-foreground mb-1">Instructions</p>
+                <div className="border-t pt-4">
+                  <p className="mb-1 text-sm text-muted-foreground">Instructions</p>
                   <p className="font-medium">{order.instructions}</p>
                 </div>
               )}
@@ -187,14 +289,7 @@ const AdminOrderDetail = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <Timeline
-                steps={[
-                  { label: "En attente", time: "2025-01-15 14:30", status: "done" },
-                  { label: "Enlevé", time: "2025-01-15 14:45", status: "done" },
-                  { label: "En cours", time: "2025-01-15 15:00", status: "current" },
-                  { label: "Livré", time: "", status: "pending" },
-                ]}
-              />
+              <Timeline steps={timelineSteps} />
             </CardContent>
           </Card>
 
@@ -205,23 +300,31 @@ const AdminOrderDetail = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {activityLog.map((log, i) => (
-                  <div key={i} className="flex gap-4 pb-4 border-b last:border-0">
-                    <div className="flex-shrink-0">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Edit className="h-5 w-5 text-primary" />
+                {orderActivities.length === 0 && (
+                  <p className="text-sm text-muted-foreground">Aucune activité pour le moment.</p>
+                )}
+                {orderActivities.map((log) => {
+                  const actor = drivers.find((item) => item.id === log.driverId)?.name || log.by;
+                  return (
+                    <div key={log.id} className="flex gap-4 border-b pb-4 last:border-0">
+                      <div className="flex-shrink-0">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                          <Edit className="h-5 w-5 text-primary" />
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="mb-1 flex items-center justify-between">
+                          <p className="font-semibold">{log.message || log.type}</p>
+                          <p className="text-xs text-muted-foreground">{formatDateTime(log.at)}</p>
+                        </div>
+                        {log.driverId && (
+                          <p className="text-sm text-muted-foreground">Chauffeur : {drivers.find((item) => item.id === log.driverId)?.name}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground">Par {actor}</p>
                       </div>
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="font-semibold">{log.action}</p>
-                        <p className="text-xs text-muted-foreground">{log.date}</p>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-1">{log.details}</p>
-                      <p className="text-xs text-muted-foreground">Par {log.user}</p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -230,7 +333,7 @@ const AdminOrderDetail = () => {
         {/* Colonne latérale */}
         <div className="space-y-6">
           {/* Chauffeur affecté */}
-          <Card className="border-none shadow-soft">
+          <Card className="border-none shadow-soft" id="order-driver-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5" />
@@ -238,29 +341,56 @@ const AdminOrderDetail = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Nom</p>
-                <p className="font-semibold">{order.driver.name}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Téléphone</p>
-                <a href={`tel:${order.driver.phone}`} className="flex items-center gap-2 text-primary hover:underline">
-                  <Phone className="h-4 w-4" />
-                  {order.driver.phone}
-                </a>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Véhicule</p>
-                <p className="font-medium">{order.driver.vehicle}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Zone</p>
-                <Badge variant="outline">{order.driver.zone}</Badge>
-              </div>
-              <Button className="w-full" variant="outline">
-                <Edit className="h-4 w-4 mr-2" />
-                Changer de chauffeur
-              </Button>
+              {driver ? (
+                <>
+                  <div>
+                    <p className="mb-1 text-sm text-muted-foreground">Nom</p>
+                    <p className="font-semibold">{driver.name}</p>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-sm text-muted-foreground">Téléphone</p>
+                    <a href={`tel:${driver.phone.replace(/\s/g, "")}`} className="flex items-center gap-2 text-primary hover:underline">
+                      <Phone className="h-4 w-4" />
+                      {driver.phone}
+                    </a>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-sm text-muted-foreground">Véhicule</p>
+                    <p className="font-medium">{driverVehicle}</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline" className={cn("text-xs", driverStatusBadgeClass[driver.status])}>
+                      {driverStatusLabel[driver.status]}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {zoneLabels[driver.zone]}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      Prochain créneau : {driver.nextFreeSlot}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-col gap-2 pt-2">
+                    <Button id="btn-assign-driver" onClick={() => setIsModalOpen(true)}>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Remplacer le chauffeur
+                    </Button>
+                    <Button variant="outline" onClick={handleUnassignDriver}>
+                      <UserMinus className="mr-2 h-4 w-4" />
+                      Retirer le chauffeur
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Aucun chauffeur n'est encore affecté à cette commande.
+                  </p>
+                  <Button id="btn-assign-driver" onClick={() => setIsModalOpen(true)} className="w-full">
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Affecter un chauffeur
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -272,7 +402,7 @@ const AdminOrderDetail = () => {
             <CardContent className="space-y-4">
               <Textarea
                 value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                onChange={(event) => setNotes(event.target.value)}
                 placeholder="Ajoutez des notes sur cette commande..."
                 rows={6}
               />
@@ -301,6 +431,8 @@ const AdminOrderDetail = () => {
           </Card>
         </div>
       </div>
+
+      <AssignDriverModal orderId={order.id} open={isModalOpen} onOpenChange={setIsModalOpen} />
     </DashboardLayout>
   );
 };

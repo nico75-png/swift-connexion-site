@@ -12,6 +12,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import AssignDriverModal from "@/components/admin/orders/AssignDriverModal";
+import {
+  canUnassignDriver,
+  getAssignButtonLabel,
+  isAssignmentReadOnly,
+} from "@/components/admin/orders/orderAssignmentUtils";
 import { useActivityLogStore, useDriversStore, useNotificationsStore, useOrdersStore } from "@/providers/AdminDataProvider";
 import { driverStatusBadgeClass, driverStatusLabel } from "@/components/admin/orders/driverUtils";
 import { format } from "date-fns";
@@ -139,7 +144,9 @@ const AdminOrderDetail = () => {
   };
 
   const handleUnassignDriver = () => {
-    if (!order) return;
+    if (!order || !canUnassignDriver(order.status)) {
+      return;
+    }
     const result = unassignDriver(order.id);
     if (!result.success) {
       toast({
@@ -176,6 +183,17 @@ const AdminOrderDetail = () => {
       </DashboardLayout>
     );
   }
+
+  const assignButtonLabel = getAssignButtonLabel(order.status, Boolean(driver));
+  const assignModalLabel = assignButtonLabel
+    ? driver
+      ? assignButtonLabel
+      : assignButtonLabel === "Affecter"
+        ? "Affecter un chauffeur"
+        : assignButtonLabel
+    : null;
+  const assignmentReadOnly = isAssignmentReadOnly(order.status);
+  const allowUnassign = canUnassignDriver(order.status);
 
   return (
     <DashboardLayout sidebar={<AdminSidebar />} topbar={<Topbar title={`Commande ${order.id}`} notifications={topbarNotifications} />}>
@@ -366,27 +384,39 @@ const AdminOrderDetail = () => {
                       Prochain créneau : {driver.nextFreeSlot}
                     </Badge>
                   </div>
-                  <div className="flex flex-col gap-2 pt-2">
-                    <Button id="btn-assign-driver" onClick={() => setIsModalOpen(true)}>
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Remplacer le chauffeur
-                    </Button>
-                    <Button variant="outline" onClick={handleUnassignDriver}>
-                      <UserMinus className="mr-2 h-4 w-4" />
-                      Retirer le chauffeur
-                    </Button>
-                  </div>
+                  {!assignmentReadOnly && (
+                    <div className="flex flex-col gap-2 pt-2">
+                      {assignModalLabel && (
+                        <Button id="btn-assign-driver" onClick={() => setIsModalOpen(true)}>
+                          <UserPlus className="mr-2 h-4 w-4" />
+                          {assignModalLabel}
+                        </Button>
+                      )}
+                      {allowUnassign && (
+                        <Button variant="outline" onClick={handleUnassignDriver}>
+                          <UserMinus className="mr-2 h-4 w-4" />
+                          Retirer le chauffeur
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </>
               ) : (
-                <div className="space-y-4">
+                assignModalLabel && !assignmentReadOnly ? (
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Aucun chauffeur n'est encore affecté à cette commande.
+                    </p>
+                    <Button id="btn-assign-driver" onClick={() => setIsModalOpen(true)} className="w-full">
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      {assignModalLabel}
+                    </Button>
+                  </div>
+                ) : (
                   <p className="text-sm text-muted-foreground">
-                    Aucun chauffeur n'est encore affecté à cette commande.
+                    Aucun chauffeur ne peut être affecté sur ce statut.
                   </p>
-                  <Button id="btn-assign-driver" onClick={() => setIsModalOpen(true)} className="w-full">
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Affecter un chauffeur
-                  </Button>
-                </div>
+                )
               )}
             </CardContent>
           </Card>

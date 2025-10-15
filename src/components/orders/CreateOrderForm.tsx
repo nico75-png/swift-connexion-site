@@ -144,16 +144,21 @@ const CreateOrderForm = ({ customer }: CreateOrderFormProps) => {
   return (
     <Form {...form}>
       <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)} noValidate>
-        <div className="space-y-2">
-          <FormLabel htmlFor="customer-summary">Client</FormLabel>
-          <Input
-            id="customer-summary"
-            value={`${customer.company} (${customer.contactName})`}
-            readOnly
-            aria-readonly
-            className="bg-muted"
-          />
-        </div>
+        <section
+          aria-labelledby="customer-summary-heading"
+          className="rounded-lg border bg-muted/30 p-4"
+        >
+          <p
+            id="customer-summary-heading"
+            className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+          >
+            Client
+          </p>
+          <div className="mt-2 flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:justify-between sm:text-base">
+            <span className="font-medium text-foreground">{customer.company}</span>
+            <span className="text-muted-foreground">{customer.contactName}</span>
+          </div>
+        </section>
 
         <FormField
           control={form.control}
@@ -321,7 +326,12 @@ const CreateOrderForm = ({ customer }: CreateOrderFormProps) => {
         />
 
         <div className="pt-2">
-          <Button type="submit" className="w-full" variant="cta" disabled={form.formState.isSubmitting}>
+          <Button
+            type="submit"
+            className="w-full"
+            variant="cta"
+            disabled={form.formState.isSubmitting}
+          >
             {form.formState.isSubmitting ? "Enregistrement..." : "Créer la commande"}
           </Button>
         </div>

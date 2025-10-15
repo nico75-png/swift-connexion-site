@@ -31,28 +31,21 @@ const CreateOrder = () => {
       topbar={<Topbar userName={currentUser?.name} />}
     >
       <div className="max-w-3xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Créer une commande pour un client</h1>
-          <p className="text-muted-foreground">
-            Vous créez une commande pour {customer.company}. Vos informations client sont préremplies.
-          </p>
-        </div>
-
         <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <CardTitle>Informations de livraison</CardTitle>
+          <CardHeader className="gap-3 border-b bg-muted/40 py-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="space-y-1">
+                <CardTitle className="text-2xl font-semibold">Créer une commande</CardTitle>
                 <CardDescription>
-                  Indiquez les détails du transport. Les champs marqués d&apos;une * sont obligatoires.
+                  Renseignez les informations de votre transport. Les champs marqués d&apos;une * sont obligatoires.
                 </CardDescription>
               </div>
-              <Badge variant="secondary" className="shrink-0 text-xs font-medium">
+              <Badge variant="secondary" className="shrink-0 rounded-full px-3 py-1 text-xs font-medium">
                 N° —
               </Badge>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6 py-6">
             <CreateOrderForm customer={customer} />
           </CardContent>
         </Card>

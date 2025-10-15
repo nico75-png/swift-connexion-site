@@ -14,61 +14,102 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/components/ui/use-toast";
-import { useDriversStore } from "@/providers/AdminDataProvider";
-import {
-  type Driver,
-  type DriverWorkflowStatus,
-  normalizeDriverPhone,
-  normalizeDriverPlate,
-} from "@/lib/stores/driversOrders.store";
 
-const vehicleOptions = [
-  { value: "Vélo", label: "Vélo" },
-  { value: "Scooter", label: "Scooter" },
-  { value: "Moto", label: "Moto" },
-  { value: "Voiture", label: "Voiture" },
-  { value: "Utilitaire", label: "Utilitaire" },
-  { value: "Fourgon", label: "Fourgon" },
+const STORAGE_KEY = "oc_drivers";
+
+export type DriverStatus = "ACTIF" | "INACTIF";
+
+type VehicleType = "vélo" | "scooter" | "moto" | "voiture" | "utilitaire" | "fourgon";
+
+interface DriverRecord {
+  id: string;
+  name: string;
+  phoneRaw: string;
+  phone: string;
+  email: string;
+  vehicleType: VehicleType;
+  capacityKg: number;
+  plateRaw: string;
+  plate: string;
+  status: DriverStatus;
+  comment: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const VEHICLE_OPTIONS: Array<{ value: VehicleType; label: string }> = [
+  { value: "vélo", label: "Vélo" },
+  { value: "scooter", label: "Scooter" },
+  { value: "moto", label: "Moto" },
+  { value: "voiture", label: "Voiture" },
+  { value: "utilitaire", label: "Utilitaire" },
+  { value: "fourgon", label: "Fourgon" },
 ];
 
-const statusLabels: Record<DriverWorkflowStatus, string> = {
+const STATUS_LABELS: Record<DriverStatus, string> = {
   ACTIF: "Actif",
-  EN_PAUSE: "En pause",
-  EN_COURSE: "En course",
+  INACTIF: "Inactif",
 };
 
-const statusBadgeClasses: Record<DriverWorkflowStatus, string> = {
+const STATUS_BADGE_CLASSES: Record<DriverStatus, string> = {
   ACTIF: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  EN_COURSE: "bg-amber-100 text-amber-700 border-amber-200",
-  EN_PAUSE: "bg-slate-200 text-slate-700 border-slate-300",
+  INACTIF: "bg-slate-200 text-slate-700 border-slate-300",
 };
 
-const phonePattern = /^\+?\d[\d\s]{8,16}$/;
+export const getFromStorage = <T,>(key: string, fallback: T = [] as T) => {
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+  try {
+    const stored = window.localStorage.getItem(key);
+    if (!stored) {
+      return fallback;
+    }
+    return JSON.parse(stored) as T;
+  } catch (error) {
+    console.error(`Failed to read storage key "${key}":`, error);
+    return fallback;
+  }
+};
+
+export const saveToStorage = (key: string, value: unknown) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.error(`Failed to write storage key "${key}":`, error);
+  }
+};
+
+export const createId = (prefix: string) => `${prefix}-${Date.now()}`;
+
+export const normalizePhoneFR06 = (input: string) => {
+  const raw = input.trim();
+  const normalized = raw.replace(/\D/g, "");
+  return { raw, normalized };
+};
+
+export const formatPhoneFR10 = (normalized: string) => {
+  if (normalized.length !== 10) {
+    return normalized;
+  }
+  return normalized.replace(/(\d{2})(?=(\d{2})+(?!\d))/g, "$1 ").trim();
+};
+
+export const normalizePlate = (input: string) => input.toUpperCase().replace(/[\s-]/g, "");
+
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const platePattern = /^[A-Z0-9\- ]{5,10}$/i;
-
-const mapLegacyStatusToWorkflow = (driver: Driver): DriverWorkflowStatus => {
-  if (driver.workflowStatus) {
-    return driver.workflowStatus;
-  }
-  switch (driver.status) {
-    case "ON_TRIP":
-      return "EN_COURSE";
-    case "PAUSED":
-      return "EN_PAUSE";
-    default:
-      return "ACTIF";
-  }
-};
 
 interface FormState {
   fullname: string;
   phone: string;
   email: string;
-  vehicleType: string;
+  vehicleType: "" | VehicleType;
   capacityKg: string;
   plate: string;
-  status: DriverWorkflowStatus;
+  status: DriverStatus;
   comment: string;
 }
 
@@ -84,10 +125,11 @@ const initialFormState: FormState = {
 };
 
 const AdminDrivers = () => {
-  const { ready, drivers, createDriver } = useDriversStore();
   const { toast } = useToast();
+  const [drivers, setDrivers] = useState<DriverRecord[]>([]);
+  const [isStorageReady, setIsStorageReady] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | DriverWorkflowStatus>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | DriverStatus>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState<FormState>(initialFormState);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof FormState, string>>>({});
@@ -99,6 +141,72 @@ const AdminDrivers = () => {
   const phoneFieldRef = useRef<HTMLInputElement>(null);
   const plateFieldRef = useRef<HTMLInputElement>(null);
   const wasOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const stored = getFromStorage<DriverRecord[]>(STORAGE_KEY, []);
+    if (Array.isArray(stored) && stored.length > 0) {
+      const sanitized = stored
+        .filter((item): item is Partial<DriverRecord> & { fullname?: string } => Boolean(item) && typeof item === "object")
+        .map((item) => {
+          const normalizedPhone = typeof item.phone === "string" ? item.phone.replace(/\D/g, "") : "";
+          const normalizedPlateValue = typeof item.plate === "string" ? item.plate : item.plateRaw ?? "";
+          const plateRawValue =
+            typeof item.plateRaw === "string"
+              ? item.plateRaw
+              : typeof normalizedPlateValue === "string"
+                ? normalizedPlateValue
+                : "";
+          const vehicle = VEHICLE_OPTIONS.some((option) => option.value === item.vehicleType)
+            ? (item.vehicleType as VehicleType)
+            : "voiture";
+
+          return {
+            id: typeof item.id === "string" ? item.id : createId("DRV"),
+            name:
+              typeof item.name === "string"
+                ? item.name
+                : typeof item.fullname === "string"
+                  ? item.fullname
+                  : normalizedPhone
+                    ? formatPhoneFR10(normalizedPhone)
+                    : "Chauffeur",
+            phoneRaw:
+              typeof item.phoneRaw === "string"
+                ? item.phoneRaw
+                : normalizedPhone
+                  ? formatPhoneFR10(normalizedPhone)
+                  : "",
+            phone: normalizedPhone,
+            email: typeof item.email === "string" ? item.email : "",
+            vehicleType: vehicle,
+            capacityKg: Number(item.capacityKg) || 0,
+            plateRaw: plateRawValue.toString().toUpperCase(),
+            plate: normalizePlate(plateRawValue ?? ""),
+            status: item.status === "INACTIF" ? "INACTIF" : "ACTIF",
+            comment: typeof item.comment === "string" ? item.comment : "",
+            createdAt: typeof item.createdAt === "string" ? item.createdAt : new Date().toISOString(),
+            updatedAt:
+              typeof item.updatedAt === "string"
+                ? item.updatedAt
+                : typeof item.createdAt === "string"
+                  ? item.createdAt
+                  : new Date().toISOString(),
+          } satisfies DriverRecord;
+        });
+      setDrivers(sanitized);
+    }
+    setIsStorageReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isStorageReady) {
+      return;
+    }
+    saveToStorage(STORAGE_KEY, drivers);
+  }, [drivers, isStorageReady]);
 
   useEffect(() => {
     if (isModalOpen) {
@@ -131,18 +239,30 @@ const AdminDrivers = () => {
     switch (field) {
       case "fullname":
         return trimmed.length >= 2 ? undefined : "Veuillez saisir le nom complet";
-      case "phone":
-        return phonePattern.test(trimmed) ? undefined : "Numéro de téléphone invalide";
+      case "phone": {
+        const { normalized } = normalizePhoneFR06(trimmed);
+        return /^06\d{8}$/.test(normalized)
+          ? undefined
+          : "Le numéro doit commencer par 06 et contenir 10 chiffres";
+      }
       case "email":
         return emailPattern.test(trimmed) ? undefined : "Email invalide";
       case "vehicleType":
-        return trimmed ? undefined : "Veuillez choisir un type de véhicule";
+        return trimmed && VEHICLE_OPTIONS.some((option) => option.value === trimmed)
+          ? undefined
+          : "Veuillez choisir un type de véhicule";
       case "capacityKg":
         return Number(trimmed) > 0 ? undefined : "Capacité invalide";
-      case "plate":
-        return platePattern.test(trimmed) ? undefined : "Immatriculation invalide";
+      case "plate": {
+        const normalizedPlateValue = normalizePlate(trimmed);
+        return normalizedPlateValue.length >= 4 && /^[A-Z0-9]+$/.test(normalizedPlateValue)
+          ? undefined
+          : "Immatriculation invalide";
+      }
       case "status":
-        return trimmed ? undefined : "Statut invalide";
+        return STATUS_LABELS[value as DriverStatus] ? undefined : "Statut invalide";
+      case "comment":
+        return trimmed.length <= 500 ? undefined : "500 caractères maximum";
       default:
         return undefined;
     }
@@ -166,63 +286,69 @@ const AdminDrivers = () => {
     if (hasEmptyRequired) {
       return true;
     }
-    return requiredFields.some((field) => Boolean(validateField(field, formData[field])));
+    const hasErrors = [...requiredFields, "comment"].some((field) =>
+      Boolean(validateField(field, formData[field])),
+    );
+    return hasErrors;
   }, [formData, validateField]);
 
   const enhancedDrivers = useMemo(() => {
-    if (!ready || !drivers) {
-      return [];
-    }
     return drivers
       .map((driver) => {
-        const workflowStatus = mapLegacyStatusToWorkflow(driver);
-        const createdAtTime = driver.createdAt ? Date.parse(driver.createdAt) : 0;
-        const displayCapacity = driver.vehicle?.capacityKg
-          ? `${driver.vehicle.capacityKg} kg`
-          : driver.vehicle?.capacity ?? "-";
-        const displayPlate = driver.vehicle?.registration ?? driver.plate ?? driver.plateNormalized ?? "-";
-        const email = driver.email ?? "";
-        const fullname = driver.fullname ?? driver.name;
+        const createdAtTime = Number(new Date(driver.createdAt).getTime()) || 0;
+        const displayCapacity = `${new Intl.NumberFormat("fr-FR").format(driver.capacityKg)} kg`;
+        const displayPlate = driver.plateRaw || driver.plate || "-";
+        const displayPhone = formatPhoneFR10(driver.phone) || driver.phoneRaw;
         return {
           ...driver,
-          fullname,
-          email,
-          workflowStatus,
-          createdAtTime: Number.isFinite(createdAtTime) ? createdAtTime : 0,
+          createdAtTime,
           displayCapacity,
           displayPlate,
+          displayPhone,
         };
       })
-      .sort((a, b) => b.createdAtTime - a.createdAtTime || a.fullname.localeCompare(b.fullname));
-  }, [drivers, ready]);
+      .sort((a, b) => b.createdAtTime - a.createdAtTime || a.name.localeCompare(b.name));
+  }, [drivers]);
 
   const filteredDrivers = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     return enhancedDrivers.filter((driver) => {
-      const matchesSearch =
-        term.length === 0 ||
-        [
-          driver.fullname,
-          driver.email,
-          driver.phone,
-          driver.displayPlate,
-          driver.vehicle?.type,
-          normalizeDriverPhone(driver.phone ?? ""),
-          normalizeDriverPlate(driver.displayPlate ?? ""),
-        ]
-          .filter(Boolean)
-          .some((value) => value!.toLowerCase().includes(term));
+      const haystack = [
+        driver.name,
+        driver.email,
+        driver.displayPhone,
+        driver.phone,
+        driver.plate,
+        driver.displayPlate,
+        driver.vehicleType,
+        driver.comment,
+      ]
+        .filter(Boolean)
+        .map((value) => value.toString().toLowerCase());
 
-      const matchesStatus = statusFilter === "all" || driver.workflowStatus === statusFilter;
+      const matchesSearch = term.length === 0 || haystack.some((value) => value.includes(term));
+      const matchesStatus = statusFilter === "all" || driver.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
   }, [enhancedDrivers, searchTerm, statusFilter]);
 
-  const statusCounts = useMemo(() => ({
-    ACTIF: enhancedDrivers.filter((driver) => driver.workflowStatus === "ACTIF").length,
-    EN_COURSE: enhancedDrivers.filter((driver) => driver.workflowStatus === "EN_COURSE").length,
-    EN_PAUSE: enhancedDrivers.filter((driver) => driver.workflowStatus === "EN_PAUSE").length,
-  }), [enhancedDrivers]);
+  const statusCounts = useMemo(
+    () => ({
+      ACTIF: enhancedDrivers.filter((driver) => driver.status === "ACTIF").length,
+      INACTIF: enhancedDrivers.filter((driver) => driver.status === "INACTIF").length,
+    }),
+    [enhancedDrivers],
+  );
+
+  const phoneExists = useCallback(
+    (normalized: string) => drivers.some((driver) => driver.phone === normalized),
+    [drivers],
+  );
+
+  const plateExists = useCallback(
+    (normalized: string) => drivers.some((driver) => driver.plate === normalized),
+    [drivers],
+  );
 
   const handleInputChange = (field: keyof FormState, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -241,7 +367,7 @@ const AdminDrivers = () => {
     setSubmitAttempted(true);
 
     const nextErrors: Partial<Record<keyof FormState, string>> = {};
-    requiredFields.forEach((field) => {
+    [...requiredFields, "comment"].forEach((field) => {
       const error = validateField(field, formData[field]);
       if (error) {
         nextErrors[field] = error;
@@ -253,31 +379,44 @@ const AdminDrivers = () => {
       return;
     }
 
-    const result = createDriver({
-      fullname: formData.fullname.trim(),
-      phone: formData.phone.trim(),
-      email: formData.email.trim(),
-      vehicleType: formData.vehicleType,
-      capacityKg: Number(formData.capacityKg),
-      plate: formData.plate.trim(),
-      status: formData.status,
-      comment: formData.comment.trim() ? formData.comment.trim() : undefined,
-    });
-
-    if (!result.success) {
-      if (result.reason === "PHONE_EXISTS") {
-        setFormErrors((prev) => ({ ...prev, phone: result.message }));
-        setTouched((prev) => ({ ...prev, phone: true }));
-        phoneFieldRef.current?.focus();
-      } else if (result.reason === "PLATE_EXISTS") {
-        setFormErrors((prev) => ({ ...prev, plate: result.message }));
-        setTouched((prev) => ({ ...prev, plate: true }));
-        plateFieldRef.current?.focus();
-      }
+    const { raw: phoneRawInput, normalized: normalizedPhone } = normalizePhoneFR06(formData.phone);
+    if (phoneExists(normalizedPhone)) {
+      const message = "Un chauffeur avec ce téléphone existe déjà.";
+      setFormErrors((prev) => ({ ...prev, phone: message }));
+      setTouched((prev) => ({ ...prev, phone: true }));
+      phoneFieldRef.current?.focus();
       return;
     }
 
-    toast({ title: "✅ Chauffeur ajouté" });
+    const plateNormalized = normalizePlate(formData.plate);
+    if (plateExists(plateNormalized)) {
+      const message = "Cette immatriculation est déjà utilisée.";
+      setFormErrors((prev) => ({ ...prev, plate: message }));
+      setTouched((prev) => ({ ...prev, plate: true }));
+      plateFieldRef.current?.focus();
+      return;
+    }
+
+    const timestamp = new Date().toISOString();
+    const newDriver: DriverRecord = {
+      id: createId("DRV"),
+      name: formData.fullname.trim(),
+      phoneRaw: phoneRawInput,
+      phone: normalizedPhone,
+      email: formData.email.trim(),
+      vehicleType: formData.vehicleType as VehicleType,
+      capacityKg: Number(formData.capacityKg),
+      plateRaw: formData.plate.trim().toUpperCase(),
+      plate: plateNormalized,
+      status: formData.status,
+      comment: formData.comment.trim().slice(0, 500),
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+
+    setDrivers((prev) => [newDriver, ...prev]);
+
+    toast({ title: "✅ Chauffeur créé" });
     resetForm();
     setIsModalOpen(false);
   };
@@ -308,8 +447,7 @@ const AdminDrivers = () => {
             <SelectContent>
               <SelectItem value="all">Tous les statuts</SelectItem>
               <SelectItem value="ACTIF">Actifs</SelectItem>
-              <SelectItem value="EN_COURSE">En course</SelectItem>
-              <SelectItem value="EN_PAUSE">En pause</SelectItem>
+              <SelectItem value="INACTIF">Inactifs</SelectItem>
             </SelectContent>
           </Select>
           <Button
@@ -340,14 +478,14 @@ const AdminDrivers = () => {
               <TableBody>
                 {filteredDrivers.map((driver) => (
                   <TableRow key={driver.id} className="bg-white/60 hover:bg-white">
-                    <TableCell className="font-semibold text-[#1F1F1F]">{driver.fullname}</TableCell>
+                    <TableCell className="font-semibold text-[#1F1F1F]">{driver.name}</TableCell>
                     <TableCell>
                       <a
                         href={`tel:${driver.phone}`}
                         className="flex items-center gap-2 text-[#0F3556] hover:underline"
                       >
                         <Phone className="h-3 w-3" aria-hidden />
-                        {driver.phone}
+                        {driver.displayPhone}
                       </a>
                     </TableCell>
                     <TableCell>
@@ -366,7 +504,7 @@ const AdminDrivers = () => {
                     <TableCell>
                       <div className="flex items-center gap-2 text-[#1F1F1F]">
                         <Car className="h-4 w-4 text-muted-foreground" aria-hidden />
-                        <span className="capitalize">{driver.vehicle?.type ?? "-"}</span>
+                        <span className="capitalize">{driver.vehicleType}</span>
                         <span className="text-sm text-muted-foreground">{driver.displayCapacity}</span>
                       </div>
                     </TableCell>
@@ -376,9 +514,9 @@ const AdminDrivers = () => {
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className={`${statusBadgeClasses[driver.workflowStatus]} border`}
+                        className={`${STATUS_BADGE_CLASSES[driver.status]} border`}
                       >
-                        {statusLabels[driver.workflowStatus]}
+                        {STATUS_LABELS[driver.status]}
                       </Badge>
                     </TableCell>
                   </TableRow>
@@ -402,15 +540,9 @@ const AdminDrivers = () => {
             <p className="text-xs font-semibold text-emerald-700">Actifs</p>
             <p className="text-2xl font-bold text-emerald-700">{statusCounts.ACTIF}</p>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-soft">
-              <p className="text-xs font-semibold text-amber-700">En course</p>
-              <p className="text-2xl font-bold text-amber-700">{statusCounts.EN_COURSE}</p>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-100 p-4 shadow-soft">
-              <p className="text-xs font-semibold text-slate-700">En pause</p>
-              <p className="text-2xl font-bold text-slate-700">{statusCounts.EN_PAUSE}</p>
-            </div>
+          <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 shadow-soft">
+            <p className="text-xs font-semibold text-rose-700">Inactifs</p>
+            <p className="text-2xl font-bold text-rose-700">{statusCounts.INACTIF}</p>
           </div>
         </div>
       </div>
@@ -422,7 +554,7 @@ const AdminDrivers = () => {
           aria-describedby="add-driver-description"
           role="dialog"
           aria-modal="true"
-          className="max-h-[95vh] w-[90vw] max-w-2xl overflow-y-auto rounded-2xl border-none bg-[#F5F7FA] p-0 shadow-2xl focus:outline-none"
+          className="flex max-h-screen w-full max-w-none flex-col overflow-y-auto rounded-none border-none bg-[#F5F7FA] p-0 shadow-2xl focus:outline-none sm:max-h-[95vh] sm:w-[90vw] sm:max-w-2xl sm:rounded-2xl"
         >
           <DialogHeader className="bg-[#0F3556] px-6 py-5 text-white">
             <DialogTitle id="add-driver-title" className="text-2xl font-semibold">
@@ -436,7 +568,7 @@ const AdminDrivers = () => {
           <form id="form-add-driver" onSubmit={handleSubmit} className="space-y-6 px-6 py-6">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="driver-fullname">Nom & prénom</Label>
+                <Label htmlFor="driver-fullname">Nom complet</Label>
                 <Input
                   id="driver-fullname"
                   ref={firstFieldRef}
@@ -445,6 +577,7 @@ const AdminDrivers = () => {
                   onBlur={() => handleBlur("fullname")}
                   aria-invalid={Boolean(formErrors.fullname)}
                   aria-describedby={formErrors.fullname ? "driver-fullname-error" : undefined}
+                  autoComplete="name"
                   required
                 />
                 {formErrors.fullname && (
@@ -454,19 +587,19 @@ const AdminDrivers = () => {
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="driver-phone">Téléphone</Label>
+                <Label htmlFor="driver-phone">Téléphone mobile (06)</Label>
                 <Input
                   id="driver-phone"
                   ref={phoneFieldRef}
                   type="tel"
                   inputMode="tel"
-                  pattern="\\+?\\d[\\d\\s]{8,16}"
                   value={formData.phone}
                   onChange={(event) => handleInputChange("phone", event.target.value)}
                   onBlur={() => handleBlur("phone")}
                   aria-invalid={Boolean(formErrors.phone)}
                   aria-describedby={formErrors.phone ? "driver-phone-error" : undefined}
-                  placeholder="Ex : +33 6 12 34 56 78"
+                  placeholder="Ex : 06 12 34 56 78"
+                  autoComplete="tel"
                   required
                 />
                 {formErrors.phone && (
@@ -485,6 +618,7 @@ const AdminDrivers = () => {
                   onBlur={() => handleBlur("email")}
                   aria-invalid={Boolean(formErrors.email)}
                   aria-describedby={formErrors.email ? "driver-email-error" : undefined}
+                  autoComplete="email"
                   required
                 />
                 {formErrors.email && (
@@ -500,7 +634,10 @@ const AdminDrivers = () => {
                   onValueChange={(value) => {
                     handleInputChange("vehicleType", value);
                     setTouched((prev) => ({ ...prev, vehicleType: true }));
-                    setFormErrors((prev) => ({ ...prev, vehicleType: validateField("vehicleType", value) }));
+                    setFormErrors((prev) => ({
+                      ...prev,
+                      vehicleType: validateField("vehicleType", value),
+                    }));
                   }}
                 >
                   <SelectTrigger
@@ -512,7 +649,7 @@ const AdminDrivers = () => {
                     <SelectValue placeholder="Sélectionner" />
                   </SelectTrigger>
                   <SelectContent>
-                    {vehicleOptions.map((option) => (
+                    {VEHICLE_OPTIONS.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
@@ -531,6 +668,7 @@ const AdminDrivers = () => {
                   id="driver-capacity"
                   type="number"
                   min={1}
+                  step="1"
                   inputMode="numeric"
                   value={formData.capacityKg}
                   onChange={(event) => handleInputChange("capacityKg", event.target.value)}
@@ -555,8 +693,8 @@ const AdminDrivers = () => {
                   onBlur={() => handleBlur("plate")}
                   aria-invalid={Boolean(formErrors.plate)}
                   aria-describedby={formErrors.plate ? "driver-plate-error" : undefined}
-                  pattern="[A-Z0-9\\- ]{5,10}"
                   placeholder="AA-123-AA"
+                  autoComplete="off"
                   required
                 />
                 {formErrors.plate && (
@@ -575,23 +713,21 @@ const AdminDrivers = () => {
               <legend className="text-sm font-medium text-[#1F1F1F]">Statut</legend>
               <RadioGroup
                 value={formData.status}
-                onValueChange={(value: DriverWorkflowStatus) => {
+                onValueChange={(value: DriverStatus) => {
                   handleInputChange("status", value);
                   setTouched((prev) => ({ ...prev, status: true }));
                   setFormErrors((prev) => ({ ...prev, status: validateField("status", value) }));
                 }}
-                className="grid gap-3 sm:grid-cols-3"
+                className="grid gap-3 sm:grid-cols-2"
               >
-                {(
-                  ["ACTIF", "EN_COURSE", "EN_PAUSE"] as DriverWorkflowStatus[]
-                ).map((value) => (
+                {(["ACTIF", "INACTIF"] as DriverStatus[]).map((value) => (
                   <div
                     key={value}
                     className="flex items-center gap-2 rounded-lg border border-border bg-white p-3 shadow-sm"
                   >
                     <RadioGroupItem value={value} id={`status-${value}`} />
                     <Label htmlFor={`status-${value}`} className="cursor-pointer text-sm font-medium">
-                      {statusLabels[value]}
+                      {STATUS_LABELS[value]}
                     </Label>
                   </div>
                 ))}
@@ -606,10 +742,19 @@ const AdminDrivers = () => {
               <Textarea
                 id="driver-comment"
                 value={formData.comment}
-                onChange={(event) => handleInputChange("comment", event.target.value)}
+                onChange={(event) => handleInputChange("comment", event.target.value.slice(0, 500))}
+                onBlur={() => handleBlur("comment")}
                 placeholder="Informations complémentaires"
                 rows={3}
+                maxLength={500}
+                aria-invalid={Boolean(formErrors.comment)}
+                aria-describedby={formErrors.comment ? "driver-comment-error" : undefined}
               />
+              {formErrors.comment && (
+                <p id="driver-comment-error" className="text-sm text-destructive">
+                  {formErrors.comment}
+                </p>
+              )}
             </div>
 
             <DialogFooter className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:justify-end">
@@ -620,9 +765,9 @@ const AdminDrivers = () => {
                 type="submit"
                 variant="cta"
                 disabled={isSubmitDisabled}
-                className="bg-[#FFB800] text-[#1F1F1F] hover:bg-[#ffcb33] disabled:opacity-50"
+                className="bg-[#FFB800] text-[#1F1F1F] hover:bg-[#ffcb33] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Ajouter le chauffeur
+                Créer
               </Button>
             </DialogFooter>
           </form>

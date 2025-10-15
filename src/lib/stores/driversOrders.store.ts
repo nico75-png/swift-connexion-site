@@ -2,20 +2,31 @@ import { differenceInMinutes, parseISO } from "date-fns";
 
 export type DriverStatus = "AVAILABLE" | "ON_TRIP" | "PAUSED";
 
+export type DriverWorkflowStatus = "ACTIF" | "EN_PAUSE" | "EN_COURSE";
+
 export type ZoneCode = "INTRA_PARIS" | "PETITE_COURONNE" | "GRANDE_COURONNE";
 
 export interface Driver {
   id: string;
   name: string;
+  fullname?: string;
   phone: string;
+  phoneNormalized?: string;
+  email?: string;
   vehicle: {
     type: string;
     capacity: string;
+    capacityKg?: number;
     registration?: string;
   };
+  plate?: string;
+  plateNormalized?: string;
   status: DriverStatus;
   nextFreeSlot: string;
   active: boolean;
+  workflowStatus?: DriverWorkflowStatus;
+  comment?: string;
+  createdAt?: string;
   /**
    * @deprecated Tous les chauffeurs couvrent toutes les zones.
    * Ce champ est conservé pour compatibilité mais n'est plus utilisé.
@@ -72,7 +83,13 @@ export interface Assignment {
   endedAt?: string | null;
 }
 
-export type ActivityType = "CREATE" | "ASSIGN" | "UNASSIGN" | "NOTE" | "STATUS_UPDATE";
+export type ActivityType =
+  | "CREATE"
+  | "ASSIGN"
+  | "UNASSIGN"
+  | "NOTE"
+  | "STATUS_UPDATE"
+  | "DRIVER_CREATE";
 
 export interface ActivityEntry {
   id: string;
@@ -118,41 +135,70 @@ const defaultDrivers: Driver[] = [
   {
     id: "DRV-101",
     name: "Marc Dubois",
+    fullname: "Marc Dubois",
     phone: "06 12 34 56 78",
-    vehicle: { type: "Fourgon", capacity: "5 m³", registration: "AB-123-CD" },
+    phoneNormalized: "0612345678",
+    email: "marc.dubois@one-connexion.test",
+    vehicle: { type: "Fourgon", capacity: "500 kg", capacityKg: 500, registration: "AB-123-CD" },
+    plate: "AB123CD",
+    plateNormalized: "AB123CD",
     status: "AVAILABLE",
+    workflowStatus: "ACTIF",
     nextFreeSlot: "Aujourd'hui · 16:00",
     active: true,
+    comment: "Polyvalent et réactif",
+    createdAt: "2025-01-14T08:15:00.000Z",
     coversAllZones: true,
   },
   {
     id: "DRV-102",
     name: "Julie Lambert",
+    fullname: "Julie Lambert",
     phone: "06 98 76 54 32",
-    vehicle: { type: "Scooter", capacity: "0.5 m³" },
+    phoneNormalized: "0698765432",
+    email: "julie.lambert@one-connexion.test",
+    vehicle: { type: "Scooter", capacity: "80 kg", capacityKg: 80 },
+    plate: "SC123OC",
+    plateNormalized: "SC123OC",
     status: "ON_TRIP",
+    workflowStatus: "EN_COURSE",
     nextFreeSlot: "Aujourd'hui · 18:15",
     active: true,
+    createdAt: "2025-01-14T09:45:00.000Z",
     coversAllZones: true,
   },
   {
     id: "DRV-103",
     name: "Sophie Renard",
+    fullname: "Sophie Renard",
     phone: "07 11 22 33 44",
-    vehicle: { type: "Voiture", capacity: "1.2 m³", registration: "CD-456-EF" },
+    phoneNormalized: "0711223344",
+    email: "sophie.renard@one-connexion.test",
+    vehicle: { type: "Voiture", capacity: "250 kg", capacityKg: 250, registration: "CD-456-EF" },
+    plate: "CD456EF",
+    plateNormalized: "CD456EF",
     status: "PAUSED",
+    workflowStatus: "EN_PAUSE",
     nextFreeSlot: "Demain · 08:00",
     active: true,
+    createdAt: "2025-01-13T15:30:00.000Z",
     coversAllZones: true,
   },
   {
     id: "DRV-104",
     name: "Pierre Martin",
+    fullname: "Pierre Martin",
     phone: "06 55 44 33 22",
-    vehicle: { type: "Camionnette", capacity: "8 m³", registration: "GH-789-IJ" },
+    phoneNormalized: "0655443322",
+    email: "pierre.martin@one-connexion.test",
+    vehicle: { type: "Utilitaire", capacity: "750 kg", capacityKg: 750, registration: "GH-789-IJ" },
+    plate: "GH789IJ",
+    plateNormalized: "GH789IJ",
     status: "AVAILABLE",
+    workflowStatus: "ACTIF",
     nextFreeSlot: "Aujourd'hui · 15:30",
     active: true,
+    createdAt: "2025-01-12T11:10:00.000Z",
     coversAllZones: true,
   },
 ];
@@ -437,6 +483,100 @@ export const appendNotifications = (entries: NotificationEntry | NotificationEnt
     (a, b) => parseISO(b.createdAt).getTime() - parseISO(a.createdAt).getTime(),
   );
   saveNotifications(merged);
+};
+
+export const normalizeDriverPhone = (value: string) => value.replace(/\D/g, "");
+
+export const normalizeDriverPlate = (value: string) => value.trim().toUpperCase().replace(/\s+/g, "");
+
+export interface CreateDriverPayload {
+  fullname: string;
+  phone: string;
+  email: string;
+  vehicleType: string;
+  capacityKg: number;
+  plate: string;
+  status: DriverWorkflowStatus;
+  comment?: string;
+}
+
+export type CreateDriverResult =
+  | { success: true; driver: Driver }
+  | { success: false; reason: "PHONE_EXISTS" | "PLATE_EXISTS"; message: string };
+
+const statusToLegacy: Record<DriverWorkflowStatus, DriverStatus> = {
+  ACTIF: "AVAILABLE",
+  EN_PAUSE: "PAUSED",
+  EN_COURSE: "ON_TRIP",
+};
+
+export const createDriver = (payload: CreateDriverPayload): CreateDriverResult => {
+  const fullname = payload.fullname.trim();
+  const phoneInput = payload.phone.trim();
+  const emailInput = payload.email.trim();
+  const plateInput = payload.plate.trim().toUpperCase();
+  const phoneNorm = normalizeDriverPhone(phoneInput);
+  const plateNorm = normalizeDriverPlate(plateInput);
+
+  const current = getDrivers();
+
+  const phoneExists = current.some((driver) => {
+    const existing = driver.phoneNormalized ?? normalizeDriverPhone(driver.phone);
+    return existing === phoneNorm;
+  });
+  if (phoneExists) {
+    return { success: false, reason: "PHONE_EXISTS", message: "Un chauffeur avec ce téléphone existe déjà." };
+  }
+
+  const plateExists = current.some((driver) => {
+    const existing = driver.plateNormalized ?? (driver.plate ? normalizeDriverPlate(driver.plate) : undefined);
+    return existing === plateNorm;
+  });
+  if (plateExists) {
+    return { success: false, reason: "PLATE_EXISTS", message: "Cette immatriculation est déjà utilisée." };
+  }
+
+  const id = `DRV-${Date.now()}`;
+  const createdAt = new Date().toISOString();
+
+  const driver: Driver = {
+    id,
+    name: fullname,
+    fullname,
+    phone: phoneInput,
+    phoneNormalized: phoneNorm,
+    email: emailInput,
+    vehicle: {
+      type: payload.vehicleType,
+      capacity: `${payload.capacityKg} kg`,
+      capacityKg: payload.capacityKg,
+      registration: plateInput,
+    },
+    plate: plateNorm,
+    plateNormalized: plateNorm,
+    status: statusToLegacy[payload.status],
+    workflowStatus: payload.status,
+    nextFreeSlot: "À planifier",
+    active: payload.status !== "EN_PAUSE",
+    comment: payload.comment?.trim() ? payload.comment.trim() : undefined,
+    createdAt,
+    coversAllZones: true,
+  };
+
+  const next = [driver, ...current];
+  saveDrivers(next);
+
+  appendActivity({
+    id: generateId(),
+    type: "DRIVER_CREATE",
+    orderId: "ADMIN_DRIVER",
+    driverId: id,
+    at: createdAt,
+    by: "admin",
+    message: `Chauffeur ${fullname} ajouté`,
+  });
+
+  return { success: true, driver };
 };
 
 export const hasTimeOverlap = (startA: string, endA: string, startB: string, endB: string) => {

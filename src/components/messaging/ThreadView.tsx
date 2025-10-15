@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 
 const CONTEXT_LABELS: Record<string, string> = {
   SUPPORT: "Support",
-  ORDER: "Commande",
+  ORDER: "Suivi de commande",
   INCIDENT: "Incident",
   BILLING: "Facturation",
 };

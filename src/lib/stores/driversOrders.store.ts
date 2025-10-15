@@ -7,7 +7,14 @@ export type DriverWorkflowStatus = "ACTIF" | "EN_PAUSE" | "EN_COURSE";
 
 export type DriverLifecycleStatus = "ACTIF" | "INACTIF";
 
-export type DriverUnavailabilityType = "VACANCES" | "RENDEZ_VOUS";
+export const DRIVER_UNAVAILABILITY_TYPES = [
+  "VACANCES",
+  "RENDEZ_VOUS",
+  "MALADIE",
+  "AUTRE",
+] as const;
+
+export type DriverUnavailabilityType = (typeof DRIVER_UNAVAILABILITY_TYPES)[number];
 
 export interface DriverUnavailability {
   id: string;
@@ -545,6 +552,88 @@ const DRIVER_LIFECYCLE_VALUES: DriverLifecycleStatus[] = ["ACTIF", "INACTIF"];
 const formatPhoneDisplay = (normalized: string) =>
   normalized.length === 10 ? normalized.replace(/(\d{2})(?=(\d{2})+(?!\d))/g, "$1 ").trim() : normalized;
 
+const toTimestamp = (value: string | undefined | null) => {
+  if (!value) return null;
+  const time = parseISO(value).getTime();
+  return Number.isNaN(time) ? null : time;
+};
+
+export const mergeUnavailabilitiesByType = (list: DriverUnavailability[] = []) => {
+  if (!Array.isArray(list) || list.length === 0) {
+    return [];
+  }
+
+  const nowIso = new Date().toISOString();
+  const byType = new Map<DriverUnavailabilityType, DriverUnavailability[]>();
+
+  list.forEach((item) => {
+    if (!item) return;
+    const copy = { ...item };
+    const bucket = byType.get(copy.type);
+    if (bucket) {
+      bucket.push(copy);
+    } else {
+      byType.set(copy.type, [copy]);
+    }
+  });
+
+  const mergedByType = new Map<DriverUnavailabilityType, DriverUnavailability[]>();
+
+  byType.forEach((items, type) => {
+    const sorted = items
+      .map((entry) => ({ ...entry }))
+      .sort((a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime());
+
+    const acc: DriverUnavailability[] = [];
+
+    sorted.forEach((current) => {
+      const last = acc[acc.length - 1];
+      if (!last) {
+        acc.push({ ...current });
+        return;
+      }
+
+      const lastEnd = parseISO(last.end).getTime();
+      const currentStart = parseISO(current.start).getTime();
+
+      if (lastEnd >= currentStart) {
+        const lastStart = parseISO(last.start).getTime();
+        const currentEnd = parseISO(current.end).getTime();
+        const mergedStart = Math.min(lastStart, currentStart);
+        const mergedEnd = Math.max(lastEnd, currentEnd);
+        const createdAtCandidates = [toTimestamp(last.createdAt), toTimestamp(current.createdAt)].filter(
+          (value): value is number => value !== null,
+        );
+        const mergedCreatedAt = createdAtCandidates.length
+          ? new Date(Math.min(...createdAtCandidates)).toISOString()
+          : new Date(mergedStart).toISOString();
+        const mergedReason = last.reason?.trim()
+          ? last.reason
+          : current.reason?.trim()
+            ? current.reason
+            : undefined;
+
+        acc[acc.length - 1] = {
+          ...last,
+          start: new Date(mergedStart).toISOString(),
+          end: new Date(mergedEnd).toISOString(),
+          reason: mergedReason,
+          createdAt: mergedCreatedAt,
+          updatedAt: nowIso,
+        } satisfies DriverUnavailability;
+      } else {
+        acc.push({ ...current });
+      }
+    });
+
+    mergedByType.set(type, acc);
+  });
+
+  return Array.from(mergedByType.values())
+    .flat()
+    .sort((a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime());
+};
+
 const sanitizeUnavailabilities = (value: unknown): DriverUnavailability[] => {
   if (!Array.isArray(value)) {
     return [];
@@ -574,7 +663,10 @@ const sanitizeUnavailabilities = (value: unknown): DriverUnavailability[] => {
         return null;
       }
 
-      const typeValue = entry.type === "RENDEZ_VOUS" ? "RENDEZ_VOUS" : "VACANCES";
+      const typeValue =
+        typeof entry.type === "string" && DRIVER_UNAVAILABILITY_TYPES.includes(entry.type as DriverUnavailabilityType)
+          ? (entry.type as DriverUnavailabilityType)
+          : "AUTRE";
 
       return {
         id:
@@ -604,7 +696,7 @@ const sanitizeUnavailabilities = (value: unknown): DriverUnavailability[] => {
     })
     .sort((a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime()) as DriverUnavailability[];
 
-  return sanitized;
+  return mergeUnavailabilitiesByType(sanitized);
 };
 
 const sanitizeDriverEntry = (value: Partial<Driver>): Driver | null => {

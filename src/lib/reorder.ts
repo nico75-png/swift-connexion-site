@@ -1,4 +1,9 @@
 import { differenceInMinutes } from "date-fns";
+import {
+  assertUniqueOrderIdOrThrow,
+  generateNextOrderNumber,
+  reconcileGlobalOrderSeq,
+} from "@/lib/orderSequence";
 
 export type Nullable<T> = T | null;
 
@@ -128,15 +133,6 @@ export const saveToStorage = (key: string, value: unknown) => {
   }
 };
 
-export function generateUniqueOrderId(): string {
-  const orders = getFromStorage<ClientOrder[]>("oc_orders", []);
-  let id: string;
-  do {
-    id = `ORD-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-  } while (orders.some((order) => order.id === id));
-  return id;
-}
-
 export function haversineKm(a: Coordinates, b: Coordinates): number {
   const toRad = (value: number) => (value * Math.PI) / 180;
   const R = 6371;
@@ -260,7 +256,7 @@ export function createReorderDraft(orderId: string): ClientOrder {
   const base = source.price?.breakdown?.base ?? 10;
   return {
     ...source,
-    id: generateUniqueOrderId(),
+    id: generateNextOrderNumber(),
     previousOrderId: source.id,
     status: "À valider",
     driverId: null,
@@ -286,6 +282,8 @@ export function confirmReorder(draft: ClientOrder) {
     id: draft.id,
     createdAt: new Date().toISOString(),
   };
+
+  assertUniqueOrderIdOrThrow(newOrder.id);
 
   const pickup =
     newOrder.from?.coords ??
@@ -321,6 +319,7 @@ export function confirmReorder(draft: ClientOrder) {
 
   orders.unshift(storedOrder);
   saveToStorage("oc_orders", orders);
+  reconcileGlobalOrderSeq();
 
   const assignments = getFromStorage<AssignmentEntry[]>("oc_assignments", []);
   const nowISO = new Date().toISOString();
@@ -463,12 +462,13 @@ export function ensureOrdersDataShape(): ClientOrder[] {
       };
     });
     saveToStorage("oc_orders", normalized);
+    reconcileGlobalOrderSeq();
     return normalized;
   }
 
   const fallback: ClientOrder[] = [
     {
-      id: "ORD-2025-001",
+      id: "009",
       status: "Livré",
       createdAt: "2025-01-15T12:00:00.000Z",
       pickupAt: "2025-01-14T09:30:00.000Z",
@@ -494,7 +494,7 @@ export function ensureOrdersDataShape(): ClientOrder[] {
       notes: "Remettre en main propre",
     },
     {
-      id: "ORD-2025-002",
+      id: "010",
       status: "Livré",
       createdAt: "2025-01-13T10:00:00.000Z",
       pickupAt: "2025-01-13T08:15:00.000Z",
@@ -520,7 +520,7 @@ export function ensureOrdersDataShape(): ClientOrder[] {
       notes: "Transport à température contrôlée",
     },
     {
-      id: "ORD-2025-003",
+      id: "1000",
       status: "En cours",
       createdAt: "2025-01-16T07:30:00.000Z",
       pickupAt: "2025-01-16T08:00:00.000Z",
@@ -546,7 +546,7 @@ export function ensureOrdersDataShape(): ClientOrder[] {
       notes: "Fragile, manipuler avec précaution",
     },
     {
-      id: "ORD-2025-004",
+      id: "1001",
       status: "En attente",
       createdAt: "2025-01-17T10:00:00.000Z",
       pickupAt: "2025-01-17T14:30:00.000Z",
@@ -574,6 +574,7 @@ export function ensureOrdersDataShape(): ClientOrder[] {
   ];
 
   saveToStorage("oc_orders", fallback);
+  reconcileGlobalOrderSeq();
   return fallback;
 }
 

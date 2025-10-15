@@ -1,4 +1,5 @@
 import { differenceInMinutes, parseISO } from "date-fns";
+import { initGlobalOrderSeq, reconcileGlobalOrderSeq } from "@/lib/orderSequence";
 
 export type DriverStatus = "AVAILABLE" | "ON_TRIP" | "PAUSED";
 
@@ -232,7 +233,7 @@ const defaultDrivers: Driver[] = [
 
 const defaultOrders: Order[] = [
   {
-    id: "CMD-247",
+    id: "010",
     client: "Cabinet Dupont",
     type: "Express",
     status: "En cours",
@@ -251,7 +252,7 @@ const defaultOrders: Order[] = [
     driverAssignedAt: "2025-01-15T12:30:00+01:00",
   },
   {
-    id: "CMD-246",
+    id: "009",
     client: "Optique Vision",
     type: "Standard",
     status: "Livré",
@@ -269,7 +270,7 @@ const defaultOrders: Order[] = [
     driverAssignedAt: "2025-01-15T11:15:00+01:00",
   },
   {
-    id: "CMD-245",
+    id: "1000",
     client: "Lab Médical",
     type: "Fragile",
     status: "En attente",
@@ -287,7 +288,7 @@ const defaultOrders: Order[] = [
     driverAssignedAt: null,
   },
   {
-    id: "CMD-244",
+    id: "1001",
     client: "Avocat & Associés",
     type: "Express",
     status: "Enlevé",
@@ -305,7 +306,7 @@ const defaultOrders: Order[] = [
     driverAssignedAt: "2025-01-15T09:00:00+01:00",
   },
   {
-    id: "CMD-243",
+    id: "1002",
     client: "Pharmacie Centrale",
     type: "Standard",
     status: "Livré",
@@ -323,7 +324,7 @@ const defaultOrders: Order[] = [
     driverAssignedAt: "2025-01-15T07:30:00+01:00",
   },
   {
-    id: "CMD-242",
+    id: "1003",
     client: "Cabinet Martin",
     type: "Express",
     status: "Annulé",
@@ -345,28 +346,28 @@ const defaultOrders: Order[] = [
 const defaultAssignments: Assignment[] = [
   {
     id: "ASN-1",
-    orderId: "CMD-247",
+    orderId: "010",
     driverId: "DRV-101",
     start: "2025-01-15T13:45:00+01:00",
     end: "2025-01-15T14:45:00+01:00",
   },
   {
     id: "ASN-2",
-    orderId: "CMD-246",
+    orderId: "009",
     driverId: "DRV-102",
     start: "2025-01-15T12:30:00+01:00",
     end: "2025-01-15T13:15:00+01:00",
   },
   {
     id: "ASN-3",
-    orderId: "CMD-244",
+    orderId: "1001",
     driverId: "DRV-104",
     start: "2025-01-15T09:45:00+01:00",
     end: "2025-01-15T10:45:00+01:00",
   },
   {
     id: "ASN-4",
-    orderId: "CMD-243",
+    orderId: "1002",
     driverId: "DRV-103",
     start: "2025-01-15T08:30:00+01:00",
     end: "2025-01-15T09:15:00+01:00",
@@ -379,7 +380,7 @@ const defaultActivity: ActivityEntry[] = [
   {
     id: "ACT-1",
     type: "CREATE",
-    orderId: "CMD-247",
+    orderId: "010",
     at: "2025-01-15T12:00:00+01:00",
     by: "system",
     message: "Commande créée",
@@ -387,7 +388,7 @@ const defaultActivity: ActivityEntry[] = [
   {
     id: "ACT-2",
     type: "ASSIGN",
-    orderId: "CMD-247",
+    orderId: "010",
     driverId: "DRV-101",
     at: "2025-01-15T12:30:00+01:00",
     by: "admin.sophie",
@@ -396,7 +397,7 @@ const defaultActivity: ActivityEntry[] = [
   {
     id: "ACT-3",
     type: "STATUS_UPDATE",
-    orderId: "CMD-247",
+    orderId: "010",
     at: "2025-01-15T13:00:00+01:00",
     by: "DRV-101",
     message: "Statut mis à jour : Enlevé",
@@ -407,10 +408,10 @@ const defaultNotifications: NotificationEntry[] = [
   {
     id: "NOTIF-1",
     channel: "ADMIN",
-    orderId: "CMD-247",
+    orderId: "010",
     driverId: "DRV-101",
     read: true,
-    message: "Chauffeur Marc Dubois affecté à #CMD-247",
+    message: "Chauffeur Marc Dubois affecté à #010",
     createdAt: "2025-01-15T12:30:00+01:00",
   },
 ];
@@ -447,6 +448,8 @@ const ensureInitialized = () => {
   initStore(STORAGE_KEYS.scheduledAssignments, defaultScheduledAssignments);
   initStore(STORAGE_KEYS.activity, defaultActivity);
   initStore(STORAGE_KEYS.notifications, defaultNotifications);
+  initGlobalOrderSeq();
+  reconcileGlobalOrderSeq();
 };
 
 const readStore = <T,>(key: string, fallback: T): T => {
@@ -896,4 +899,6 @@ export const resetMockStores = () => {
   writeStore(STORAGE_KEYS.scheduledAssignments, defaultScheduledAssignments);
   writeStore(STORAGE_KEYS.activity, defaultActivity);
   writeStore(STORAGE_KEYS.notifications, defaultNotifications);
+  initGlobalOrderSeq();
+  reconcileGlobalOrderSeq();
 };

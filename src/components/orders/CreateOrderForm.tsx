@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,10 +15,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { createOrder } from "@/lib/services/orders.service";
 import type { AuthClient } from "@/lib/stores/auth.store";
 
-const parseLocaleNumber = (value: string) => Number.parseFloat(value.replace(",", "."));
+export const parseLocaleNumber = (value: string) => Number.parseFloat(value.replace(",", "."));
 
 const formSchema = z
   .object({
@@ -73,23 +70,36 @@ type FormValues = z.infer<typeof formSchema>;
 
 interface CreateOrderFormProps {
   customer: AuthClient;
+  defaultValues: FormValues;
+  onSubmit: (values: FormValues) => Promise<void> | void;
+  isSubmitting?: boolean;
 }
 
-const CreateOrderForm = ({ customer }: CreateOrderFormProps) => {
-  const navigate = useNavigate();
+const CreateOrderForm = ({ customer, defaultValues, onSubmit, isSubmitting }: CreateOrderFormProps) => {
   const [showInstructions, setShowInstructions] = useState(false);
   const initialValues = useMemo(
     () => ({
-      transportType: "",
-      pickupAddress: customer.defaultPickupAddress ?? "",
-      deliveryAddress: customer.defaultDeliveryAddress ?? "",
-      date: "",
-      time: "",
-      weight: "",
-      volume: "",
-      driverInstructions: "",
+      transportType: defaultValues.transportType ?? "",
+      pickupAddress: defaultValues.pickupAddress ?? customer.defaultPickupAddress ?? "",
+      deliveryAddress: defaultValues.deliveryAddress ?? customer.defaultDeliveryAddress ?? "",
+      date: defaultValues.date ?? "",
+      time: defaultValues.time ?? "",
+      weight: defaultValues.weight ?? "",
+      volume: defaultValues.volume ?? "",
+      driverInstructions: defaultValues.driverInstructions ?? "",
     }),
-    [customer.defaultDeliveryAddress, customer.defaultPickupAddress],
+    [
+      customer.defaultDeliveryAddress,
+      customer.defaultPickupAddress,
+      defaultValues.date,
+      defaultValues.deliveryAddress,
+      defaultValues.driverInstructions,
+      defaultValues.pickupAddress,
+      defaultValues.time,
+      defaultValues.transportType,
+      defaultValues.volume,
+      defaultValues.weight,
+    ],
   );
 
   const form = useForm<FormValues>({
@@ -101,50 +111,27 @@ const CreateOrderForm = ({ customer }: CreateOrderFormProps) => {
     form.reset(initialValues);
   }, [form, initialValues]);
 
-  const onSubmit = async (values: FormValues) => {
-    const weightValue = parseLocaleNumber(values.weight);
-    const volumeValue = parseLocaleNumber(values.volume);
-
-    const payload = {
-      customerId: customer.id,
-      transportType: values.transportType,
-      pickupAddress: values.pickupAddress,
-      deliveryAddress: values.deliveryAddress,
-      date: values.date,
-      time: values.time,
-      weight: weightValue,
-      volume: volumeValue,
-      driverInstructions: values.driverInstructions?.trim() ? values.driverInstructions.trim() : undefined,
-    };
-
-    try {
-      const result = await createOrder(payload, {
-        customerDisplayName: customer.contactName,
-        customerCompany: customer.company,
-      });
-
-      if (result.success && result.orderId) {
-        toast.success("Commande créée", {
-          description: "Votre commande a bien été enregistrée.",
-        });
-        navigate(`/espace-client/commandes/${result.orderId}`);
-        return;
-      }
-
-      toast.error("Création impossible", {
-        description: result.error ?? "Une erreur est survenue. Veuillez réessayer.",
-      });
-    } catch (error) {
-      toast.error("Création impossible", {
-        description:
-          error instanceof Error ? error.message : "Une erreur est survenue. Veuillez réessayer.",
-      });
-    }
+  const handleSubmit = async (values: FormValues) => {
+    await onSubmit({
+      ...values,
+      driverInstructions: values.driverInstructions?.trim() ?? "",
+    });
   };
+
+  useEffect(() => {
+    if (initialValues.driverInstructions) {
+      setShowInstructions(true);
+    }
+  }, [initialValues.driverInstructions]);
 
   return (
     <Form {...form}>
-      <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)} noValidate>
+      <form className="space-y-6" onSubmit={form.handleSubmit(handleSubmit)} noValidate>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span className="font-semibold">Étape 1</span>
+          <span>•</span>
+          <span>Informations de transport</span>
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <label className="text-sm font-medium text-muted-foreground">Nom de la société</label>
@@ -166,7 +153,11 @@ const CreateOrderForm = ({ customer }: CreateOrderFormProps) => {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Type de transport</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value} disabled={form.formState.isSubmitting}>
+              <Select
+                onValueChange={field.onChange}
+                value={field.value}
+                disabled={form.formState.isSubmitting || isSubmitting}
+              >
                 <FormControl>
                   <SelectTrigger aria-label="Type de transport">
                     <SelectValue placeholder="Sélectionnez" />
@@ -192,12 +183,12 @@ const CreateOrderForm = ({ customer }: CreateOrderFormProps) => {
             <FormItem>
               <FormLabel>Adresse de départ</FormLabel>
               <FormControl>
-                <Input
-                  {...field}
-                  placeholder="Saisissez l'adresse de collecte"
-                  autoComplete="street-address"
-                  disabled={form.formState.isSubmitting}
-                />
+                  <Input
+                    {...field}
+                    placeholder="Saisissez l'adresse de collecte"
+                    autoComplete="street-address"
+                    disabled={form.formState.isSubmitting || isSubmitting}
+                  />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -215,7 +206,7 @@ const CreateOrderForm = ({ customer }: CreateOrderFormProps) => {
                   {...field}
                   placeholder="Saisissez l'adresse de livraison"
                   autoComplete="street-address"
-                  disabled={form.formState.isSubmitting}
+                  disabled={form.formState.isSubmitting || isSubmitting}
                 />
               </FormControl>
               <FormMessage />
@@ -234,7 +225,7 @@ const CreateOrderForm = ({ customer }: CreateOrderFormProps) => {
                   <Input
                     {...field}
                     type="date"
-                    disabled={form.formState.isSubmitting}
+                    disabled={form.formState.isSubmitting || isSubmitting}
                     min={new Date().toISOString().slice(0, 10)}
                   />
                 </FormControl>
@@ -252,7 +243,7 @@ const CreateOrderForm = ({ customer }: CreateOrderFormProps) => {
                   <Input
                     {...field}
                     type="time"
-                    disabled={form.formState.isSubmitting}
+                    disabled={form.formState.isSubmitting || isSubmitting}
                   />
                 </FormControl>
                 <FormMessage />
@@ -276,7 +267,7 @@ const CreateOrderForm = ({ customer }: CreateOrderFormProps) => {
                     step="0.1"
                     min={0.1}
                     placeholder="0,5"
-                    disabled={form.formState.isSubmitting}
+                    disabled={form.formState.isSubmitting || isSubmitting}
                   />
                 </FormControl>
                 <FormMessage />
@@ -297,7 +288,7 @@ const CreateOrderForm = ({ customer }: CreateOrderFormProps) => {
                     step="0.01"
                     min={0.01}
                     placeholder="0,20"
-                    disabled={form.formState.isSubmitting}
+                    disabled={form.formState.isSubmitting || isSubmitting}
                   />
                 </FormControl>
                 <FormMessage />
@@ -312,7 +303,7 @@ const CreateOrderForm = ({ customer }: CreateOrderFormProps) => {
             variant="outline"
             size="sm"
             onClick={() => setShowInstructions(!showInstructions)}
-            disabled={form.formState.isSubmitting}
+            disabled={form.formState.isSubmitting || isSubmitting}
           >
             {showInstructions ? "Masquer" : "Ajouter"} instructions particulières
           </Button>
@@ -328,7 +319,7 @@ const CreateOrderForm = ({ customer }: CreateOrderFormProps) => {
                       {...field}
                       placeholder="Indications d'accès, codes, consignes spécifiques..."
                       rows={4}
-                      disabled={form.formState.isSubmitting}
+                      disabled={form.formState.isSubmitting || isSubmitting}
                     />
                   </FormControl>
                   <FormMessage />
@@ -343,14 +334,18 @@ const CreateOrderForm = ({ customer }: CreateOrderFormProps) => {
             type="submit"
             className="w-full"
             variant="cta"
-            disabled={form.formState.isSubmitting}
+            disabled={form.formState.isSubmitting || isSubmitting}
           >
-            {form.formState.isSubmitting ? "Enregistrement..." : "Créer la commande"}
+            {form.formState.isSubmitting || isSubmitting
+              ? "Préparation du récapitulatif..."
+              : "Passer au récapitulatif"}
           </Button>
         </div>
       </form>
     </Form>
   );
 };
+
+export type { FormValues as CreateOrderFormValues };
 
 export default CreateOrderForm;

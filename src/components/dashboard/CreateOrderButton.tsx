@@ -17,18 +17,17 @@ import { useToast } from "@/hooks/use-toast";
 import {
   assertUniqueOrderIdOrThrow,
   generateNextOrderNumber,
-  previewNextOrderNumber,
   reconcileGlobalOrderSeq,
 } from "@/lib/orderSequence";
 import { getOrders, saveOrders, type Order } from "@/lib/stores/driversOrders.store";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/stores/auth.store";
 
 interface CreateOrderButtonProps {
   className?: string;
 }
 
 const INITIAL_FORM = {
-  client: "",
   type: "",
   pickup: "",
   delivery: "",
@@ -36,7 +35,6 @@ const INITIAL_FORM = {
   time: "",
   weight: "",
   volume: "",
-  driver: "auto",
   notes: "",
 };
 
@@ -47,15 +45,15 @@ const INITIAL_FORM = {
 const CreateOrderButton = ({ className }: CreateOrderButtonProps) => {
   const [open, setOpen] = useState(false);
   const [formValues, setFormValues] = useState(INITIAL_FORM);
-  const [previewId, setPreviewId] = useState<string | null>(null);
+  const [showInstructions, setShowInstructions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { currentClient } = useAuth();
 
   useEffect(() => {
-    if (open) {
-      setPreviewId(previewNextOrderNumber());
-    } else {
+    if (!open) {
       setFormValues(INITIAL_FORM);
+      setShowInstructions(false);
       setIsSubmitting(false);
     }
   }, [open]);
@@ -67,13 +65,23 @@ const CreateOrderButton = ({ className }: CreateOrderButtonProps) => {
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
+    if (!currentClient) {
+      toast({
+        title: "Erreur",
+        description: "Aucun client connecté",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const requiredFields: Array<keyof typeof INITIAL_FORM> = [
-      "client",
       "type",
       "pickup",
       "delivery",
       "date",
       "time",
+      "weight",
+      "volume",
     ];
     const missing = requiredFields.filter((field) => !formValues[field]?.trim());
     if (missing.length > 0) {
@@ -85,39 +93,75 @@ const CreateOrderButton = ({ className }: CreateOrderButtonProps) => {
       return;
     }
 
+    // Validation poids et volume > 0
+    const weightKg = Number.parseFloat(formValues.weight);
+    const volumeM3 = Number.parseFloat(formValues.volume);
+    
+    if (weightKg <= 0 || Number.isNaN(weightKg)) {
+      toast({
+        title: "Poids invalide",
+        description: "Le poids doit être supérieur à 0 kg.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (volumeM3 <= 0 || Number.isNaN(volumeM3)) {
+      toast({
+        title: "Volume invalide",
+        description: "Le volume doit être supérieur à 0 m³.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validation date/heure future
+    const scheduleStart = new Date(`${formValues.date}T${formValues.time}`);
+    if (Number.isNaN(scheduleStart.getTime())) {
+      toast({
+        title: "Date/heure invalide",
+        description: "Veuillez saisir une date et une heure valides.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (scheduleStart.getTime() <= Date.now()) {
+      toast({
+        title: "Date/heure invalide",
+        description: "La date et l'heure doivent être dans le futur.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const orders = getOrders();
       const id = generateNextOrderNumber();
       assertUniqueOrderIdOrThrow(id);
 
-      const scheduleStart = new Date(`${formValues.date}T${formValues.time}`);
-      const safeStart = Number.isNaN(scheduleStart.getTime()) ? new Date() : scheduleStart;
-      const scheduleEnd = new Date(safeStart.getTime() + 60 * 60 * 1000);
-
-      const weightKg = Number.parseFloat(formValues.weight) || 0;
-      const volumeM3 = Number.parseFloat(formValues.volume) || 0;
-      const driverId = formValues.driver !== "auto" ? formValues.driver : null;
+      const scheduleEnd = new Date(scheduleStart.getTime() + 60 * 60 * 1000);
       const amount = Number((25 + weightKg * 1.5 + volumeM3 * 4).toFixed(2));
 
       const newOrder: Order = {
         id,
-        client: formValues.client,
+        client: currentClient.company,
         type: formValues.type,
-        status: driverId ? "En cours" : "En attente",
+        status: "En attente",
         amount,
         schedule: {
-          start: safeStart.toISOString(),
+          start: scheduleStart.toISOString(),
           end: scheduleEnd.toISOString(),
         },
         pickupAddress: formValues.pickup,
         dropoffAddress: formValues.delivery,
         zoneRequirement: "INTRA_PARIS",
-        volumeRequirement: volumeM3 > 0 ? `${volumeM3.toFixed(2)} m³` : "1 m³",
-        weight: weightKg > 0 ? `${weightKg.toFixed(1)} kg` : "— kg",
+        volumeRequirement: `${volumeM3.toFixed(2)} m³`,
+        weight: `${weightKg.toFixed(1)} kg`,
         instructions: formValues.notes?.trim() || undefined,
-        driverId,
-        driverAssignedAt: driverId ? new Date().toISOString() : null,
+        driverId: null,
+        driverAssignedAt: null,
       };
 
       saveOrders([newOrder, ...orders]);
@@ -125,13 +169,10 @@ const CreateOrderButton = ({ className }: CreateOrderButtonProps) => {
 
       toast({
         title: "Commande créée",
-        description: driverId
-          ? `Commande ${newOrder.id} créée et assignée automatiquement.`
-          : `Commande ${newOrder.id} enregistrée. Affectez un chauffeur ultérieurement.`,
+        description: `Commande ${newOrder.id} enregistrée avec succès.`,
       });
 
       setOpen(false);
-      setPreviewId(previewNextOrderNumber());
       setFormValues(INITIAL_FORM);
     } catch (error) {
       console.error("Failed to create order", error);
@@ -156,54 +197,45 @@ const CreateOrderButton = ({ className }: CreateOrderButtonProps) => {
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Créer une commande pour un client</DialogTitle>
+          <DialogTitle>Créer une commande</DialogTitle>
           <DialogDescription>
-            Remplissez les informations de la commande
+            Renseignez les informations de votre transport
           </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <Label htmlFor="order-id">N° commande</Label>
-            <Input
-              id="order-id"
-              value={previewId ?? "Auto"}
-              readOnly
-              className="font-mono"
-              aria-readonly="true"
-            />
-            <p className="mt-1 text-xs text-muted-foreground">
-              Le numéro est attribué automatiquement lors de l'enregistrement.
-            </p>
-          </div>
+          {/* Informations client en lecture seule */}
+          {currentClient && (
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Nom de la société</label>
+                <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm font-medium">
+                  {currentClient.company}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">N° SIRET</label>
+                <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm font-medium">
+                  {currentClient.siret}
+                </div>
+              </div>
+            </div>
+          )}
 
-          {/* Sélection client */}
-          <div>
-            <Label htmlFor="client">Client *</Label>
-            <Select value={formValues.client} onValueChange={handleChange("client")}>
-              <SelectTrigger id="client">
-                <SelectValue placeholder="Sélectionner un client" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Cabinet Dupont">Cabinet Dupont</SelectItem>
-                <SelectItem value="Optique Vision">Optique Vision</SelectItem>
-                <SelectItem value="Lab Médical">Lab Médical</SelectItem>
-                <SelectItem value="Avocat & Associés">Avocat & Associés</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
 
           {/* Type de transport */}
           <div>
             <Label htmlFor="type">Type de transport *</Label>
             <Select value={formValues.type} onValueChange={handleChange("type")}>
               <SelectTrigger id="type">
-                <SelectValue placeholder="Type" />
+                <SelectValue placeholder="Sélectionnez" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Standard">Standard</SelectItem>
-                <SelectItem value="Express">Express</SelectItem>
-                <SelectItem value="Fragile">Fragile</SelectItem>
+                <SelectItem value="medical">Médical</SelectItem>
+                <SelectItem value="juridique">Juridique</SelectItem>
+                <SelectItem value="optique">Optique</SelectItem>
+                <SelectItem value="express">Express</SelectItem>
+                <SelectItem value="standard">Standard</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -260,56 +292,61 @@ const CreateOrderButton = ({ className }: CreateOrderButtonProps) => {
             </div>
           </div>
 
-          {/* Options */}
-          <div className="grid md:grid-cols-3 gap-4">
+          {/* Poids et Volume */}
+          <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="weight">Poids (kg)</Label>
+              <Label htmlFor="weight">Poids (kg) *</Label>
               <Input
                 id="weight"
                 type="number"
+                inputMode="decimal"
                 step="0.1"
-                placeholder="Ex: 2.5"
+                min="0.1"
+                placeholder="0,5"
                 value={formValues.weight}
                 onChange={(event) => handleChange("weight")(event.target.value)}
+                required
               />
             </div>
             <div>
-              <Label htmlFor="volume">Volume (m³)</Label>
+              <Label htmlFor="volume">Volume (m³) *</Label>
               <Input
                 id="volume"
                 type="number"
+                inputMode="decimal"
                 step="0.01"
-                placeholder="Ex: 0.05"
+                min="0.01"
+                placeholder="0,20"
                 value={formValues.volume}
                 onChange={(event) => handleChange("volume")(event.target.value)}
+                required
               />
-            </div>
-            <div>
-              <Label htmlFor="driver">Affecter chauffeur</Label>
-              <Select value={formValues.driver} onValueChange={handleChange("driver")}>
-                <SelectTrigger id="driver">
-                  <SelectValue placeholder="Auto" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="auto">Automatique</SelectItem>
-                  <SelectItem value="DRV-101">Marc Dubois</SelectItem>
-                  <SelectItem value="DRV-102">Julie Lambert</SelectItem>
-                  <SelectItem value="DRV-104">Pierre Martin</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </div>
 
-          {/* Instructions */}
+          {/* Instructions particulières */}
           <div>
-            <Label htmlFor="notes">Instructions particulières</Label>
-            <Textarea
-              id="notes"
-              placeholder="Notes pour le chauffeur..."
-              rows={3}
-              value={formValues.notes}
-              onChange={(event) => handleChange("notes")(event.target.value)}
-            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowInstructions(!showInstructions)}
+              disabled={isSubmitting}
+            >
+              {showInstructions ? "Masquer" : "Ajouter"} instructions particulières
+            </Button>
+            {showInstructions && (
+              <div className="mt-4">
+                <Label htmlFor="notes">Instructions pour le chauffeur</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="Indications d'accès, codes, consignes spécifiques..."
+                  rows={4}
+                  value={formValues.notes}
+                  onChange={(event) => handleChange("notes")(event.target.value)}
+                />
+              </div>
+            )}
           </div>
 
           {/* Actions */}

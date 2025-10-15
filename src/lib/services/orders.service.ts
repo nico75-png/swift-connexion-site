@@ -15,7 +15,7 @@ export interface CreateOrderPayload {
   date: string;
   time: string;
   weight: number;
-  size: number;
+  volume: number;
   driverInstructions?: string;
 }
 
@@ -61,7 +61,7 @@ const buildNewOrder = (
     pickupAddress: payload.pickupAddress,
     dropoffAddress: payload.deliveryAddress,
     zoneRequirement: "INTRA_PARIS",
-    volumeRequirement: `${payload.size}`,
+    volumeRequirement: `${payload.volume}`,
     weight: `${payload.weight}`,
     instructions: payload.driverInstructions?.trim() || undefined,
     driverId: null,
@@ -90,7 +90,7 @@ export const createOrder = async (
       meta: {
         customerId: payload.customerId,
         weight: payload.weight,
-        size: payload.size,
+        volume: payload.volume,
       },
     });
 

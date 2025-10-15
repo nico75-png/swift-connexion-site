@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +15,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { createOrder } from "@/lib/services/orders.service";
@@ -35,7 +35,7 @@ const formSchema = z
       .min(1, "Indiquez un poids")
       .refine(value => !Number.isNaN(parseLocaleNumber(value)), "Indiquez un poids valide")
       .refine(value => parseLocaleNumber(value) > 0, "Le poids doit être supérieur à 0"),
-    size: z
+    volume: z
       .string()
       .trim()
       .min(1, "Indiquez une taille/volume")
@@ -76,6 +76,7 @@ interface CreateOrderFormProps {
 }
 
 const CreateOrderForm = ({ customer }: CreateOrderFormProps) => {
+  const navigate = useNavigate();
   const initialValues = useMemo(
     () => ({
       transportType: "",
@@ -84,7 +85,7 @@ const CreateOrderForm = ({ customer }: CreateOrderFormProps) => {
       date: "",
       time: "",
       weight: "",
-      size: "",
+      volume: "",
       driverInstructions: "",
     }),
     [customer.defaultDeliveryAddress, customer.defaultPickupAddress],
@@ -101,7 +102,7 @@ const CreateOrderForm = ({ customer }: CreateOrderFormProps) => {
 
   const onSubmit = async (values: FormValues) => {
     const weightValue = parseLocaleNumber(values.weight);
-    const sizeValue = parseLocaleNumber(values.size);
+    const volumeValue = parseLocaleNumber(values.volume);
 
     const payload = {
       customerId: customer.id,
@@ -111,40 +112,47 @@ const CreateOrderForm = ({ customer }: CreateOrderFormProps) => {
       date: values.date,
       time: values.time,
       weight: weightValue,
-      size: sizeValue,
+      volume: volumeValue,
       driverInstructions: values.driverInstructions?.trim() ? values.driverInstructions.trim() : undefined,
     };
 
-    const result = await createOrder(payload, {
-      customerDisplayName: customer.contactName,
-      customerCompany: customer.company,
-    });
-
-    if (result.success) {
-      toast.success("Commande créée", {
-        description: `Votre commande #${result.orderId} a bien été enregistrée.`,
+    try {
+      const result = await createOrder(payload, {
+        customerDisplayName: customer.contactName,
+        customerCompany: customer.company,
       });
-      form.reset(initialValues);
-      return;
-    }
 
-    toast.error("Création impossible", {
-      description: result.error ?? "Une erreur est survenue. Veuillez réessayer.",
-    });
+      if (result.success && result.orderId) {
+        toast.success("Commande créée", {
+          description: "Votre commande a bien été enregistrée.",
+        });
+        navigate(`/espace-client/commandes/${result.orderId}`);
+        return;
+      }
+
+      toast.error("Création impossible", {
+        description: result.error ?? "Une erreur est survenue. Veuillez réessayer.",
+      });
+    } catch (error) {
+      toast.error("Création impossible", {
+        description:
+          error instanceof Error ? error.message : "Une erreur est survenue. Veuillez réessayer.",
+      });
+    }
   };
 
   return (
     <Form {...form}>
       <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)} noValidate>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="customer-name">Nom du client</Label>
-            <Input id="customer-name" value={customer.contactName} readOnly aria-readonly className="bg-muted" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="customer-company">Société</Label>
-            <Input id="customer-company" value={customer.company} readOnly aria-readonly className="bg-muted" />
-          </div>
+        <div className="space-y-2">
+          <FormLabel htmlFor="customer-summary">Client</FormLabel>
+          <Input
+            id="customer-summary"
+            value={`${customer.company} (${customer.contactName})`}
+            readOnly
+            aria-readonly
+            className="bg-muted"
+          />
         </div>
 
         <FormField
@@ -261,7 +269,7 @@ const CreateOrderForm = ({ customer }: CreateOrderFormProps) => {
                     type="number"
                     inputMode="decimal"
                     step="0.1"
-                    min={0}
+                    min={0.1}
                     placeholder="0,5"
                     disabled={form.formState.isSubmitting}
                   />
@@ -272,17 +280,17 @@ const CreateOrderForm = ({ customer }: CreateOrderFormProps) => {
           />
           <FormField
             control={form.control}
-            name="size"
+            name="volume"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Taille / Volume (m³)</FormLabel>
+                <FormLabel>Volume (m³)</FormLabel>
                 <FormControl>
                   <Input
                     {...field}
                     type="number"
                     inputMode="decimal"
                     step="0.01"
-                    min={0}
+                    min={0.01}
                     placeholder="0,20"
                     disabled={form.formState.isSubmitting}
                   />
@@ -314,7 +322,7 @@ const CreateOrderForm = ({ customer }: CreateOrderFormProps) => {
 
         <div className="pt-2">
           <Button type="submit" className="w-full" variant="cta" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? "Enregistrement..." : "Valider la commande"}
+            {form.formState.isSubmitting ? "Enregistrement..." : "Créer la commande"}
           </Button>
         </div>
       </form>

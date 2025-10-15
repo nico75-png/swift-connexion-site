@@ -1,0 +1,16 @@
+<svg width="720" height="480" viewBox="0 0 720 480" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Aperçu du portail One Connexion</title>
+  <desc id="desc">Sidebar bleue à gauche et contenu principal clair avec titre et bouton CTA.</desc>
+  <rect width="720" height="480" fill="#F5F7FA" rx="24" />
+  <rect x="32" y="32" width="176" height="416" rx="20" fill="#0F3556" />
+  <rect x="56" y="64" width="128" height="28" rx="8" fill="#FFFFFF" opacity="0.9" />
+  <rect x="56" y="116" width="128" height="20" rx="10" fill="#FFFFFF" opacity="0.5" />
+  <rect x="56" y="152" width="128" height="20" rx="10" fill="#FFFFFF" opacity="0.3" />
+  <rect x="232" y="64" width="440" height="60" rx="16" fill="#FFFFFF" stroke="#E0E6EE" />
+  <rect x="232" y="152" width="200" height="120" rx="20" fill="#FFFFFF" stroke="#E0E6EE" />
+  <rect x="452" y="152" width="220" height="120" rx="20" fill="#FFFFFF" stroke="#E0E6EE" />
+  <rect x="232" y="296" width="440" height="72" rx="18" fill="#FFFFFF" stroke="#E0E6EE" />
+  <rect x="232" y="392" width="200" height="44" rx="22" fill="#FFB800" />
+  <text x="252" y="100" fill="#1F1F1F" font-family="Inter, Arial" font-size="24" font-weight="700">Tableau de bord client</text>
+  <text x="244" y="420" fill="#1F1F1F" font-family="Inter, Arial" font-size="16" font-weight="600">Programmer une livraison</text>
+</svg>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -77,6 +77,7 @@ interface CreateOrderFormProps {
 
 const CreateOrderForm = ({ customer }: CreateOrderFormProps) => {
   const navigate = useNavigate();
+  const [showInstructions, setShowInstructions] = useState(false);
   const initialValues = useMemo(
     () => ({
       transportType: "",
@@ -144,21 +145,20 @@ const CreateOrderForm = ({ customer }: CreateOrderFormProps) => {
   return (
     <Form {...form}>
       <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)} noValidate>
-        <section
-          aria-labelledby="customer-summary-heading"
-          className="rounded-lg border bg-muted/30 p-4"
-        >
-          <p
-            id="customer-summary-heading"
-            className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-          >
-            Client
-          </p>
-          <div className="mt-2 flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:justify-between sm:text-base">
-            <span className="font-medium text-foreground">{customer.company}</span>
-            <span className="text-muted-foreground">{customer.contactName}</span>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">Nom de la société</label>
+            <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm font-medium">
+              {customer.company}
+            </div>
           </div>
-        </section>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">N° SIRET</label>
+            <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm font-medium">
+              {customer.siret}
+            </div>
+          </div>
+        </div>
 
         <FormField
           control={form.control}
@@ -306,24 +306,37 @@ const CreateOrderForm = ({ customer }: CreateOrderFormProps) => {
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="driverInstructions"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Instructions particulières pour le chauffeur</FormLabel>
-              <FormControl>
-                <Textarea
-                  {...field}
-                  placeholder="Indications d'accès, codes, consignes spécifiques..."
-                  rows={4}
-                  disabled={form.formState.isSubmitting}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
+        <div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowInstructions(!showInstructions)}
+            disabled={form.formState.isSubmitting}
+          >
+            {showInstructions ? "Masquer" : "Ajouter"} instructions particulières
+          </Button>
+          {showInstructions && (
+            <FormField
+              control={form.control}
+              name="driverInstructions"
+              render={({ field }) => (
+                <FormItem className="mt-4">
+                  <FormLabel>Instructions pour le chauffeur</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      placeholder="Indications d'accès, codes, consignes spécifiques..."
+                      rows={4}
+                      disabled={form.formState.isSubmitting}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           )}
-        />
+        </div>
 
         <div className="pt-2">
           <Button

@@ -13,6 +13,7 @@ export interface AuthClient {
   id: string;
   contactName: string;
   company: string;
+  siret: string;
   defaultPickupAddress?: string;
   defaultDeliveryAddress?: string;
 }
@@ -33,6 +34,7 @@ const defaultState: AuthState = {
     id: "CLI-2001",
     contactName: "Jean Dupont",
     company: "One Optique",
+    siret: "123 456 789 00012",
     defaultPickupAddress: "123 Avenue de Paris, 75001 Paris",
     defaultDeliveryAddress: "45 Rue du Commerce, 92100 Boulogne",
   },

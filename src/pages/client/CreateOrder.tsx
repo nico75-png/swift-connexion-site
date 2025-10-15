@@ -20,6 +20,7 @@ const CreateOrder = () => {
       id: currentUser?.id ?? "client-temp",
       contactName: currentUser?.name ?? "Client connecté",
       company: currentUser?.name ?? "Client",
+      siret: "000 000 000 00000",
       defaultPickupAddress: "",
       defaultDeliveryAddress: "",
     };
@@ -32,18 +33,11 @@ const CreateOrder = () => {
     >
       <div className="max-w-3xl mx-auto space-y-6">
         <Card>
-          <CardHeader className="gap-3 border-b bg-muted/40 py-6">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="space-y-1">
-                <CardTitle className="text-2xl font-semibold">Créer une commande</CardTitle>
-                <CardDescription>
-                  Renseignez les informations de votre transport. Les champs marqués d&apos;une * sont obligatoires.
-                </CardDescription>
-              </div>
-              <Badge variant="secondary" className="shrink-0 rounded-full px-3 py-1 text-xs font-medium">
-                N° —
-              </Badge>
-            </div>
+          <CardHeader className="border-b bg-muted/40 py-6">
+            <CardTitle className="text-2xl font-semibold">Créer une commande</CardTitle>
+            <CardDescription>
+              Renseignez les informations de votre transport. Les champs marqués d&apos;un astérisque sont obligatoires.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 py-6">
             <CreateOrderForm customer={customer} />

@@ -9,6 +9,7 @@ import {
   generateNextOrderNumber,
   reconcileGlobalOrderSeq,
 } from "@/lib/orderSequence";
+import type { CancelOrderReason } from "@/lib/orders/cancellation";
 
 export type Nullable<T> = T | null;
 
@@ -72,6 +73,11 @@ export interface ClientOrder {
   driver?: Nullable<{ id: string; name: string; phone?: string }>;
   notes?: string;
   history?: Array<{ label: string; at: string }>;
+  cancellation?: {
+    reason: CancelOrderReason;
+    comment?: string;
+    at: string;
+  };
 }
 
 export interface StoredDriver {

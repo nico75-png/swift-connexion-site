@@ -62,14 +62,17 @@ const CreateOrder = () => {
         </div>
 
         <Card className="relative">
-          <div className="absolute top-6 right-6 text-right text-sm text-muted-foreground select-none pointer-events-none">
+          <div
+            className="absolute top-6 right-6 text-right text-sm text-muted-foreground select-none pointer-events-none"
+            aria-hidden="true"
+          >
             <p className="uppercase tracking-wide text-xs">N° de commande</p>
             <p className="text-base font-semibold text-foreground">#{orderNumber}</p>
           </div>
-          <CardHeader className="pr-32">
+          <CardHeader className="pr-36">
             <CardTitle>Informations de livraison</CardTitle>
             <CardDescription>
-              Ce formulaire est réservé à votre espace client. Le chauffeur sera attribué par notre équipe.
+              Vos informations client sont préremplies. Renseignez uniquement les détails de transport nécessaires.
             </CardDescription>
           </CardHeader>
           <CardContent>

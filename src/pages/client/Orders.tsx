@@ -2,7 +2,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import ClientSidebar from "@/components/dashboard/ClientSidebar";
 import Topbar from "@/components/dashboard/Topbar";
 import CreateOrderButton from "@/components/dashboard/CreateOrderButton";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,163 @@ import {
   formatDateTime,
 } from "@/lib/reorder";
 import ReorderModal from "./components/ReorderModal";
+
+const OrdersPreviewSvg = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="880"
+    height="360"
+    viewBox="0 0 880 360"
+    role="img"
+    aria-label="Aperçu Mes commandes avec numérotation séquentielle"
+  >
+    <defs>
+      <style>{`
+        .bg{fill:#F5F7FA}
+        .card{fill:#fff;stroke:#E4E7EB}
+        .title{font:600 18px Inter, Arial; fill:#1F1F1F}
+        .th{font:600 12px Inter, Arial; fill:#6B7280}
+        .td{font:400 13px Inter, Arial; fill:#1F1F1F}
+        .badge{font:600 11px Inter, Arial; fill:#0F3556}
+        .cta{fill:#FFB800}
+        .icon{stroke:#0F3556; stroke-width:2; fill:none}
+        .chip{fill:#E8F0F7; stroke:#C7D7E6}
+      `}</style>
+    </defs>
+    <rect className="bg" x="0" y="0" width="100%" height="100%" />
+    <g transform="translate(24,24)">
+      <text className="title">Mes commandes</text>
+      <rect className="card" x="0" y="24" width="832" height="292" rx="10" />
+      <g transform="translate(16,44)">
+        <text className="th" x="0" y="0">
+          N°
+        </text>
+        <text className="th" x="90" y="0">
+          Client
+        </text>
+        <text className="th" x="260" y="0">
+          Départ → Arrivée
+        </text>
+        <text className="th" x="520" y="0">
+          Statut
+        </text>
+        <text className="th" x="620" y="0">
+          Chauffeur
+        </text>
+        <text className="th" x="750" y="0">
+          Actions
+        </text>
+      </g>
+      <g transform="translate(16,72)">
+        <text className="td" x="0" y="0">
+          009
+        </text>
+        <text className="td" x="90" y="0">
+          One Optique
+        </text>
+        <text className="td" x="260" y="0">
+          Paris 15 → Nanterre
+        </text>
+        <g transform="translate(520,-12)">
+          <rect className="chip" width="78" height="22" rx="6" />
+          <text className="badge" x="10" y="14">
+            AFFECTÉE
+          </text>
+        </g>
+        <text className="td" x="620" y="0">
+          A. Martin
+        </text>
+        <g transform="translate(750,-10)">
+          <g>
+            <circle cx="10" cy="10" r="12" fill="#fff" stroke="#0F3556" />
+            <path className="icon" d="M10 6 a6 6 0 1 0 6 6" />
+            <polyline className="icon" points="10,2 10,6 6,6" />
+          </g>
+          <g transform="translate(36,0)">
+            <rect x="-2" y="-2" width="24" height="24" rx="6" fill="#fff" stroke="#0F3556" />
+            <rect x="3" y="6" width="10" height="8" rx="2" stroke="#0F3556" fill="none" />
+          </g>
+          <g transform="translate(72,0)">
+            <rect x="-2" y="-2" width="24" height="24" rx="6" fill="#fff" stroke="#0F3556" />
+            <circle className="icon" cx="10" cy="10" r="6" />
+          </g>
+        </g>
+      </g>
+      <g transform="translate(16,108)">
+        <text className="td" x="0" y="0">
+          010
+        </text>
+        <text className="td" x="90" y="0">
+          LexPartner
+        </text>
+        <text className="td" x="260" y="0">
+          Issy → La Défense
+        </text>
+        <g transform="translate(520,-12)">
+          <rect className="chip" width="88" height="22" rx="6" />
+          <text className="badge" x="10" y="14">
+            EN COURS
+          </text>
+        </g>
+        <text className="td" x="620" y="0">
+          B. Kaba
+        </text>
+        <g transform="translate(750,-10)">
+          <circle cx="10" cy="10" r="12" fill="#fff" stroke="#0F3556" />
+          <path className="icon" d="M10 6 a6 6 0 1 0 6 6" />
+          <polyline className="icon" points="10,2 10,6 6,6" />
+          <g transform="translate(36,0)">
+            <rect x="-2" y="-2" width="24" height="24" rx="6" fill="#fff" stroke="#0F3556" />
+            <rect x="3" y="6" width="10" height="8" rx="2" stroke="#0F3556" fill="none" />
+          </g>
+          <g transform="translate(72,0)">
+            <rect x="-2" y="-2" width="24" height="24" rx="6" fill="#fff" stroke="#0F3556" />
+            <circle className="icon" cx="10" cy="10" r="6" />
+          </g>
+        </g>
+      </g>
+      <g transform="translate(16,144)">
+        <text className="td" x="0" y="0">
+          1000
+        </text>
+        <text className="td" x="90" y="0">
+          Medica+
+        </text>
+        <text className="td" x="260" y="0">
+          Ivry → Paris 12
+        </text>
+        <g transform="translate(520,-12)">
+          <rect className="chip" width="70" height="22" rx="6" />
+          <text className="badge" x="10" y="14">
+            LIVRÉE
+          </text>
+        </g>
+        <text className="td" x="620" y="0">
+          C. Nguyen
+        </text>
+        <g transform="translate(750,-10)">
+          <circle cx="10" cy="10" r="12" fill="#fff" stroke="#0F3556" />
+          <path className="icon" d="M10 6 a6 6 0 1 0 6 6" />
+          <polyline className="icon" points="10,2 10,6 6,6" />
+          <g transform="translate(36,0)">
+            <rect x="-2" y="-2" width="24" height="24" rx="6" fill="#fff" stroke="#0F3556" />
+            <rect x="3" y="6" width="10" height="8" rx="2" stroke="#0F3556" fill="none" />
+          </g>
+          <g transform="translate(72,0)">
+            <rect x="-2" y="-2" width="24" height="24" rx="6" fill="#fff" stroke="#0F3556" />
+            <circle className="icon" cx="10" cy="10" r="6" />
+          </g>
+        </g>
+      </g>
+      <g transform="translate(640,270)">
+        <rect className="cta" x="0" y="0" width="192" height="38" rx="8" />
+        <text className="title" x="16" y="26" fill="#1F1F1F">
+          ➕ Créer une commande
+        </text>
+      </g>
+    </g>
+  </svg>
+);
 
 /**
  * Page listant toutes les commandes du client
@@ -280,6 +437,17 @@ const ClientOrders = () => {
                 </tbody>
               </table>
             </div>
+          </CardContent>
+        </Card>
+        <Card className="overflow-hidden border border-dashed border-muted">
+          <CardHeader className="pb-0">
+            <CardTitle>Aperçu du rendu</CardTitle>
+            <CardDescription>
+              Illustration statique de la numérotation globale affichée dans la liste.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <OrdersPreviewSvg />
           </CardContent>
         </Card>
         <ReorderModal

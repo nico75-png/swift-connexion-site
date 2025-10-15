@@ -19,7 +19,7 @@ const EspaceClient = () => {
 
   const orders = [
     {
-      id: "CMD-2025-001",
+      id: "009",
       date: "15/01/2025",
       type: "Document juridique",
       from: "Paris 75001",
@@ -36,7 +36,7 @@ const EspaceClient = () => {
       ],
     },
     {
-      id: "CMD-2025-002",
+      id: "010",
       date: "14/01/2025",
       type: "Colis médical",
       from: "Paris 75008",
@@ -46,7 +46,7 @@ const EspaceClient = () => {
       price: 52.00,
     },
     {
-      id: "CMD-2025-003",
+      id: "1000",
       date: "14/01/2025",
       type: "Monture optique",
       from: "Paris 75015",
@@ -56,7 +56,7 @@ const EspaceClient = () => {
       price: 38.00,
     },
     {
-      id: "CMD-2025-004",
+      id: "1001",
       date: "13/01/2025",
       type: "Document express",
       from: "Paris 75002",

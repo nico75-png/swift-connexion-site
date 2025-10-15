@@ -14,7 +14,7 @@ import { Link } from "react-router-dom";
  */
 const ClientOrderDetail = () => {
   const order = {
-    id: "CMD-2025-001",
+    id: "009",
     date: "15/01/2025",
     type: "Document juridique",
     from: "123 Avenue de Paris, 75001 Paris",

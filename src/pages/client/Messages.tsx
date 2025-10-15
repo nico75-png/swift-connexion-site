@@ -21,7 +21,7 @@ const CLIENT_ID = "client-1";
 
 const CONTEXT_LABELS: Record<string, string> = {
   SUPPORT: "Support",
-  ORDER: "Commande",
+  ORDER: "Suivi de commande",
   INCIDENT: "Incident",
   BILLING: "Facturation",
 };

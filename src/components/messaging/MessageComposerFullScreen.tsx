@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -17,12 +17,15 @@ import type { Conversation, ConversationContextType, Participant } from "@/hooks
 import { useIsMobile } from "@/hooks/use-mobile";
 import { createThread, listRecentDriversForClient } from "@/services/messages.service";
 
-const contextOptions: { label: string; value: ConversationContextType }[] = [
-  { label: "Support", value: "SUPPORT" },
-  { label: "Suivi commande", value: "ORDER" },
-  { label: "Facturation", value: "BILLING" },
-  { label: "Incident", value: "INCIDENT" },
-];
+const CONTEXT_OPTION_LABELS: Record<ConversationContextType, string> = {
+  SUPPORT: "Support",
+  ORDER: "Suivi de commande",
+  BILLING: "Facturation",
+  INCIDENT: "Incident",
+};
+
+const ADMIN_CONTEXT_TYPES: ConversationContextType[] = ["SUPPORT", "ORDER", "BILLING", "INCIDENT"];
+const DRIVER_CONTEXT_TYPES: ConversationContextType[] = ["ORDER", "INCIDENT"];
 
 const composerSchema = z
   .object({
@@ -31,8 +34,14 @@ const composerSchema = z
       .min(1, "Sélectionnez un destinataire"),
     contextType: z.enum(["SUPPORT", "ORDER", "BILLING", "INCIDENT"] as const),
     contextReference: z.string().optional(),
-    subject: z.string({ required_error: "L'objet est obligatoire" }).min(1, "L'objet est obligatoire"),
-    message: z.string({ required_error: "Le message est obligatoire" }).min(1, "Le message est obligatoire"),
+    subject: z
+      .string({ required_error: "L'objet est obligatoire" })
+      .trim()
+      .min(1, "L'objet est obligatoire"),
+    message: z
+      .string({ required_error: "Le message est obligatoire" })
+      .trim()
+      .min(1, "Le message est obligatoire"),
   })
   .superRefine((data, ctx) => {
     if ((data.contextType === "ORDER" || data.contextType === "INCIDENT") && !data.contextReference?.trim()) {
@@ -67,6 +76,11 @@ const MessageComposerFullScreen = ({ open, actorId, onClose, onCreated }: Messag
     [participants],
   );
 
+  const actor = useMemo(() => participants.find((participant) => participant.id === actorId) ?? null, [participants, actorId]);
+  const actorOrders = actor?.metadata?.orders ?? [];
+  const actorIncidents = actor?.metadata?.incidents ?? [];
+  const activeOrderId = actor?.metadata?.activeOrderId ?? actorOrders[0] ?? null;
+
   const recipientOptions = useMemo(() => {
     return [...adminRecipients, ...drivers];
   }, [adminRecipients, drivers]);
@@ -82,10 +96,47 @@ const MessageComposerFullScreen = ({ open, actorId, onClose, onCreated }: Messag
     },
   });
 
+  const referenceSuggestionsId = useId();
+  const referenceSuggestionsListId = useMemo(
+    () => `reference-suggestions-${referenceSuggestionsId.replace(/:/g, "")}`,
+    [referenceSuggestionsId],
+  );
+  const recipientId = form.watch("recipientId");
   const contextType = form.watch("contextType");
+  const { dirtyFields } = form.formState;
+
+  const selectedRecipient = useMemo(
+    () => recipientOptions.find((recipient) => recipient.id === recipientId) ?? null,
+    [recipientOptions, recipientId],
+  );
+
+  const allowedContextTypes = selectedRecipient?.role === "DRIVER" ? DRIVER_CONTEXT_TYPES : ADMIN_CONTEXT_TYPES;
+  const isReferenceRequired = contextType === "ORDER" || contextType === "INCIDENT";
+
+  const referenceSuggestions = useMemo(() => {
+    if (contextType === "ORDER") {
+      return Array.from(new Set(actorOrders));
+    }
+
+    if (contextType === "INCIDENT") {
+      return Array.from(new Set(actorIncidents));
+    }
+
+    return [];
+  }, [contextType, actorOrders, actorIncidents]);
 
   useEffect(() => {
     if (!open) {
+      setDrivers([]);
+      form.reset({
+        recipientId: "",
+        contextType: "SUPPORT",
+        contextReference: "",
+        subject: "",
+        message: "",
+      });
+      setSubmitError(null);
+      setIsSubmitting(false);
       return;
     }
 
@@ -99,11 +150,6 @@ const MessageComposerFullScreen = ({ open, actorId, onClose, onCreated }: Messag
           return;
         }
         setDrivers(result);
-        if (adminRecipients[0]) {
-          form.setValue("recipientId", adminRecipients[0].id, { shouldDirty: false });
-        } else if (result[0]) {
-          form.setValue("recipientId", result[0].id, { shouldDirty: false });
-        }
       } catch (error) {
         if (mounted) {
           toast({
@@ -124,29 +170,124 @@ const MessageComposerFullScreen = ({ open, actorId, onClose, onCreated }: Messag
     return () => {
       mounted = false;
     };
-  }, [open, actorId, adminRecipients, form, toast, listRecentDriversForClient]);
+  }, [open, actorId, form, toast]);
 
   useEffect(() => {
     if (!open) {
-      form.reset({
-        recipientId: "",
-        contextType: "SUPPORT",
-        contextReference: "",
-        subject: "",
-        message: "",
-      });
-      setSubmitError(null);
       return;
     }
 
-    if (!form.getValues("recipientId")) {
-      if (adminRecipients[0]) {
-        form.setValue("recipientId", adminRecipients[0].id, { shouldDirty: false });
-      } else if (drivers[0]) {
-        form.setValue("recipientId", drivers[0].id, { shouldDirty: false });
+    const recipientDirty = dirtyFields.recipientId;
+    const currentRecipientId = form.getValues("recipientId");
+
+    if (recipientDirty && currentRecipientId) {
+      return;
+    }
+
+    const driverForActiveOrder = activeOrderId
+      ? drivers.find((driver) => driver.metadata?.orders?.includes(activeOrderId))
+      : undefined;
+
+    const defaultRecipient = driverForActiveOrder ?? adminRecipients[0] ?? drivers[0] ?? null;
+
+    if (defaultRecipient && currentRecipientId !== defaultRecipient.id) {
+      form.setValue("recipientId", defaultRecipient.id, { shouldDirty: false });
+    }
+
+    const currentContextType = form.getValues("contextType");
+
+    if (!dirtyFields.contextType) {
+      if (defaultRecipient?.role === "DRIVER") {
+        if (currentContextType !== "ORDER") {
+          form.setValue("contextType", "ORDER", { shouldDirty: false });
+        }
+      } else if (currentContextType !== "SUPPORT") {
+        form.setValue("contextType", "SUPPORT", { shouldDirty: false });
       }
     }
-  }, [open, adminRecipients, drivers, form]);
+
+    const updatedContextType = defaultRecipient?.role === "DRIVER" ? "ORDER" : form.getValues("contextType");
+
+    if (!dirtyFields.contextReference) {
+      if (defaultRecipient?.role === "DRIVER" && updatedContextType === "ORDER") {
+        const driverOrders = defaultRecipient.metadata?.orders ?? [];
+        const defaultReference =
+          (activeOrderId && driverOrders.includes(activeOrderId) && activeOrderId) || driverOrders[0] || "";
+        form.setValue("contextReference", defaultReference, { shouldDirty: false });
+      } else if (updatedContextType === "SUPPORT") {
+        form.setValue("contextReference", "", { shouldDirty: false });
+      }
+    }
+  }, [
+    open,
+    drivers,
+    adminRecipients,
+    dirtyFields.recipientId,
+    dirtyFields.contextType,
+    dirtyFields.contextReference,
+    form,
+    activeOrderId,
+  ]);
+
+  useEffect(() => {
+    if (!open || !selectedRecipient) {
+      return;
+    }
+
+    if (!allowedContextTypes.includes(contextType)) {
+      form.setValue("contextType", allowedContextTypes[0], { shouldDirty: false });
+    }
+
+    if (selectedRecipient.role === "ADMIN" && !dirtyFields.contextType) {
+      form.setValue("contextType", "SUPPORT", { shouldDirty: false });
+    }
+
+    if (selectedRecipient.role === "DRIVER" && contextType === "ORDER" && !dirtyFields.contextReference) {
+      const driverOrder = selectedRecipient.metadata?.orders ?? [];
+      const preferredOrder =
+        activeOrderId && driverOrder.includes(activeOrderId) ? activeOrderId : driverOrder[0] ?? "";
+      if (preferredOrder) {
+        form.setValue("contextReference", preferredOrder, { shouldDirty: false });
+      }
+    }
+
+    if (selectedRecipient.role !== "DRIVER" && !dirtyFields.contextReference && contextType === "SUPPORT") {
+      form.setValue("contextReference", "", { shouldDirty: false });
+    }
+  }, [
+    open,
+    selectedRecipient,
+    allowedContextTypes,
+    contextType,
+    dirtyFields.contextReference,
+    dirtyFields.contextType,
+    form,
+    activeOrderId,
+  ]);
+
+  useEffect(() => {
+    if (!open || dirtyFields.contextReference) {
+      return;
+    }
+
+    if (contextType === "ORDER") {
+      const preferredOrder =
+        (selectedRecipient?.role === "DRIVER" && selectedRecipient.metadata?.orders?.find((order) => order === activeOrderId)) ||
+        activeOrderId ||
+        actorOrders[0] ||
+        "";
+      form.setValue("contextReference", preferredOrder ?? "", { shouldDirty: false });
+      return;
+    }
+
+    if (contextType === "INCIDENT") {
+      const incidentRef = actorIncidents[0] ?? "";
+      form.setValue("contextReference", incidentRef, { shouldDirty: false });
+      return;
+    }
+
+    form.setValue("contextReference", "", { shouldDirty: false });
+  }, [open, contextType, dirtyFields.contextReference, form, selectedRecipient, activeOrderId, actorOrders, actorIncidents]);
 
   const handleClose = () => {
     if (isSubmitting) {
@@ -159,24 +300,30 @@ const MessageComposerFullScreen = ({ open, actorId, onClose, onCreated }: Messag
     setIsSubmitting(true);
     setSubmitError(null);
     try {
+      const recipient = recipientOptions.find((option) => option.id === values.recipientId);
+      if (!recipient) {
+        throw new Error("Le destinataire sélectionné est introuvable");
+      }
+
       const conversation = await createThread({
         fromId: actorId,
         toId: values.recipientId,
+        toType: recipient.role,
         context: {
           type: values.contextType,
           referenceId: values.contextReference?.trim() || undefined,
         },
-        subject: values.subject,
-        firstMessage: values.message,
+        subject: values.subject.trim(),
+        firstMessage: values.message.trim(),
       });
 
       toast({
-        title: "Conversation créée", 
+        title: "Conversation créée",
         description: "Votre nouveau thread est prêt.",
       });
 
       form.reset({
-        recipientId: adminRecipients[0]?.id ?? "",
+        recipientId: "",
         contextType: "SUPPORT",
         contextReference: "",
         subject: "",
@@ -196,6 +343,18 @@ const MessageComposerFullScreen = ({ open, actorId, onClose, onCreated }: Messag
       setIsSubmitting(false);
     }
   };
+
+  const referencePlaceholder = useMemo(() => {
+    if (contextType === "ORDER") {
+      return "CMD-001";
+    }
+
+    if (contextType === "INCIDENT") {
+      return "INC-001";
+    }
+
+    return "Référence (optionnel)";
+  }, [contextType]);
 
   const content = (
     <div className="flex h-full flex-col">
@@ -227,7 +386,7 @@ const MessageComposerFullScreen = ({ open, actorId, onClose, onCreated }: Messag
                             <div className="flex flex-col text-left">
                               <span className="font-medium">{recipient.displayName}</span>
                               <span className="text-xs text-muted-foreground">
-                                {recipient.role === "ADMIN" && "Support One Connexion"}
+                                {recipient.role === "ADMIN" && "Support OneConnexion (ADMIN)"}
                                 {recipient.role === "DRIVER" && "Chauffeur assigné"}
                                 {recipient.metadata?.orders?.length
                                   ? ` • Commandes ${recipient.metadata.orders.join(", ")}`
@@ -257,9 +416,9 @@ const MessageComposerFullScreen = ({ open, actorId, onClose, onCreated }: Messag
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {contextOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
+                          {allowedContextTypes.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {CONTEXT_OPTION_LABELS[type]}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -274,19 +433,27 @@ const MessageComposerFullScreen = ({ open, actorId, onClose, onCreated }: Messag
                   name="contextReference"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Référence</FormLabel>
+                      <FormLabel>
+                        Référence
+                        {isReferenceRequired ? " *" : ""}
+                      </FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder={
-                            contextType === "INCIDENT"
-                              ? "INC-001"
-                              : contextType === "ORDER"
-                                ? "CMD-001"
-                                : "Référence (optionnel)"
-                          }
-                          {...field}
-                          disabled={isSubmitting}
-                        />
+                        <>
+                          <Input
+                            placeholder={referencePlaceholder}
+                            {...field}
+                            value={field.value ?? ""}
+                            disabled={isSubmitting}
+                            list={referenceSuggestions.length > 0 ? referenceSuggestionsListId : undefined}
+                          />
+                          {referenceSuggestions.length > 0 && (
+                            <datalist id={referenceSuggestionsListId}>
+                              {referenceSuggestions.map((suggestion) => (
+                                <option key={suggestion} value={suggestion} />
+                              ))}
+                            </datalist>
+                          )}
+                        </>
                       </FormControl>
                       <FormMessage />
                     </FormItem>

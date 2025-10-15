@@ -16,6 +16,8 @@ type Participant = {
   phone?: string;
   metadata?: {
     orders?: string[];
+    incidents?: string[];
+    activeOrderId?: string;
   };
 };
 
@@ -63,6 +65,7 @@ type SendMessageInput = {
 type CreateThreadInput = {
   fromId: string;
   toId: string;
+  toRole?: UserRole;
   subject: string;
   message: string;
   contextType: ConversationContextType;
@@ -112,7 +115,7 @@ const participants: Participant[] = [
     company: "Cabinet Dupont",
     email: "jean.dupont@client.test",
     phone: "+33611112222",
-    metadata: { orders: ["CMD-010", "CMD-011"] },
+    metadata: { orders: ["CMD-010", "CMD-011"], incidents: ["INC-204"], activeOrderId: "CMD-010" },
   }),
   buildParticipant("driver-1", "DRIVER", "Marc Bernard", "MB", {
     phone: "+33655554444",
@@ -385,6 +388,10 @@ const createThread = async (input: CreateThreadInput): Promise<Conversation> => 
     throw new Error("Participant introuvable pour créer la conversation");
   }
 
+  if (input.toRole && recipient.role !== input.toRole) {
+    throw new Error("Le destinataire sélectionné n'est plus disponible");
+  }
+
   const serviceResponse = await messagingService.sendMessage({
     subject: input.subject,
     content: input.message,
@@ -463,6 +470,7 @@ const listRecentDriversForClient = async (clientId: string): Promise<Participant
   const snapshot = getState();
   const client = snapshot.participants.find((participant) => participant.id === clientId);
   const clientOrders = client?.metadata?.orders ?? [];
+  const activeOrderId = client?.metadata?.activeOrderId;
 
   const drivers = snapshot.participants.filter((participant) => {
     if (participant.role !== "DRIVER") {
@@ -477,7 +485,25 @@ const listRecentDriversForClient = async (clientId: string): Promise<Participant
     return driverOrders.some((order) => clientOrders.includes(order));
   });
 
-  return drivers;
+  const scoreDriver = (participant: Participant) => {
+    const driverOrders = participant.metadata?.orders ?? [];
+    if (activeOrderId && driverOrders.includes(activeOrderId)) {
+      return 0;
+    }
+    if (driverOrders.some((order) => clientOrders.includes(order))) {
+      return 1;
+    }
+    return 2;
+  };
+
+  return [...drivers].sort((a, b) => {
+    const scoreDiff = scoreDriver(a) - scoreDriver(b);
+    if (scoreDiff !== 0) {
+      return scoreDiff;
+    }
+
+    return a.displayName.localeCompare(b.displayName);
+  });
 };
 
 const buildSnapshot = (): MessagesStore => ({

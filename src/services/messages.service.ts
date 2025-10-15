@@ -1,10 +1,10 @@
-import type { Conversation, ConversationContextType, Participant } from "@/hooks/useMessagesStore";
+import type { Conversation, ConversationContextType, Participant, UserRole } from "@/hooks/useMessagesStore";
 import { messagesStoreActions } from "@/hooks/useMessagesStore";
 
 type CreateThreadPayload = {
   fromId: string;
   toId: string;
-  toType?: string;
+  toType?: UserRole;
   context: {
     type: ConversationContextType;
     referenceId?: string;
@@ -17,6 +17,7 @@ export const createThread = async (payload: CreateThreadPayload): Promise<Conver
   return messagesStoreActions.createThread({
     fromId: payload.fromId,
     toId: payload.toId,
+    toRole: payload.toType,
     subject: payload.subject,
     message: payload.firstMessage,
     contextType: payload.context.type,

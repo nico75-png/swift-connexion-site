@@ -20,8 +20,9 @@ import {
   Driver,
   DriverLifecycleStatus,
   DriverUnavailability,
+  DRIVER_UNAVAILABILITY_TYPES,
   getDrivers,
-  hasTimeOverlap,
+  mergeUnavailabilitiesByType,
   saveDrivers,
 } from "@/lib/stores/driversOrders.store";
 import { cancelScheduledAssignmentsForInterval } from "@/lib/services/assign.service";
@@ -95,7 +96,14 @@ const STATUS_BADGE_CLASSES: Record<DriverStatus, string> = {
 const UNAVAILABILITY_TYPE_LABELS: Record<DriverUnavailability["type"], string> = {
   VACANCES: "Vacances",
   RENDEZ_VOUS: "Rendez-vous",
+  MALADIE: "Maladie",
+  AUTRE: "Autre",
 };
+
+const UNAVAILABILITY_TYPE_OPTIONS = DRIVER_UNAVAILABILITY_TYPES.map((value) => ({
+  value,
+  label: UNAVAILABILITY_TYPE_LABELS[value],
+}));
 
 const VEHICLE_LABEL_BY_VALUE = new Map(VEHICLE_OPTIONS.map((option) => [option.value, option.label]));
 const VEHICLE_VALUE_BY_LABEL = new Map(
@@ -104,7 +112,7 @@ const VEHICLE_VALUE_BY_LABEL = new Map(
 const DEFAULT_VEHICLE_VALUE: VehicleType = "voiture";
 
 const cloneUnavailabilities = (list: DriverUnavailability[] = []) =>
-  [...list].sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+  mergeUnavailabilitiesByType(list.map((item) => ({ ...item })));
 
 const areUnavailabilitiesEqual = (
   a: DriverUnavailability[] = [],
@@ -163,15 +171,6 @@ const validateUnavailabilityFormState = (
   const reason = state.reason.trim();
   if (reason.length > 200) {
     errors.reason = "200 caractères maximum";
-  }
-
-  if (!errors.start && !errors.end && startIso && endIso) {
-    const overlap = list.some(
-      (item) => item.id !== state.id && hasTimeOverlap(startIso, endIso, item.start, item.end),
-    );
-    if (overlap) {
-      errors.overlap = "Une indisponibilité existe déjà sur ce créneau.";
-    }
   }
 
   return { errors, startIso: startIso ?? null, endIso: endIso ?? null };
@@ -1198,7 +1197,7 @@ const DriverSettingsModal = ({ open, driver, onOpenChange, onSubmit }: DriverSet
   };
 
   const handleDeleteItem = (id: string) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
+    setItems((prev) => cloneUnavailabilities(prev.filter((item) => item.id !== id)));
     if (form.id === id) {
       setForm({ id: null, type: "", start: "", end: "", reason: "" });
       setFormTouched(false);
@@ -1246,7 +1245,7 @@ const DriverSettingsModal = ({ open, driver, onOpenChange, onSubmit }: DriverSet
               ? `${driver.name} · ${driver.phoneRaw || formatPhoneFR10(driver.phone)}`
               : "Aucun chauffeur sélectionné."}
             <span className="mt-1 block text-sm text-white/70">
-              Consultez et ajustez le statut ainsi que les indisponibilités (rendez-vous ou vacances).
+              Consultez et ajustez le statut ainsi que les indisponibilités (vacances, rendez-vous, maladie ou autre motif).
             </span>
           </DialogDescription>
         </DialogHeader>
@@ -1367,8 +1366,11 @@ const DriverSettingsModal = ({ open, driver, onOpenChange, onSubmit }: DriverSet
                       <SelectValue placeholder="Sélectionner" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="VACANCES">Vacances</SelectItem>
-                      <SelectItem value="RENDEZ_VOUS">Rendez-vous</SelectItem>
+                      {UNAVAILABILITY_TYPE_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   {formErrors.type && (

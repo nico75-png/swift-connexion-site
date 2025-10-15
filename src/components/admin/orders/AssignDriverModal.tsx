@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { useDriversStore, useOrdersStore } from "@/providers/AdminDataProvider";
-import { hasTimeOverlap, type ScheduledAssignmentStatus, type Driver } from "@/lib/stores/driversOrders.store";
+import { isDriverAssignable, type Driver } from "@/lib/stores/driversOrders.store";
 import { useToast } from "@/hooks/use-toast";
 import { driverStatusBadgeClass, driverStatusLabel } from "./driverUtils";
 import { format } from "date-fns";
@@ -27,8 +27,6 @@ const availabilityFilters = [
   { value: "ON_TRIP", label: "En course" },
   { value: "PAUSED", label: "En pause" },
 ] as const;
-
-const blockingScheduledStatuses = new Set<ScheduledAssignmentStatus>(["PENDING", "PROCESSING"]);
 
 const getNextDriverUnavailability = (items: Driver["unavailabilities"] = []) => {
   const now = Date.now();
@@ -57,44 +55,30 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
     return `${start} → ${end}`;
   }, [order]);
 
-  const conflictingAssignment = useMemo(() => {
-    if (!order || !selectedDriver) return undefined;
-    return assignments.find((assignment) =>
-      assignment.driverId === selectedDriver.id &&
-      assignment.orderId !== order.id &&
-      hasTimeOverlap(order.schedule.start, order.schedule.end, assignment.start, assignment.end),
-    );
-  }, [assignments, order, selectedDriver]);
-
-  const conflictingScheduled = useMemo(() => {
-    if (!order || !selectedDriver) return undefined;
-    return scheduledAssignments.find((scheduled) =>
-      scheduled.driverId === selectedDriver.id &&
-      scheduled.orderId !== order.id &&
-      blockingScheduledStatuses.has(scheduled.status) &&
-      hasTimeOverlap(order.schedule.start, order.schedule.end, scheduled.start, scheduled.end),
-    );
-  }, [order, scheduledAssignments, selectedDriver]);
+  const assignabilityMap = useMemo(() => {
+    if (!order) {
+      return new Map<string, ReturnType<typeof isDriverAssignable>>();
+    }
+    const map = new Map<string, ReturnType<typeof isDriverAssignable>>();
+    drivers.forEach((driver) => {
+      map.set(
+        driver.id,
+        isDriverAssignable(driver, order.schedule.start, order.schedule.end, {
+          currentOrderId: order.id,
+        }),
+      );
+    });
+    return map;
+  }, [drivers, order, assignments, scheduledAssignments]);
 
   const validationError = useMemo(() => {
-    if (!selectedDriver) return null;
-    if (selectedDriver.lifecycleStatus === "INACTIF") {
-      return "Ce chauffeur est inactif";
+    if (!order || !selectedDriver) return null;
+    const result = assignabilityMap.get(selectedDriver.id);
+    if (!result) {
+      return "Ce chauffeur est introuvable";
     }
-    if (!selectedDriver.active) {
-      return "Ce chauffeur est indisponible sur ce créneau";
-    }
-    if (selectedDriver.status === "PAUSED") {
-      return "Chauffeur en pause — sélection impossible";
-    }
-    if (conflictingAssignment) {
-      return `Conflit horaire détecté avec la commande #${conflictingAssignment.orderId}`;
-    }
-    if (conflictingScheduled) {
-      return `Conflit horaire détecté avec une planification pour la commande #${conflictingScheduled.orderId}`;
-    }
-    return null;
-  }, [conflictingAssignment, conflictingScheduled, selectedDriver]);
+    return result.assignable ? null : result.reason ?? null;
+  }, [assignabilityMap, order, selectedDriver]);
 
   useEffect(() => {
     if (open) {
@@ -179,29 +163,8 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
   const renderDriverCard = (driver: typeof drivers[number]) => {
     const isSelected = selectedDriverId === driver.id;
     const nextUnavailability = getNextDriverUnavailability(driver.unavailabilities);
-    const overlappingAssignment = order
-      ? assignments.find(
-          (assignment) =>
-            assignment.driverId === driver.id &&
-            assignment.orderId !== order.id &&
-            hasTimeOverlap(order.schedule.start, order.schedule.end, assignment.start, assignment.end),
-        )
-      : undefined;
-    const overlappingScheduled = order
-      ? scheduledAssignments.find(
-          (scheduled) =>
-            scheduled.driverId === driver.id &&
-            scheduled.orderId !== order.id &&
-            blockingScheduledStatuses.has(scheduled.status) &&
-            hasTimeOverlap(order.schedule.start, order.schedule.end, scheduled.start, scheduled.end),
-        )
-      : undefined;
-
-    const conflictMessage = overlappingAssignment
-      ? `Conflit horaire détecté avec la commande #${overlappingAssignment.orderId}`
-      : overlappingScheduled
-        ? `Conflit horaire détecté avec une planification pour la commande #${overlappingScheduled.orderId}`
-        : null;
+    const assignability = order ? assignabilityMap.get(driver.id) : undefined;
+    const conflictMessage = assignability?.assignable ? null : assignability?.reason ?? null;
 
     const isInactive = driver.lifecycleStatus === "INACTIF";
 

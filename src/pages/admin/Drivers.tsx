@@ -50,7 +50,7 @@ interface DriverRecord {
   unavailabilities: DriverUnavailability[];
 }
 
-interface EditDriverModalProps {
+interface DriverSettingsModalProps {
   open: boolean;
   driver: DriverRecord | null;
   onOpenChange: (open: boolean) => void;
@@ -348,8 +348,8 @@ const AdminDrivers = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | DriverStatus>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingDriverId, setEditingDriverId] = useState<string | null>(null);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [settingsDriverId, setSettingsDriverId] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormState>(initialFormState);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [touched, setTouched] = useState<Partial<Record<keyof FormState, boolean>>>({});
@@ -374,16 +374,16 @@ const AdminDrivers = () => {
     [refreshAll],
   );
 
-  const editingDriver = useMemo(() => {
-    if (!editingDriverId) {
+  const settingsDriver = useMemo(() => {
+    if (!settingsDriverId) {
       return null;
     }
-    return drivers.find((driver) => driver.id === editingDriverId) ?? null;
-  }, [drivers, editingDriverId]);
+    return drivers.find((driver) => driver.id === settingsDriverId) ?? null;
+  }, [drivers, settingsDriverId]);
 
-  const handleEditSubmit = useCallback(
+  const handleSettingsSubmit = useCallback(
     (updates: { lifecycleStatus: DriverStatus; unavailabilities: DriverUnavailability[] }) => {
-      if (!editingDriverId) {
+      if (!settingsDriverId) {
         return;
       }
 
@@ -392,7 +392,7 @@ const AdminDrivers = () => {
       let updatedRecord: DriverRecord | null = null;
 
       setDrivers((prev) => {
-        const target = prev.find((driver) => driver.id === editingDriverId);
+        const target = prev.find((driver) => driver.id === settingsDriverId);
         if (!target) {
           return prev;
         }
@@ -419,13 +419,13 @@ const AdminDrivers = () => {
       });
 
       if (!previousDriver || !updatedRecord) {
-        setIsEditModalOpen(false);
-        setEditingDriverId(null);
+        setIsSettingsModalOpen(false);
+        setSettingsDriverId(null);
         return;
       }
 
-      setIsEditModalOpen(false);
-      setEditingDriverId(null);
+      setIsSettingsModalOpen(false);
+      setSettingsDriverId(null);
 
       const changed = computeChangedUnavailabilities(
         previousDriver.unavailabilities,
@@ -460,7 +460,7 @@ const AdminDrivers = () => {
           : "Modifications enregistrées.",
       });
     },
-    [editingDriverId, persistDrivers, toast],
+    [settingsDriverId, persistDrivers, toast],
   );
 
   useEffect(() => {
@@ -808,21 +808,22 @@ const AdminDrivers = () => {
                         type="button"
                         size="sm"
                         variant="outline"
-                        data-action="edit"
+                        data-action="settings"
                         aria-haspopup="dialog"
-                        aria-controls="modal-edit-driver"
+                        aria-controls="modal-driver-settings"
+                        aria-label={`Ouvrir les paramètres du chauffeur ${driver.name}`}
+                        title="Paramètres chauffeur"
                         onClick={() => {
-                          setEditingDriverId(driver.id);
-                          setIsEditModalOpen(true);
+                          setSettingsDriverId(driver.id);
+                          setIsSettingsModalOpen(true);
                         }}
                       >
-                        <span aria-hidden className="mr-2 flex items-center gap-1">
+                        <span aria-hidden className="mr-2 flex items-center justify-center text-base">
                           <span role="img" aria-hidden>
-                            🛠️
+                            👁️
                           </span>
-                          <Pencil className="h-4 w-4" aria-hidden />
                         </span>
-                        <span className="sr-only md:not-sr-only">Modifier</span>
+                        <span className="sr-only md:not-sr-only">Paramètres</span>
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -1079,24 +1080,24 @@ const AdminDrivers = () => {
           </form>
         </DialogContent>
       </Dialog>
-      <EditDriverModal
-        open={isEditModalOpen && Boolean(editingDriver)}
-        driver={editingDriver}
+      <DriverSettingsModal
+        open={isSettingsModalOpen && Boolean(settingsDriver)}
+        driver={settingsDriver}
         onOpenChange={(open) => {
           if (!open) {
-            setIsEditModalOpen(false);
-            setEditingDriverId(null);
+            setIsSettingsModalOpen(false);
+            setSettingsDriverId(null);
           } else {
-            setIsEditModalOpen(true);
+            setIsSettingsModalOpen(true);
           }
         }}
-        onSubmit={handleEditSubmit}
+        onSubmit={handleSettingsSubmit}
       />
     </DashboardLayout>
   );
 };
 
-const EditDriverModal = ({ open, driver, onOpenChange, onSubmit }: EditDriverModalProps) => {
+const DriverSettingsModal = ({ open, driver, onOpenChange, onSubmit }: DriverSettingsModalProps) => {
   const [status, setStatus] = useState<DriverStatus>("ACTIF");
   const [items, setItems] = useState<DriverUnavailability[]>([]);
   const [form, setForm] = useState<UnavailabilityFormState>({
@@ -1229,33 +1230,37 @@ const EditDriverModal = ({ open, driver, onOpenChange, onSubmit }: EditDriverMod
   return (
     <Dialog open={open && Boolean(driver)} onOpenChange={onOpenChange}>
       <DialogContent
-        id="modal-edit-driver"
+        id="modal-driver-settings"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="edit-driver-title"
+        aria-labelledby="driver-settings-title"
+        aria-describedby="driver-settings-description"
         className="flex max-h-screen w-full max-w-4xl flex-col overflow-hidden rounded-none border-none bg-[#F5F7FA] p-0 shadow-2xl focus:outline-none sm:rounded-2xl"
       >
         <DialogHeader className="bg-[#0F3556] px-6 py-5 text-white">
-          <DialogTitle id="edit-driver-title" className="text-2xl font-semibold">
-            Modifier le chauffeur
+          <DialogTitle id="driver-settings-title" className="text-2xl font-semibold">
+            Paramètres chauffeur
           </DialogTitle>
-          <DialogDescription className="text-white/80">
+          <DialogDescription id="driver-settings-description" className="text-white/80">
             {driver
               ? `${driver.name} · ${driver.phoneRaw || formatPhoneFR10(driver.phone)}`
               : "Aucun chauffeur sélectionné."}
+            <span className="mt-1 block text-sm text-white/70">
+              Consultez et ajustez le statut ainsi que les indisponibilités (rendez-vous ou vacances).
+            </span>
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-6 overflow-y-auto px-6 py-6">
           <section className="space-y-3">
-            <Label htmlFor="edit-driver-status" className="text-base font-medium text-[#1F1F1F]">
+            <Label htmlFor="driver-settings-status" className="text-base font-medium text-[#1F1F1F]">
               Statut
             </Label>
             <Select value={status} onValueChange={(value: DriverStatus) => setStatus(value)}>
               <SelectTrigger
-                id="edit-driver-status"
+                id="driver-settings-status"
                 ref={statusTriggerRef}
                 className="bg-white"
-                aria-describedby="edit-driver-status-help"
+                aria-describedby="driver-settings-status-help"
               >
                 <SelectValue placeholder="Sélectionnez un statut" />
               </SelectTrigger>
@@ -1267,7 +1272,7 @@ const EditDriverModal = ({ open, driver, onOpenChange, onSubmit }: EditDriverMod
                 ))}
               </SelectContent>
             </Select>
-            <p id="edit-driver-status-help" className="text-sm text-muted-foreground">
+            <p id="driver-settings-status-help" className="text-sm text-muted-foreground">
               INACTIF ⇒ ne sera plus jamais assigné automatiquement.
             </p>
           </section>
@@ -1346,7 +1351,7 @@ const EditDriverModal = ({ open, driver, onOpenChange, onSubmit }: EditDriverMod
               </h4>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-unav-type">Type</Label>
+                  <Label htmlFor="driver-settings-unav-type">Type</Label>
                   <Select
                     value={form.type}
                     onValueChange={(value: DriverUnavailability["type"]) => {
@@ -1354,9 +1359,9 @@ const EditDriverModal = ({ open, driver, onOpenChange, onSubmit }: EditDriverMod
                     }}
                   >
                     <SelectTrigger
-                      id="edit-unav-type"
+                      id="driver-settings-unav-type"
                       aria-invalid={Boolean(formErrors.type)}
-                      aria-describedby={formErrors.type ? "edit-unav-type-error" : undefined}
+                      aria-describedby={formErrors.type ? "driver-settings-unav-type-error" : undefined}
                       className="bg-white"
                     >
                       <SelectValue placeholder="Sélectionner" />
@@ -1367,57 +1372,57 @@ const EditDriverModal = ({ open, driver, onOpenChange, onSubmit }: EditDriverMod
                     </SelectContent>
                   </Select>
                   {formErrors.type && (
-                    <p id="edit-unav-type-error" className="text-sm text-destructive">
+                    <p id="driver-settings-unav-type-error" className="text-sm text-destructive">
                       {formErrors.type}
                     </p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-unav-start">Début</Label>
+                  <Label htmlFor="driver-settings-unav-start">Début</Label>
                   <Input
-                    id="edit-unav-start"
+                    id="driver-settings-unav-start"
                     type="datetime-local"
                     value={form.start}
                     onChange={(event) => setForm((prev) => ({ ...prev, start: event.target.value }))}
                     aria-invalid={Boolean(formErrors.start)}
-                    aria-describedby={formErrors.start ? "edit-unav-start-error" : undefined}
+                    aria-describedby={formErrors.start ? "driver-settings-unav-start-error" : undefined}
                   />
                   {formErrors.start && (
-                    <p id="edit-unav-start-error" className="text-sm text-destructive">
+                    <p id="driver-settings-unav-start-error" className="text-sm text-destructive">
                       {formErrors.start}
                     </p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-unav-end">Fin</Label>
+                  <Label htmlFor="driver-settings-unav-end">Fin</Label>
                   <Input
-                    id="edit-unav-end"
+                    id="driver-settings-unav-end"
                     type="datetime-local"
                     value={form.end}
                     onChange={(event) => setForm((prev) => ({ ...prev, end: event.target.value }))}
                     aria-invalid={Boolean(formErrors.end)}
-                    aria-describedby={formErrors.end ? "edit-unav-end-error" : undefined}
+                    aria-describedby={formErrors.end ? "driver-settings-unav-end-error" : undefined}
                   />
                   {formErrors.end && (
-                    <p id="edit-unav-end-error" className="text-sm text-destructive">
+                    <p id="driver-settings-unav-end-error" className="text-sm text-destructive">
                       {formErrors.end}
                     </p>
                   )}
                 </div>
                 <div className="space-y-2 md:col-span-1">
-                  <Label htmlFor="edit-unav-reason">Raison (200 caractères max)</Label>
+                  <Label htmlFor="driver-settings-unav-reason">Raison (200 caractères max)</Label>
                   <Textarea
-                    id="edit-unav-reason"
+                    id="driver-settings-unav-reason"
                     rows={2}
                     value={form.reason}
                     onChange={(event) =>
                       setForm((prev) => ({ ...prev, reason: event.target.value.slice(0, 200) }))
                     }
                     aria-invalid={Boolean(formErrors.reason)}
-                    aria-describedby={formErrors.reason ? "edit-unav-reason-error" : undefined}
+                    aria-describedby={formErrors.reason ? "driver-settings-unav-reason-error" : undefined}
                   />
                   {formErrors.reason && (
-                    <p id="edit-unav-reason-error" className="text-sm text-destructive">
+                    <p id="driver-settings-unav-reason-error" className="text-sm text-destructive">
                       {formErrors.reason}
                     </p>
                   )}

@@ -6,13 +6,14 @@ import {
   NotificationEntry,
   Order,
   ScheduledAssignment,
-  ScheduledAssignmentStatus,
   generateId,
   getAssignments,
   getDrivers,
   getOrders,
   getScheduledAssignments,
   hasTimeOverlap,
+  isBlockingScheduledStatus,
+  isDriverAssignable,
   saveAssignments,
   saveOrders,
   saveScheduledAssignments,
@@ -35,9 +36,6 @@ const nowIso = () => new Date().toISOString();
 const resolveDriver = (driverId: string, drivers: Driver[]) => drivers.find((driver) => driver.id === driverId);
 
 const resolveOrder = (orderId: string, orders: Order[]) => orders.find((order) => order.id === orderId);
-
-const isBlockingScheduledStatus = (status: ScheduledAssignmentStatus) =>
-  status === "PENDING" || status === "PROCESSING";
 
 export const cancelScheduledAssignmentsForInterval = (
   driverId: string,
@@ -83,126 +81,12 @@ export const isDriverAvailable = (
   driverId: string,
   dateStart: string,
   dateEnd: string,
-  options: { ignoreScheduledId?: string } = {},
+  options: { ignoreScheduledId?: string; currentOrderId?: string | null } = {},
 ) => {
   const drivers = getDrivers();
   const driver = resolveDriver(driverId, drivers);
-  if (!driver || !driver.active || driver.status === "PAUSED" || driver.lifecycleStatus === "INACTIF") {
-    return false;
-  }
-
-  const hasBlockingUnavailability = (driver.unavailabilities ?? []).some((unavailability) =>
-    hasTimeOverlap(dateStart, dateEnd, unavailability.start, unavailability.end),
-  );
-
-  if (hasBlockingUnavailability) {
-    return false;
-  }
-
-  const assignments = getAssignments();
-  const overlappingAssignment = assignments.some(
-    (assignment) =>
-      assignment.driverId === driverId &&
-      !assignment.endedAt &&
-      hasTimeOverlap(dateStart, dateEnd, assignment.start, assignment.end),
-  );
-
-  if (overlappingAssignment) {
-    return false;
-  }
-
-  const scheduledAssignments = getScheduledAssignments();
-  const overlappingScheduled = scheduledAssignments.some(
-    (assignment) =>
-      assignment.driverId === driverId &&
-      assignment.id !== options.ignoreScheduledId &&
-      isBlockingScheduledStatus(assignment.status) &&
-      hasTimeOverlap(dateStart, dateEnd, assignment.start, assignment.end),
-  );
-
-  return !overlappingScheduled;
-};
-
-const findConflictingAssignment = (driverId: string, dateStart: string, dateEnd: string) => {
-  const assignments = getAssignments();
-  return assignments.find(
-    (assignment) =>
-      assignment.driverId === driverId &&
-      !assignment.endedAt &&
-      hasTimeOverlap(dateStart, dateEnd, assignment.start, assignment.end),
-  );
-};
-
-const findConflictingScheduledAssignment = (
-  driverId: string,
-  dateStart: string,
-  dateEnd: string,
-  options: { ignoreScheduledId?: string } = {},
-) => {
-  const scheduledAssignments = getScheduledAssignments();
-  return scheduledAssignments.find(
-    (assignment) =>
-      assignment.driverId === driverId &&
-      assignment.id !== options.ignoreScheduledId &&
-      isBlockingScheduledStatus(assignment.status) &&
-      hasTimeOverlap(dateStart, dateEnd, assignment.start, assignment.end),
-  );
-};
-
-const guardDriverStatus = (driver: Driver): { valid: boolean; error?: string } => {
-  if (driver.lifecycleStatus === "INACTIF") {
-    return { valid: false, error: "Ce chauffeur est inactif" };
-  }
-
-  if (!driver.active) {
-    return { valid: false, error: "Ce chauffeur est indisponible sur ce créneau" };
-  }
-
-  if (driver.status === "PAUSED") {
-    return { valid: false, error: "Chauffeur en pause — sélection impossible" };
-  }
-
-  return { valid: true };
-};
-
-const guardAvailability = (
-  driverId: string,
-  schedule: Order["schedule"],
-  options: { ignoreScheduledId?: string } = {},
-): { valid: boolean; conflictOrderId?: string; error?: string } => {
-  const isAvailable = isDriverAvailable(driverId, schedule.start, schedule.end, options);
-  if (!isAvailable) {
-    const driver = resolveDriver(driverId, getDrivers());
-    if (driver) {
-      const blockingUnavailability = (driver.unavailabilities ?? []).find((item) =>
-        hasTimeOverlap(schedule.start, schedule.end, item.start, item.end),
-      );
-      if (blockingUnavailability) {
-        return { valid: false, error: "Ce chauffeur est indisponible sur ce créneau" };
-      }
-    }
-
-    const conflict = findConflictingAssignment(driverId, schedule.start, schedule.end);
-    if (conflict) {
-      return {
-        valid: false,
-        conflictOrderId: conflict.orderId,
-        error: `Conflit horaire détecté avec la commande #${conflict.orderId}`,
-      };
-    }
-
-    const scheduledConflict = findConflictingScheduledAssignment(driverId, schedule.start, schedule.end, options);
-    if (scheduledConflict) {
-      return {
-        valid: false,
-        conflictOrderId: scheduledConflict.orderId,
-        error: `Conflit horaire détecté avec une planification pour la commande #${scheduledConflict.orderId}`,
-      };
-    }
-
-    return { valid: false, error: "Conflit horaire détecté pour ce chauffeur" };
-  }
-  return { valid: true };
+  const result = isDriverAssignable(driver, dateStart, dateEnd, options);
+  return result.assignable;
 };
 
 const updateAssignmentsAfterAssign = (assignment: Assignment) => {
@@ -295,17 +179,15 @@ export const assignDriver = (
     return { success: false, error: "Chauffeur introuvable" };
   }
 
-  const statusCheck = guardDriverStatus(driver);
-  if (!statusCheck.valid) {
-    return { success: false, error: statusCheck.error };
-  }
-
-  const availabilityCheck = guardAvailability(driver.id, order.schedule, options);
-  if (!availabilityCheck.valid) {
+  const assignability = isDriverAssignable(driver, order.schedule.start, order.schedule.end, {
+    ignoreScheduledId: options.ignoreScheduledId,
+    currentOrderId: order.id,
+  });
+  if (!assignability.assignable) {
     return {
       success: false,
-      error: availabilityCheck.error,
-      conflictOrderId: availabilityCheck.conflictOrderId,
+      error: assignability.reason,
+      conflictOrderId: assignability.conflictOrderId,
     };
   }
 
@@ -400,17 +282,14 @@ export const scheduleDriverAssignment = (
     return { success: false, error: "La planification doit être programmée dans le futur" };
   }
 
-  const statusCheck = guardDriverStatus(driver);
-  if (!statusCheck.valid) {
-    return { success: false, error: statusCheck.error };
-  }
-
-  const availabilityCheck = guardAvailability(driver.id, order.schedule);
-  if (!availabilityCheck.valid) {
+  const assignability = isDriverAssignable(driver, order.schedule.start, order.schedule.end, {
+    currentOrderId: order.id,
+  });
+  if (!assignability.assignable) {
     return {
       success: false,
-      error: availabilityCheck.error,
-      conflictOrderId: availabilityCheck.conflictOrderId,
+      error: assignability.reason,
+      conflictOrderId: assignability.conflictOrderId,
     };
   }
 
@@ -479,20 +358,14 @@ export const processScheduledAssignments = () => {
       continue;
     }
 
-    const statusCheck = guardDriverStatus(driver);
-    if (!statusCheck.valid) {
+    const assignability = isDriverAssignable(driver, order.schedule.start, order.schedule.end, {
+      ignoreScheduledId: assignment.id,
+      currentOrderId: order.id,
+    });
+    if (!assignability.assignable) {
       updateScheduledAssignment(assignment.id, {
         status: "FAILED",
-        failureReason: statusCheck.error,
-      });
-      continue;
-    }
-
-    const availabilityCheck = guardAvailability(driver.id, order.schedule, { ignoreScheduledId: assignment.id });
-    if (!availabilityCheck.valid) {
-      updateScheduledAssignment(assignment.id, {
-        status: "FAILED",
-        failureReason: availabilityCheck.error,
+        failureReason: assignability.reason,
       });
       continue;
     }

@@ -1,16 +1,13 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import {
-  assignDriver,
-  isDriverAvailable,
-  processScheduledAssignments,
-  scheduleDriverAssignment,
-} from "@/lib/services/assign.service";
+import { assignDriver, processScheduledAssignments, scheduleDriverAssignment } from "@/lib/services/assign.service";
 import {
   getOrders,
   resetMockStores,
   saveScheduledAssignments,
   getScheduledAssignments,
+  getDrivers,
+  isDriverAssignable,
   ScheduledAssignment,
 } from "@/lib/stores/driversOrders.store";
 
@@ -71,8 +68,9 @@ describe("assign.service", () => {
 
     saveScheduledAssignments([scheduled]);
 
-    const available = isDriverAvailable(scheduled.driverId, scheduled.start, scheduled.end);
-    expect(available).toBe(false);
+    const driver = getDrivers().find((item) => item.id === scheduled.driverId);
+    const availability = isDriverAssignable(driver, scheduled.start, scheduled.end);
+    expect(availability.assignable).toBe(false);
   });
 
   it("exécute les planifications arrivées à échéance", () => {

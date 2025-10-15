@@ -1,104 +1,229 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { formatDistanceToNow, parseISO } from "date-fns";
+import { fr } from "date-fns/locale";
+import { MessageCircle, Plus } from "lucide-react";
+
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import ClientSidebar from "@/components/dashboard/ClientSidebar";
 import Topbar from "@/components/dashboard/Topbar";
-import Chat from "@/components/dashboard/Chat";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import MessageComposer from "@/components/messaging/MessageComposer";
+import MessageList from "@/components/messaging/MessageList";
+import { useMessagesStore } from "@/hooks/useMessagesStore";
+import type { Conversation, Participant } from "@/hooks/useMessagesStore";
+import { cn } from "@/lib/utils";
 
-/**
- * Page de messagerie avec support et chauffeurs
- */
+const CLIENT_ID = "client-1";
+
+const CONTEXT_LABELS: Record<string, string> = {
+  SUPPORT: "Support",
+  ORDER: "Commande",
+  INCIDENT: "Incident",
+};
+
+const safeRelative = (value: string) => {
+  try {
+    return formatDistanceToNow(parseISO(value), { addSuffix: true, locale: fr });
+  } catch (error) {
+    return "il y a peu";
+  }
+};
+
+const buildParticipantsMap = (participants: Participant[]) =>
+  participants.reduce<Record<string, Participant>>((acc, participant) => {
+    acc[participant.id] = participant;
+    return acc;
+  }, {});
+
 const ClientMessages = () => {
-  const [selectedConversation, setSelectedConversation] = useState<string | null>("support");
+  const { participants, getConversationsFor, getParticipant, getRecipientsFor } = useMessagesStore();
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [isStartingNewConversation, setIsStartingNewConversation] = useState(false);
 
-  const conversations = [
-    {
-      id: "support",
-      name: "Support One Connexion",
-      type: "support",
-      lastMessage: "Nous avons bien reçu votre demande",
-      time: "Il y a 1h",
-      unread: 1,
-    },
-    {
-      id: "driver-marc",
-      name: "Marc Dupuis (Chauffeur)",
-      type: "driver",
-      order: "009",
-      lastMessage: "J'arrive dans 10 minutes",
-      time: "Il y a 5 min",
-      unread: 2,
-    },
-  ];
+  const participantsMap = useMemo(() => buildParticipantsMap(participants), [participants]);
 
-  const supportMessages = [
-    { id: "1", sender: "me" as const, text: "Bonjour, j'aimerais des informations sur les tarifs", time: "10:30" },
-    { id: "2", sender: "other" as const, text: "Bonjour ! Je serais ravi de vous aider. Quel type de transport vous intéresse ?", time: "10:32" },
-    { id: "3", sender: "me" as const, text: "Transport médical en urgence", time: "10:33" },
-    { id: "4", sender: "other" as const, text: "Pour le médical express, le tarif de base est de 35€ + 0.9€/km", time: "10:35" },
-  ];
+  const clientConversations = useMemo(() => {
+    return getConversationsFor(CLIENT_ID).map((conversation) => {
+      const otherParticipantId = conversation.participants.find((id) => id !== CLIENT_ID) ?? "";
+      const otherParticipant = otherParticipantId ? getParticipant(otherParticipantId) ?? null : null;
+      const lastMessage = conversation.messages[conversation.messages.length - 1] ?? null;
 
-  const driverMessages = [
-    { id: "1", sender: "other" as const, text: "Bonjour, je suis en route pour l'enlèvement", time: "11:20" },
-    { id: "2", sender: "me" as const, text: "Parfait, merci !", time: "11:21" },
-    { id: "3", sender: "other" as const, text: "J'arrive dans 10 minutes", time: "11:25" },
-  ];
+      return { conversation, otherParticipant, lastMessage };
+    });
+  }, [getConversationsFor, getParticipant]);
 
-  const currentMessages = selectedConversation === "support" ? supportMessages : driverMessages;
-  const currentRecipient = conversations.find(c => c.id === selectedConversation);
+  useEffect(() => {
+    if (isStartingNewConversation) {
+      return;
+    }
+
+    if (!selectedConversationId && clientConversations.length > 0) {
+      setSelectedConversationId(clientConversations[0].conversation.id);
+      return;
+    }
+
+    if (
+      selectedConversationId &&
+      !clientConversations.some((item) => item.conversation.id === selectedConversationId)
+    ) {
+      setSelectedConversationId(clientConversations[0]?.conversation.id ?? null);
+    }
+  }, [clientConversations, selectedConversationId, isStartingNewConversation]);
+
+  const selectedConversation: Conversation | null = useMemo(() => {
+    if (isStartingNewConversation) {
+      return null;
+    }
+
+    if (!selectedConversationId) {
+      return null;
+    }
+
+    return (
+      clientConversations.find((item) => item.conversation.id === selectedConversationId)?.conversation ?? null
+    );
+  }, [clientConversations, selectedConversationId, isStartingNewConversation]);
+
+  const composerRecipients = useMemo(() => getRecipientsFor(CLIENT_ID), [getRecipientsFor]);
+
+  const handleSelectConversation = (conversationId: string) => {
+    setIsStartingNewConversation(false);
+    setSelectedConversationId(conversationId);
+  };
+
+  const handleStartNewConversation = () => {
+    setSelectedConversationId(null);
+    setIsStartingNewConversation(true);
+  };
+
+  const handleMessageSent = (conversationId: string) => {
+    setIsStartingNewConversation(false);
+    setSelectedConversationId(conversationId);
+  };
 
   return (
     <DashboardLayout
       sidebar={<ClientSidebar />}
-      topbar={<Topbar userName="Jean Dupont" />}
+      topbar={<Topbar userName={participantsMap[CLIENT_ID]?.displayName ?? "Client"} />}
     >
-      <div className="h-[calc(100vh-12rem)]">
-        <div className="grid md:grid-cols-[350px_1fr] gap-6 h-full">
-          {/* Liste des conversations */}
-          <Card className="p-4 overflow-y-auto">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              Conversations
-            </h2>
-            <div className="space-y-2">
-              {conversations.map((conv) => (
-                <button
-                  key={conv.id}
-                  onClick={() => setSelectedConversation(conv.id)}
-                  className={`w-full p-3 rounded-lg text-left transition-colors ${
-                    selectedConversation === conv.id
-                      ? "bg-primary/10 border-2 border-primary"
-                      : "bg-muted/30 hover:bg-muted"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="font-medium">{conv.name}</p>
-                    {conv.unread > 0 && (
-                      <Badge className="bg-primary text-primary-foreground">
-                        {conv.unread}
-                      </Badge>
-                    )}
-                  </div>
-                  {conv.order && (
-                    <p className="text-xs text-primary mb-1">Commande {conv.order}</p>
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Messagerie</h1>
+            <p className="text-muted-foreground">
+              Contactez l'administrateur ou votre chauffeur pour suivre vos commandes.
+            </p>
+          </div>
+          <Button onClick={handleStartNewConversation} variant="outline">
+            <Plus className="mr-2 h-4 w-4" /> Nouvelle conversation
+          </Button>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+          <Card className="h-[720px] flex flex-col">
+            <CardHeader className="space-y-1">
+              <h2 className="text-lg font-semibold">Vos échanges</h2>
+              <p className="text-sm text-muted-foreground">
+                Support One Connexion et chauffeurs affectés à vos commandes
+              </p>
+            </CardHeader>
+            <CardContent className="p-0 flex-1 flex flex-col">
+              <ScrollArea className="flex-1">
+                <div className="space-y-2 p-2">
+                  {clientConversations.map(({ conversation, otherParticipant, lastMessage }) => {
+                    const isActive = conversation.id === selectedConversationId && !isStartingNewConversation;
+
+                    return (
+                      <button
+                        key={conversation.id}
+                        type="button"
+                        onClick={() => handleSelectConversation(conversation.id)}
+                        className={cn(
+                          "w-full rounded-lg border p-4 text-left transition",
+                          isActive
+                            ? "border-primary bg-primary/5"
+                            : "border-transparent hover:border-border hover:bg-muted/40",
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 space-y-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-medium text-sm">
+                                {otherParticipant?.displayName ?? "Participant inconnu"}
+                              </span>
+                              {otherParticipant && (
+                                <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                                  {otherParticipant.role}
+                                </Badge>
+                              )}
+                              <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+                                {CONTEXT_LABELS[conversation.context.type] ?? conversation.context.type}
+                              </Badge>
+                              {conversation.context.reference && (
+                                <Badge variant="outline" className="text-[10px]">
+                                  {conversation.context.reference}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {lastMessage ? lastMessage.subject : "Nouvelle conversation"}
+                            </p>
+                            {lastMessage && (
+                              <p className="text-xs text-muted-foreground truncate">
+                                {lastMessage.content}
+                              </p>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-muted-foreground uppercase tracking-wide">
+                            {safeRelative(conversation.updatedAt)}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+
+                  {clientConversations.length === 0 && (
+                    <div className="py-10 text-center text-sm text-muted-foreground space-y-3">
+                      <MessageCircle className="mx-auto h-6 w-6" />
+                      <p>Aucune conversation pour le moment.</p>
+                    </div>
                   )}
-                  <p className="text-sm text-muted-foreground truncate">{conv.lastMessage}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{conv.time}</p>
-                </button>
-              ))}
-            </div>
+                </div>
+              </ScrollArea>
+            </CardContent>
           </Card>
 
-          {/* Zone de chat */}
-          {currentRecipient && (
-            <Chat
-              messages={currentMessages}
-              recipientName={currentRecipient.name}
-              onSendMessage={(msg) => console.log("Send:", msg)}
+          <div className="flex flex-col gap-4">
+            {selectedConversation ? (
+              <MessageList
+                conversation={selectedConversation}
+                currentUserId={CLIENT_ID}
+                participantsMap={participantsMap}
+              />
+            ) : (
+              <Card className="flex h-[480px] items-center justify-center text-center text-sm text-muted-foreground">
+                <CardContent className="space-y-3">
+                  <MessageCircle className="mx-auto h-8 w-8" />
+                  <p>
+                    {isStartingNewConversation
+                      ? "Renseignez les informations ci-dessous pour démarrer une nouvelle discussion."
+                      : "Sélectionnez une conversation pour afficher les messages."}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            <MessageComposer
+              actorId={CLIENT_ID}
+              actorRole="CLIENT"
+              conversation={isStartingNewConversation ? null : selectedConversation}
+              recipients={composerRecipients}
+              onMessageSent={handleMessageSent}
             />
-          )}
+          </div>
         </div>
       </div>
     </DashboardLayout>

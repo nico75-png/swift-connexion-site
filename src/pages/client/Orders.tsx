@@ -21,6 +21,12 @@ import {
   formatCurrencyEUR,
   formatDateTime,
 } from "@/lib/reorder";
+import {
+  getOrderStatusBadgeClass,
+  getOrderStatusLabel,
+  getStatusFilterValue,
+  normalizeOrderStatus,
+} from "@/lib/order-status";
 import ReorderModal from "./components/ReorderModal";
 
 const OrdersPreviewSvg = () => (
@@ -215,31 +221,16 @@ const ClientOrders = () => {
     };
   }, [refreshOrdersFromStorage]);
 
-  const getStatusColor = useCallback((status: string) => {
-    const normalized = status.toLowerCase();
-    if (normalized.includes("livr")) {
-      return "bg-success/10 text-success border-success/20";
-    }
-    if (normalized.includes("cours")) {
-      return "bg-info/10 text-info border-info/20";
-    }
-    if (normalized.includes("attent")) {
-      return "bg-warning/10 text-warning border-warning/20";
-    }
-    if (normalized.includes("valid")) {
-      return "bg-amber-100 text-amber-800 border-amber-200";
-    }
-    if (normalized.includes("annul")) {
-      return "bg-destructive/10 text-destructive border-destructive/20";
-    }
-    return "bg-muted text-foreground border-border";
-  }, []);
+  const getStatusColor = useCallback((status: string) => getOrderStatusBadgeClass(status), []);
 
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
-      const normalizedStatus = order.status.toLowerCase();
+      const normalizedStatus = normalizeOrderStatus(order.status);
+      const filterValue = getStatusFilterValue(order.status);
       const matchesStatus =
-        statusFilter === "all" || normalizedStatus.includes(statusFilter.toLowerCase());
+        statusFilter === "all" ||
+        filterValue === statusFilter ||
+        (statusFilter === "EN_COURS" && normalizedStatus === "PICKED_UP");
       const haystack = [
         order.id,
         order.type,
@@ -326,9 +317,12 @@ const ClientOrders = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tous les statuts</SelectItem>
-                  <SelectItem value="en cours">En cours</SelectItem>
-                  <SelectItem value="livré">Livré</SelectItem>
-                  <SelectItem value="en attente">En attente</SelectItem>
+                  <SelectItem value="EN_COURS">En cours</SelectItem>
+                  <SelectItem value="PICKED_UP">Enlevée</SelectItem>
+                  <SelectItem value="EN_ATTENTE_ENLEVEMENT">En attente d'enlèvement</SelectItem>
+                  <SelectItem value="EN_ATTENTE_AFFECTATION">En attente d'affectation</SelectItem>
+                  <SelectItem value="LIVREE">Livrée</SelectItem>
+                  <SelectItem value="ANNULEE">Annulée</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -358,8 +352,12 @@ const ClientOrders = () => {
                     const driverPhone = order.driver?.phone ?? "";
                     const fromAddress = order.from?.address ?? "Adresse non renseignée";
                     const toAddress = order.to?.address ?? "Adresse non renseignée";
-                    const canContactDriver = driverPhone.trim().length > 0 && order.status.toLowerCase().includes("cours");
-                    const canReorder = !order.status.toLowerCase().includes("cours");
+                    const normalizedOrderStatus = normalizeOrderStatus(order.status);
+                    const canContactDriver =
+                      driverPhone.trim().length > 0 &&
+                      (normalizedOrderStatus === "EN_COURS" || normalizedOrderStatus === "PICKED_UP");
+                    const canReorder =
+                      normalizedOrderStatus !== "EN_COURS" && normalizedOrderStatus !== "PICKED_UP";
                     return (
                       <tr key={order.id} className="border-b transition-colors hover:bg-muted/30">
                         <td className="p-4 font-mono text-sm">{order.id}</td>
@@ -384,7 +382,9 @@ const ClientOrders = () => {
                           </div>
                         </td>
                         <td className="p-4">
-                          <Badge className={`${getStatusColor(order.status)} border`}>{order.status}</Badge>
+                          <Badge className={cn("border", getStatusColor(order.status))}>
+                            {getOrderStatusLabel(order.status)}
+                          </Badge>
                         </td>
                         <td className="p-4 text-right font-semibold">
                           {formatCurrencyEUR(order.price?.total ?? 0)}

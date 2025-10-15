@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { getOrderStatusBadgeClass, getOrderStatusLabel } from "@/lib/order-status";
+import { cn } from "@/lib/utils";
 
 /**
  * Dashboard admin - Vue d'ensemble
@@ -47,17 +49,6 @@ const Admin = () => {
     { name: "Cabinet Martin", sector: "Juridique", signupDate: "Hier", orders: 2 },
     { name: "Opticien Plus", sector: "Optique", signupDate: "Il y a 2j", orders: 5 },
   ];
-
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      "Livré": "bg-success/10 text-success border-success/20",
-      "En cours": "bg-info/10 text-info border-info/20",
-      "Enlevé": "bg-secondary/10 text-secondary border-secondary/20",
-      "En attente": "bg-warning/10 text-warning border-warning/20",
-      "Annulé": "bg-destructive/10 text-destructive border-destructive/20",
-    };
-    return colors[status] || "";
-  };
 
   return (
     <DashboardLayout
@@ -111,8 +102,11 @@ const Admin = () => {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-1">
                       <span className="font-mono text-sm font-semibold">{order.id}</span>
-                      <Badge variant="outline" className={getStatusColor(order.status)}>
-                        {order.status}
+                      <Badge
+                        variant="outline"
+                        className={cn("text-xs", getOrderStatusBadgeClass(order.status))}
+                      >
+                        {getOrderStatusLabel(order.status)}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">{order.client} • {order.driver}</p>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Download, MapPin, Phone, User, Edit, UserMinus, UserPlus } from "lucide-react";
+import { ArrowLeft, Download, MapPin, Phone, User, Edit, UserMinus, UserPlus, AlertTriangle } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import AdminSidebar from "@/components/dashboard/AdminSidebar";
 import Topbar from "@/components/dashboard/Topbar";
@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import AssignDriverModal from "@/components/admin/orders/AssignDriverModal";
 import { useActivityLogStore, useDriversStore, useNotificationsStore, useOrdersStore } from "@/providers/AdminDataProvider";
@@ -17,6 +20,16 @@ import { driverStatusBadgeClass, driverStatusLabel } from "@/components/admin/or
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import {
+  canReportDriverIncident,
+  getOrderStatusBadgeClass,
+  getOrderStatusLabel,
+  getOrderTimelineIndex,
+  normalizeOrderStatus,
+  ORDER_TIMELINE_STEPS,
+  isOrderCancelled,
+  type NormalizedOrderStatus,
+} from "@/lib/order-status";
 
 const formatDateTime = (iso: string) => format(new Date(iso), "dd MMM yyyy · HH'h'mm", { locale: fr });
 
@@ -29,22 +42,54 @@ const AdminOrderDetail = () => {
   const { notifications } = useNotificationsStore();
 
   const order = useMemo(() => orders.find((item) => item.id === id) ?? null, [orders, id]);
-  const driver = useMemo(() => (order?.driverId ? drivers.find((item) => item.id === order.driverId) ?? null : null), [drivers, order]);
-  const assignment = useMemo(() => (order ? assignments.find((item) => item.orderId === order.id) ?? null : null), [assignments, order]);
+  const driver = useMemo(
+    () => (order?.driverId ? drivers.find((item) => item.id === order.driverId) ?? null : null),
+    [drivers, order],
+  );
+  const assignment = useMemo(
+    () =>
+      order
+        ? assignments.find((item) => item.orderId === order.id && item.status !== "CANCELLED") ?? null
+        : null,
+    [assignments, order],
+  );
 
-  const [currentStatus, setCurrentStatus] = useState(order?.status ?? "En attente");
+  const normalizedOrderStatus = normalizeOrderStatus(order?.status);
+  const [currentStatus, setCurrentStatus] = useState<string>(
+    normalizedOrderStatus ?? "EN_ATTENTE_AFFECTATION",
+  );
   const [notes, setNotes] = useState(order?.instructions ?? "");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
+  const [incidentReason, setIncidentReason] = useState("");
+  const [incidentNotifyClient, setIncidentNotifyClient] = useState(true);
+  const [incidentError, setIncidentError] = useState<string | null>(null);
+  const [incidentExcludedDriverId, setIncidentExcludedDriverId] = useState<string | null>(null);
+
+  const statusOptions: NormalizedOrderStatus[] = [
+    "EN_ATTENTE_AFFECTATION",
+    "EN_ATTENTE_ENLEVEMENT",
+    "PICKED_UP",
+    "EN_COURS",
+    "LIVREE",
+    "ANNULEE",
+  ];
 
   useEffect(() => {
     if (order?.status) {
-      setCurrentStatus(order.status);
+      setCurrentStatus(normalizeOrderStatus(order.status) ?? "EN_ATTENTE_AFFECTATION");
     }
   }, [order?.status]);
 
   useEffect(() => {
     setNotes(order?.instructions ?? "");
   }, [order?.instructions]);
+
+  useEffect(() => {
+    if (order?.driverId && incidentExcludedDriverId && order.driverId !== incidentExcludedDriverId) {
+      setIncidentExcludedDriverId(null);
+    }
+  }, [order?.driverId, incidentExcludedDriverId]);
 
   const topbarNotifications = useMemo(
     () =>
@@ -59,23 +104,18 @@ const AdminOrderDetail = () => {
 
   const timelineSteps = useMemo(() => {
     if (!order) {
-      return [
-        { label: "En attente", time: "", status: "pending" as const },
-        { label: "Enlevé", time: "", status: "pending" as const },
-        { label: "En cours", time: "", status: "pending" as const },
-        { label: "Livré", time: "", status: "pending" as const },
-      ];
+      return ORDER_TIMELINE_STEPS.map((step) => ({ label: step.label, time: "", status: "pending" as const }));
     }
 
-    const baseStatuses = ["En attente", "Enlevé", "En cours", "Livré"];
-    const currentIndex = baseStatuses.findIndex((status) => status === order.status);
+    const currentIndex = getOrderTimelineIndex(order.status);
+    const cancelled = isOrderCancelled(order.status);
     const scheduleStart = formatDateTime(order.schedule.start);
     const pickupTime = assignment ? formatDateTime(assignment.start) : "";
     const deliveryTime = assignment ? formatDateTime(assignment.end) : "";
 
-    const steps = baseStatuses.map((label, index) => {
+    const steps = ORDER_TIMELINE_STEPS.map((step, index) => {
       let status: "done" | "current" | "pending" | "cancelled" = "pending";
-      if (order.status === "Annulé") {
+      if (cancelled) {
         status = index === 0 ? "done" : "cancelled";
       } else if (currentIndex === -1) {
         status = "pending";
@@ -96,11 +136,15 @@ const AdminOrderDetail = () => {
                 ? deliveryTime
                 : "";
 
-      return { label, time, status };
+      return { label: step.label, time, status };
     });
 
-    if (order.status === "Annulé") {
-      steps.push({ label: "Annulée", time: formatDateTime(order.schedule.end), status: "cancelled" as const });
+    if (cancelled) {
+      steps.push({
+        label: getOrderStatusLabel(order.status),
+        time: formatDateTime(order.schedule.end),
+        status: "cancelled" as const,
+      });
     }
 
     return steps;
@@ -120,7 +164,7 @@ const AdminOrderDetail = () => {
     setCurrentStatus(newStatus);
     toast({
       title: "Statut mis à jour",
-      description: `La commande est maintenant "${newStatus}"`,
+      description: `La commande est maintenant "${getOrderStatusLabel(newStatus)}"`,
     });
   };
 
@@ -153,6 +197,62 @@ const AdminOrderDetail = () => {
       title: "Chauffeur retiré",
       description: `Le chauffeur a été retiré de la commande ${order.id}.`,
     });
+  };
+
+  const canDeclareIncident = Boolean(order && driver && canReportDriverIncident(order.status));
+
+  const handleOpenIncidentModal = () => {
+    setIncidentReason("");
+    setIncidentNotifyClient(true);
+    setIncidentError(null);
+    setIsIncidentModalOpen(true);
+  };
+
+  const handleCloseIncidentModal = () => {
+    setIsIncidentModalOpen(false);
+    setIncidentError(null);
+  };
+
+  const handleIncidentSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!order || !driver) {
+      setIncidentError("Commande ou chauffeur introuvable");
+      return;
+    }
+
+    const trimmedReason = incidentReason.trim();
+    if (!trimmedReason) {
+      setIncidentError("La raison est obligatoire");
+      return;
+    }
+
+    const result = reportDriverIncident(order.id, {
+      reason: trimmedReason,
+      notifyClient: incidentNotifyClient,
+    });
+
+    if (!result.success) {
+      const errorMessage = result.error ?? "Une erreur est survenue";
+      setIncidentError(errorMessage);
+      toast({
+        title: "Incident non enregistré",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const excludedId = result.driver?.id ?? driver.id ?? null;
+    setIncidentExcludedDriverId(excludedId);
+    toast({
+      title: "Incident enregistré",
+      description: "Le chauffeur a été retiré et la réaffectation est lancée.",
+    });
+    setIsIncidentModalOpen(false);
+    setIncidentError(null);
+    setIncidentReason("");
+    setIncidentNotifyClient(true);
+    setTimeout(() => setIsModalOpen(true), 75);
   };
 
   const driverVehicle = driver ? `${driver.vehicle.type} · ${driver.vehicle.capacity}${driver.vehicle.registration ? ` · ${driver.vehicle.registration}` : ""}` : "";
@@ -207,8 +307,11 @@ const AdminOrderDetail = () => {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Détails de la commande</CardTitle>
-                <Badge variant="outline" className="px-4 py-1 text-base">
-                  {currentStatus}
+                <Badge
+                  variant="outline"
+                  className={cn("px-4 py-1 text-base", getOrderStatusBadgeClass(order.status))}
+                >
+                  {getOrderStatusLabel(order.status)}
                 </Badge>
               </div>
             </CardHeader>
@@ -276,14 +379,14 @@ const AdminOrderDetail = () => {
                 <CardTitle>Timeline de la commande</CardTitle>
                 <Select value={currentStatus} onValueChange={handleStatusChange}>
                   <SelectTrigger className="w-48">
-                    <SelectValue />
+                    <SelectValue placeholder="Statut" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="En attente">En attente</SelectItem>
-                    <SelectItem value="Enlevé">Enlevé</SelectItem>
-                    <SelectItem value="En cours">En cours</SelectItem>
-                    <SelectItem value="Livré">Livré</SelectItem>
-                    <SelectItem value="Annulé">Annulé</SelectItem>
+                    {statusOptions.map((statusCode) => (
+                      <SelectItem key={statusCode} value={statusCode}>
+                        {getOrderStatusLabel(statusCode)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -367,6 +470,16 @@ const AdminOrderDetail = () => {
                     </Badge>
                   </div>
                   <div className="flex flex-col gap-2 pt-2">
+                    {canDeclareIncident && (
+                      <Button
+                        variant="destructive"
+                        onClick={handleOpenIncidentModal}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        <AlertTriangle className="mr-2 h-4 w-4" />
+                        Signaler un incident chauffeur
+                      </Button>
+                    )}
                     <Button id="btn-assign-driver" onClick={() => setIsModalOpen(true)}>
                       <UserPlus className="mr-2 h-4 w-4" />
                       Remplacer le chauffeur
@@ -429,7 +542,73 @@ const AdminOrderDetail = () => {
         </div>
       </div>
 
-      <AssignDriverModal orderId={order.id} open={isModalOpen} onOpenChange={setIsModalOpen} />
+      <Dialog
+        open={isIncidentModalOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleCloseIncidentModal();
+          } else {
+            setIsIncidentModalOpen(true);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Incident chauffeur</DialogTitle>
+            <DialogDescription>
+              Signalez l'incident en cours de trajet afin de déclencher une réaffectation immédiate.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleIncidentSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="incident-reason">Raison de l'incident *</Label>
+              <Textarea
+                id="incident-reason"
+                value={incidentReason}
+                onChange={(event) => setIncidentReason(event.target.value)}
+                required
+                rows={4}
+                placeholder="Exemple : Panne véhicule, accident, retard important..."
+                aria-invalid={Boolean(incidentError)}
+                aria-describedby={incidentError ? "incident-reason-error" : undefined}
+              />
+              {incidentError && (
+                <p id="incident-reason-error" className="text-sm text-destructive">
+                  {incidentError}
+                </p>
+              )}
+            </div>
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="incident-notify-client"
+                checked={incidentNotifyClient}
+                onCheckedChange={(checked) => setIncidentNotifyClient(checked === true)}
+              />
+              <div className="space-y-1">
+                <Label htmlFor="incident-notify-client" className="text-sm font-medium">
+                  Notifier le client
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Un message l'informera du changement de chauffeur et du suivi en cours.
+                </p>
+              </div>
+            </div>
+            <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <Button type="button" variant="outline" onClick={handleCloseIncidentModal}>
+                Annuler
+              </Button>
+              <Button type="submit">Déclarer et réaffecter</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AssignDriverModal
+        orderId={order.id}
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        excludeDriverIds={incidentExcludedDriverId ? [incidentExcludedDriverId] : undefined}
+      />
     </DashboardLayout>
   );
 };

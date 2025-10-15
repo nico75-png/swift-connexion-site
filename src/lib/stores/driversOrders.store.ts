@@ -94,6 +94,10 @@ export interface ScheduledAssignment {
   failureReason?: string;
 }
 
+export type AssignmentStatus = "ACTIVE" | "CANCELLED";
+
+export type AssignmentCancelReason = "DRIVER_ISSUE" | "CLIENT_REQUEST" | "ORDER_CANCELLED" | "OTHER";
+
 export interface Assignment {
   id: string;
   orderId: string;
@@ -101,6 +105,9 @@ export interface Assignment {
   start: string;
   end: string;
   endedAt?: string | null;
+  status: AssignmentStatus;
+  cancelReason?: AssignmentCancelReason;
+  cancelledAt?: string | null;
 }
 
 export type ActivityType =
@@ -109,7 +116,8 @@ export type ActivityType =
   | "UNASSIGN"
   | "NOTE"
   | "STATUS_UPDATE"
-  | "DRIVER_CREATE";
+  | "DRIVER_CREATE"
+  | "INCIDENT";
 
 export interface ActivityEntry {
   id: string;
@@ -350,6 +358,8 @@ const defaultAssignments: Assignment[] = [
     driverId: "DRV-101",
     start: "2025-01-15T13:45:00+01:00",
     end: "2025-01-15T14:45:00+01:00",
+    status: "ACTIVE",
+    endedAt: null,
   },
   {
     id: "ASN-2",
@@ -357,6 +367,8 @@ const defaultAssignments: Assignment[] = [
     driverId: "DRV-102",
     start: "2025-01-15T12:30:00+01:00",
     end: "2025-01-15T13:15:00+01:00",
+    status: "ACTIVE",
+    endedAt: null,
   },
   {
     id: "ASN-3",
@@ -483,7 +495,14 @@ export const saveDrivers = (list: Driver[]) => {
   writeStore(STORAGE_KEYS.drivers, sanitized);
 };
 
-export const getAssignments = (): Assignment[] => readStore(STORAGE_KEYS.assignments, defaultAssignments);
+export const getAssignments = (): Assignment[] =>
+  readStore(STORAGE_KEYS.assignments, defaultAssignments).map((assignment) => ({
+    ...assignment,
+    status: assignment.status ?? "ACTIVE",
+    endedAt: assignment.endedAt ?? null,
+    cancelReason: assignment.cancelReason ?? undefined,
+    cancelledAt: assignment.cancelledAt ?? null,
+  }));
 
 export const saveAssignments = (list: Assignment[]) => {
   writeStore(STORAGE_KEYS.assignments, list);

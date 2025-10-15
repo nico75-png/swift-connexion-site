@@ -19,6 +19,7 @@ interface AssignDriverModalProps {
   orderId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  excludeDriverIds?: string[];
 }
 
 const availabilityFilters = [
@@ -38,7 +39,7 @@ const getNextDriverUnavailability = (items: Driver["unavailabilities"] = []) => 
     .find((item) => new Date(item.end).getTime() > now);
 };
 
-const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalProps) => {
+const AssignDriverModal = ({ orderId, open, onOpenChange, excludeDriverIds = [] }: AssignDriverModalProps) => {
   const { toast } = useToast();
   const { orders, assignments, scheduledAssignments, assignDriver, reassignDriver } = useOrdersStore();
   const { drivers } = useDriversStore();
@@ -62,6 +63,7 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
     return assignments.find((assignment) =>
       assignment.driverId === selectedDriver.id &&
       assignment.orderId !== order.id &&
+      assignment.status !== "CANCELLED" &&
       hasTimeOverlap(order.schedule.start, order.schedule.end, assignment.start, assignment.end),
     );
   }, [assignments, order, selectedDriver]);
@@ -114,14 +116,16 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
 
   const filteredDrivers = useMemo(() => {
     const query = search.toLowerCase();
+    const excluded = new Set(excludeDriverIds);
     return drivers.filter((driver) => {
       const matchesSearch =
         driver.name.toLowerCase().includes(query) ||
         driver.phone.replace(/\s/g, "").includes(query.replace(/\s/g, ""));
       const matchesStatus = availabilityFilter === "all" || driver.status === availabilityFilter;
-      return matchesSearch && matchesStatus && driver.lifecycleStatus !== "INACTIF";
+      const notExcluded = !excluded.has(driver.id);
+      return matchesSearch && matchesStatus && driver.lifecycleStatus !== "INACTIF" && notExcluded;
     });
-  }, [drivers, search, availabilityFilter]);
+  }, [drivers, search, availabilityFilter, excludeDriverIds]);
 
   const canConfirm = Boolean(selectedDriver && !validationError);
   const isReassign = Boolean(order?.driverId && selectedDriverId && order.driverId !== selectedDriverId);
@@ -184,6 +188,7 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
           (assignment) =>
             assignment.driverId === driver.id &&
             assignment.orderId !== order.id &&
+            assignment.status !== "CANCELLED" &&
             hasTimeOverlap(order.schedule.start, order.schedule.end, assignment.start, assignment.end),
         )
       : undefined;

@@ -205,13 +205,25 @@ const guardAvailability = (
   return { valid: true };
 };
 
-const updateAssignmentsAfterAssign = (assignment: Assignment) => {
+const updateAssignmentsAfterAssign = (assignment: {
+  id: string;
+  orderId: string;
+  driverId: string;
+  start: string;
+  end: string;
+}) => {
   const assignments = getAssignments();
-  const exists = assignments.find((item) => item.orderId === assignment.orderId);
-  const updated = exists
-    ? assignments.map((item) => (item.orderId === assignment.orderId ? assignment : item))
-    : [assignment, ...assignments];
-  saveAssignments(updated);
+  const sanitized: Assignment = {
+    ...assignment,
+    status: "ACTIVE",
+    endedAt: null,
+    cancelReason: undefined,
+    cancelledAt: null,
+  };
+  const remaining = assignments.filter(
+    (item) => item.orderId !== assignment.orderId || item.status === "CANCELLED",
+  );
+  saveAssignments([sanitized, ...remaining]);
 };
 
 const generateActivity = (orderId: string, driverId: string, type: "ASSIGN" | "UNASSIGN") => {
@@ -309,11 +321,15 @@ export const assignDriver = (
     };
   }
 
+  const normalizedStatus = order.status?.toUpperCase?.() ?? order.status;
+  const shouldPromoteStatus =
+    normalizedStatus === "EN_ATTENTE_AFFECTATION" || normalizedStatus === "EN ATTENTE" || normalizedStatus === "EN_ATTENTE";
+
   const updatedOrder: Order = {
     ...order,
     driverId: driver.id,
     driverAssignedAt: nowIso(),
-    status: order.status === "En attente" ? "En attente" : order.status,
+    status: shouldPromoteStatus ? "EN_ATTENTE_ENLEVEMENT" : order.status,
   };
 
   const updatedOrders = orders.map((item) => (item.id === order.id ? updatedOrder : item));
@@ -348,16 +364,32 @@ export const unassignDriver = (orderId: string): ServiceResult => {
 
   const drivers = getDrivers();
   const driver = resolveDriver(driverId, drivers);
+  const normalizedStatus = order.status?.toUpperCase?.() ?? order.status;
+  const shouldDowngradeStatus =
+    normalizedStatus === "EN_ATTENTE_ENLEVEMENT" || normalizedStatus === "ENLEVE" || normalizedStatus === "ENLEVÉ";
+
   const updatedOrder: Order = {
     ...order,
     driverId: null,
     driverAssignedAt: null,
+    status: shouldDowngradeStatus ? "EN_ATTENTE_AFFECTATION" : order.status,
   };
 
   const updatedOrders = orders.map((item) => (item.id === orderId ? updatedOrder : item));
   saveOrders(updatedOrders);
 
-  const assignments = getAssignments().filter((assignment) => assignment.orderId !== orderId);
+  const assignments = getAssignments().map((assignment) => {
+    if (assignment.orderId !== orderId || assignment.status === "CANCELLED") {
+      return assignment;
+    }
+    return {
+      ...assignment,
+      status: "CANCELLED" as const,
+      cancelReason: "OTHER" as const,
+      cancelledAt: nowIso(),
+      endedAt: nowIso(),
+    };
+  });
   saveAssignments(assignments);
 
   generateActivity(orderId, driverId, "UNASSIGN");
@@ -375,6 +407,102 @@ export const reassignDriver = (orderId: string, newDriverId: string): ServiceRes
     unassignDriver(orderId);
   }
   return assignDriver(orderId, newDriverId);
+};
+
+export const reportDriverIncident = (
+  orderId: string,
+  payload: { reason: string; notifyClient: boolean },
+): ServiceResult => {
+  const orders = getOrders();
+  const orderIndex = orders.findIndex((item) => item.id === orderId);
+  if (orderIndex === -1) {
+    return { success: false, error: "Commande introuvable" };
+  }
+
+  const order = orders[orderIndex];
+  if (!order.driverId) {
+    return { success: false, error: "Aucun chauffeur assigné" };
+  }
+
+  const drivers = getDrivers();
+  const driver = resolveDriver(order.driverId, drivers) ?? undefined;
+  const assignments = getAssignments();
+  const activeAssignment = assignments.find(
+    (assignment) => assignment.orderId === orderId && assignment.status !== "CANCELLED",
+  );
+
+  if (!activeAssignment) {
+    return { success: false, error: "Aucune assignation active à annuler" };
+  }
+
+  const incidentTime = nowIso();
+  const updatedAssignments = assignments.map((assignment) =>
+    assignment.id === activeAssignment.id
+      ? {
+          ...assignment,
+          status: "CANCELLED" as const,
+          cancelReason: "DRIVER_ISSUE" as const,
+          cancelledAt: incidentTime,
+          endedAt: incidentTime,
+        }
+      : assignment,
+  );
+  saveAssignments(updatedAssignments);
+
+  const updatedOrder: Order = {
+    ...order,
+    status: "EN_ATTENTE_AFFECTATION",
+    driverId: null,
+    driverAssignedAt: null,
+  };
+  const updatedOrders = orders.map((item) => (item.id === order.id ? updatedOrder : item));
+  saveOrders(updatedOrders);
+
+  appendActivity({
+    id: generateId(),
+    type: "INCIDENT",
+    orderId,
+    driverId: driver?.id,
+    by: "admin",
+    at: incidentTime,
+    message: `Incident chauffeur déclaré : ${payload.reason}`,
+    meta: {
+      reason: payload.reason,
+      notifyClient: payload.notifyClient,
+      cancelReason: "DRIVER_ISSUE",
+    },
+  });
+
+  const notifications: NotificationEntry[] = [
+    buildNotification(
+      "ADMIN",
+      `Incident chauffeur sur #${order.id}${driver ? ` (${driver.name})` : ""}`,
+      order.id,
+      driver?.id,
+    ),
+    buildNotification(
+      "DRIVER",
+      `Incident signalé : mission #${order.id} interrompue` +
+        (payload.reason ? ` — ${payload.reason}` : ""),
+      order.id,
+      driver?.id,
+    ),
+  ];
+
+  if (payload.notifyClient) {
+    notifications.push(
+      buildNotification(
+        "CLIENT",
+        `Incident chauffeur : réaffectation en cours pour la commande #${order.id}`,
+        order.id,
+        driver?.id,
+      ),
+    );
+  }
+
+  appendNotifications(notifications);
+
+  return { success: true, driver, order: updatedOrder };
 };
 
 export const scheduleDriverAssignment = (

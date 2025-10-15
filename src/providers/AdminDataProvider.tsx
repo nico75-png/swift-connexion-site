@@ -24,6 +24,7 @@ import {
   reassignDriver as reassignDriverService,
   scheduleDriverAssignment as scheduleDriverAssignmentService,
   unassignDriver as unassignDriverService,
+  reportDriverIncident as reportDriverIncidentService,
 } from "@/lib/services/assign.service";
 
 interface AdminDataContextValue {
@@ -38,6 +39,7 @@ interface AdminDataContextValue {
   assignDriver: typeof assignDriverService;
   reassignDriver: typeof reassignDriverService;
   unassignDriver: typeof unassignDriverService;
+  reportDriverIncident: typeof reportDriverIncidentService;
   scheduleDriverAssignment: typeof scheduleDriverAssignmentService;
   cancelScheduledAssignment: typeof cancelScheduledAssignmentService;
   markNotificationAsRead: (id: string) => void;
@@ -121,6 +123,12 @@ export const AdminDataProvider = ({ children }: { children: React.ReactNode }) =
     return result;
   }, [refreshAll]);
 
+  const reportDriverIncident = useCallback<AdminDataContextValue["reportDriverIncident"]>((orderId, payload) => {
+    const result = reportDriverIncidentService(orderId, payload);
+    refreshAll();
+    return result;
+  }, [refreshAll]);
+
   const scheduleDriverAssignment = useCallback<AdminDataContextValue["scheduleDriverAssignment"]>((orderId, driverId, executeAt) => {
     const result = scheduleDriverAssignmentService(orderId, driverId, executeAt);
     refreshAll();
@@ -171,6 +179,7 @@ export const AdminDataProvider = ({ children }: { children: React.ReactNode }) =
     assignDriver,
     reassignDriver,
     unassignDriver,
+    reportDriverIncident,
     scheduleDriverAssignment,
     cancelScheduledAssignment,
     createDriver,
@@ -188,6 +197,7 @@ export const AdminDataProvider = ({ children }: { children: React.ReactNode }) =
     assignDriver,
     reassignDriver,
     unassignDriver,
+    reportDriverIncident,
     scheduleDriverAssignment,
     cancelScheduledAssignment,
     createDriver,
@@ -219,6 +229,7 @@ export const useOrdersStore = () => {
     assignDriver,
     reassignDriver,
     unassignDriver,
+    reportDriverIncident,
     scheduleDriverAssignment,
     cancelScheduledAssignment,
     refreshAll,

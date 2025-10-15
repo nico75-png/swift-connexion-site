@@ -16,6 +16,12 @@ import AssignDriverModal from "@/components/admin/orders/AssignDriverModal";
 import { driverStatusBadgeClass, driverStatusLabel } from "@/components/admin/orders/driverUtils";
 import { useDriversStore, useNotificationsStore, useOrdersStore } from "@/providers/AdminDataProvider";
 import { cn } from "@/lib/utils";
+import {
+  getOrderStatusBadgeClass,
+  getOrderStatusLabel,
+  getStatusFilterValue,
+  normalizeOrderStatus,
+} from "@/lib/order-status";
 
 const AdminOrders = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -34,7 +40,18 @@ const AdminOrders = () => {
   );
 
   const statusOptions = useMemo(
-    () => Array.from(new Set(orders.map((order) => order.status))).sort(),
+    () =>
+      Array.from(
+        orders.reduce((acc, order) => {
+          const value = getStatusFilterValue(order.status);
+          if (!acc.has(value)) {
+            acc.set(value, getOrderStatusLabel(order.status));
+          }
+          return acc;
+        }, new Map<string, string>()),
+      )
+        .map(([value, label]) => ({ value, label }))
+        .sort((a, b) => a.label.localeCompare(b.label, "fr")),
     [orders],
   );
 
@@ -44,12 +61,41 @@ const AdminOrders = () => {
         const term = searchTerm.toLowerCase();
         const matchesSearch =
           order.id.toLowerCase().includes(term) || order.client.toLowerCase().includes(term);
-        const matchesStatus = statusFilter === "all" || order.status === statusFilter;
+        const matchesStatus =
+          statusFilter === "all" || getStatusFilterValue(order.status) === statusFilter;
         const matchesClient = clientFilter === "all" || order.client === clientFilter;
         return matchesSearch && matchesStatus && matchesClient;
       }),
     [orders, searchTerm, statusFilter, clientFilter],
   );
+
+  const statusCounts = useMemo(() => {
+    const counts = {
+      pending: 0,
+      inProgress: 0,
+      delivered: 0,
+      cancelled: 0,
+    };
+
+    for (const order of orders) {
+      const normalized = normalizeOrderStatus(order.status);
+      if (normalized === "EN_ATTENTE_AFFECTATION") {
+        counts.pending += 1;
+      } else if (
+        normalized === "EN_ATTENTE_ENLEVEMENT" ||
+        normalized === "PICKED_UP" ||
+        normalized === "EN_COURS"
+      ) {
+        counts.inProgress += 1;
+      } else if (normalized === "LIVREE") {
+        counts.delivered += 1;
+      } else if (normalized === "ANNULEE") {
+        counts.cancelled += 1;
+      }
+    }
+
+    return counts;
+  }, [orders]);
 
   const topbarNotifications = useMemo(
     () =>
@@ -64,17 +110,6 @@ const AdminOrders = () => {
       })),
     [notifications],
   );
-
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      "Livré": "bg-success/10 text-success border-success/20",
-      "En cours": "bg-info/10 text-info border-info/20",
-      "Enlevé": "bg-secondary/10 text-secondary border-secondary/20",
-      "En attente": "bg-warning/10 text-warning border-warning/20",
-      "Annulé": "bg-destructive/10 text-destructive border-destructive/20",
-    };
-    return colors[status] || "";
-  };
 
   const openAssignModal = (orderId: string) => {
     setCurrentOrderId(orderId);
@@ -119,9 +154,9 @@ const AdminOrders = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tous les statuts</SelectItem>
-            {statusOptions.map((status) => (
-              <SelectItem key={status} value={status}>
-                {status}
+            {statusOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
               </SelectItem>
             ))}
           </SelectContent>
@@ -172,8 +207,11 @@ const AdminOrders = () => {
                       <Badge variant="outline">{order.type}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={getStatusColor(order.status)}>
-                        {order.status}
+                      <Badge
+                        variant="outline"
+                        className={cn("text-sm", getOrderStatusBadgeClass(order.status))}
+                      >
+                        {getOrderStatusLabel(order.status)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm">
@@ -234,19 +272,19 @@ const AdminOrders = () => {
         </div>
         <div className="rounded-lg border border-warning/20 bg-warning/10 p-4">
           <p className="mb-1 text-xs text-warning">En attente</p>
-          <p className="text-2xl font-bold text-warning">{orders.filter((order) => order.status === "En attente").length}</p>
+          <p className="text-2xl font-bold text-warning">{statusCounts.pending}</p>
         </div>
         <div className="rounded-lg border border-info/20 bg-info/10 p-4">
           <p className="mb-1 text-xs text-info">En cours</p>
-          <p className="text-2xl font-bold text-info">{orders.filter((order) => order.status === "En cours").length}</p>
+          <p className="text-2xl font-bold text-info">{statusCounts.inProgress}</p>
         </div>
         <div className="rounded-lg border border-success/20 bg-success/10 p-4">
           <p className="mb-1 text-xs text-success">Livrées</p>
-          <p className="text-2xl font-bold text-success">{orders.filter((order) => order.status === "Livré").length}</p>
+          <p className="text-2xl font-bold text-success">{statusCounts.delivered}</p>
         </div>
         <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4">
           <p className="mb-1 text-xs text-destructive">Annulées</p>
-          <p className="text-2xl font-bold text-destructive">{orders.filter((order) => order.status === "Annulé").length}</p>
+          <p className="text-2xl font-bold text-destructive">{statusCounts.cancelled}</p>
         </div>
       </div>
 

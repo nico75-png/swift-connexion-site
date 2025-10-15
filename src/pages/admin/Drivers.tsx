@@ -207,7 +207,7 @@ const mapDriverToRecord = (driver: Driver): DriverRecord => {
     phone: phoneNormalized,
     email: driver.email ?? "",
     vehicleType: vehicleValue,
-    capacityKg: driver.vehicle?.capacityKg ?? Number.parseInt(driver.vehicle?.capacity ?? "0", 10) || 0,
+    capacityKg: (driver.vehicle?.capacityKg ?? Number.parseInt(driver.vehicle?.capacity ?? "0", 10)) || 0,
     plateRaw: plateRaw,
     plate: plateNormalized,
     lifecycleStatus,
@@ -547,7 +547,7 @@ const AdminDrivers = () => {
     if (hasEmptyRequired) {
       return true;
     }
-    const hasErrors = [...requiredFields, "comment"].some((field) =>
+    const hasErrors = [...requiredFields, "comment" as keyof FormState].some((field) =>
       Boolean(validateField(field, formData[field])),
     );
     return hasErrors;
@@ -633,7 +633,7 @@ const AdminDrivers = () => {
     setSubmitAttempted(true);
 
     const nextErrors: Partial<Record<keyof FormState, string>> = {};
-    [...requiredFields, "comment"].forEach((field) => {
+    [...requiredFields, "comment" as keyof FormState].forEach((field) => {
       const error = validateField(field, formData[field]);
       if (error) {
         nextErrors[field] = error;
@@ -1014,15 +1014,15 @@ const AdminDrivers = () => {
             <fieldset
               className="space-y-3"
               aria-required="true"
-              aria-describedby={formErrors.status ? "driver-status-error" : undefined}
+              aria-describedby={formErrors.lifecycleStatus ? "driver-status-error" : undefined}
             >
               <legend className="text-sm font-medium text-[#1F1F1F]">Statut</legend>
               <RadioGroup
-                value={formData.status}
+                value={formData.lifecycleStatus}
                 onValueChange={(value: DriverStatus) => {
-                  handleInputChange("status", value);
-                  setTouched((prev) => ({ ...prev, status: true }));
-                  setFormErrors((prev) => ({ ...prev, status: validateField("status", value) }));
+                  handleInputChange("lifecycleStatus", value);
+                  setTouched((prev) => ({ ...prev, lifecycleStatus: true }));
+                  setFormErrors((prev) => ({ ...prev, lifecycleStatus: validateField("lifecycleStatus", value) }));
                 }}
                 className="grid gap-3 sm:grid-cols-2"
               >
@@ -1038,8 +1038,8 @@ const AdminDrivers = () => {
                   </div>
                 ))}
               </RadioGroup>
-              {formErrors.status && (
-                <p id="driver-status-error" className="text-sm text-destructive">{formErrors.status}</p>
+              {formErrors.lifecycleStatus && (
+                <p id="driver-status-error" className="text-sm text-destructive">{formErrors.lifecycleStatus}</p>
               )}
             </fieldset>
 

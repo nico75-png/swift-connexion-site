@@ -443,7 +443,7 @@ export const cancelScheduledAssignment = (scheduledId: string): ScheduleResult =
   }
 
   const updated = scheduledAssignments.map((item) =>
-    item.id === scheduledId ? { ...item, status: "CANCELLED", failureReason: undefined } : item,
+    item.id === scheduledId ? { ...item, status: "CANCELLED" as ScheduledAssignmentStatus, failureReason: undefined } : item,
   );
   saveScheduledAssignments(updated);
 

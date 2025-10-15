@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { useDriversStore, useOrdersStore } from "@/providers/AdminDataProvider";
-import { hasTimeOverlap, type ScheduledAssignmentStatus } from "@/lib/stores/driversOrders.store";
+import { hasTimeOverlap, type ScheduledAssignmentStatus, type Driver } from "@/lib/stores/driversOrders.store";
 import { useToast } from "@/hooks/use-toast";
 import { driverStatusBadgeClass, driverStatusLabel } from "./driverUtils";
 import { format } from "date-fns";
@@ -261,7 +261,7 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
           )}
 
           {nextUnavailability && (
-            <Alert variant="secondary" className="border-dashed border border-border bg-muted/40">
+            <Alert className="border-dashed border border-border bg-muted/40">
               <AlertDescription className="text-sm text-muted-foreground">
                 Prochaine indisponibilité :
                 {" "}

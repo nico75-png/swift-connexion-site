@@ -593,8 +593,11 @@ const sanitizeUnavailabilities = (value: unknown): DriverUnavailability[] => {
             : now,
       } satisfies DriverUnavailability;
     })
-    .filter((item): item is DriverUnavailability => Boolean(item))
-    .sort((a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime());
+    .filter((item): boolean => {
+      if (!item) return false;
+      return Boolean(item.id && item.type && item.start && item.end);
+    })
+    .sort((a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime()) as DriverUnavailability[];
 
   return sanitized;
 };
@@ -620,7 +623,7 @@ const sanitizeDriverEntry = (value: Partial<Driver>): Driver | null => {
 
   const phoneDisplay = phoneInput || (phoneNormalized ? formatPhoneDisplay(phoneNormalized) : "");
 
-  const vehicleRaw = value.vehicle ?? {};
+  const vehicleRaw = (value.vehicle ?? {}) as Partial<{ type?: string; capacityKg?: number; capacity?: string; registration?: string }>;
   const vehicleTypeRaw =
     typeof vehicleRaw.type === "string" && vehicleRaw.type.trim()
       ? vehicleRaw.type.trim()

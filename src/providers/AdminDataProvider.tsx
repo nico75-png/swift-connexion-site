@@ -8,6 +8,9 @@ import {
   ScheduledAssignment,
   getActivityLog,
   getAssignments,
+  createDriver as createDriverInStore,
+  type CreateDriverPayload,
+  type CreateDriverResult,
   getDrivers,
   getNotifications,
   getOrders,
@@ -39,6 +42,7 @@ interface AdminDataContextValue {
   cancelScheduledAssignment: typeof cancelScheduledAssignmentService;
   markNotificationAsRead: (id: string) => void;
   markAllNotificationsAsRead: () => void;
+  createDriver: (payload: CreateDriverPayload) => CreateDriverResult;
 }
 
 const AdminDataContext = createContext<AdminDataContextValue | undefined>(undefined);
@@ -129,6 +133,14 @@ export const AdminDataProvider = ({ children }: { children: React.ReactNode }) =
     return result;
   }, [refreshAll]);
 
+  const createDriver = useCallback<AdminDataContextValue["createDriver"]>((payload) => {
+    const result = createDriverInStore(payload);
+    if (result.success) {
+      refreshAll();
+    }
+    return result;
+  }, [refreshAll]);
+
   const markNotificationAsRead = useCallback((id: string) => {
     setNotifications((current) => {
       const updated = current.map((notification) =>
@@ -161,6 +173,7 @@ export const AdminDataProvider = ({ children }: { children: React.ReactNode }) =
     unassignDriver,
     scheduleDriverAssignment,
     cancelScheduledAssignment,
+    createDriver,
     markNotificationAsRead,
     markAllNotificationsAsRead,
   }), [
@@ -177,6 +190,7 @@ export const AdminDataProvider = ({ children }: { children: React.ReactNode }) =
     unassignDriver,
     scheduleDriverAssignment,
     cancelScheduledAssignment,
+    createDriver,
     markNotificationAsRead,
     markAllNotificationsAsRead,
   ]);
@@ -224,8 +238,8 @@ export const useOrdersStore = () => {
 };
 
 export const useDriversStore = () => {
-  const { ready, drivers, refreshAll } = useAdminDataContext();
-  return { ready, drivers, refreshAll };
+  const { ready, drivers, refreshAll, createDriver } = useAdminDataContext();
+  return { ready, drivers, refreshAll, createDriver };
 };
 
 export const useActivityLogStore = () => {

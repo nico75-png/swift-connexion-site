@@ -6,12 +6,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Download, Eye, RotateCcw, MessageSquare, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
-import { ClientOrder, confirmReorder, createReorderDraft, ensureOrdersDataShape, ensureStoragePrimitives, formatCurrencyEUR, formatDateTime } from "@/lib/reorder";
+import { ClientOrder, confirmReorder, createReorderDraft, ensureStoragePrimitives, formatDateTime } from "@/lib/reorder";
+import { useAuth } from "@/lib/stores/auth.store";
+import {
+  ClientOrderListItem,
+  ORDERS_EVENTS,
+  listOrdersByClient,
+} from "@/lib/stores/clientOrders.store";
 import ReorderModal from "./components/ReorderModal";
 const OrdersPreviewSvg = () => <svg xmlns="http://www.w3.org/2000/svg" width="880" height="360" viewBox="0 0 880 360" role="img" aria-label="Aperçu Mes commandes avec numérotation séquentielle">
     <defs>
@@ -166,34 +173,92 @@ const OrdersPreviewSvg = () => <svg xmlns="http://www.w3.org/2000/svg" width="88
  * Avec filtres et actions
  */
 const ClientOrders = () => {
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+  const { currentUser, currentClient } = useAuth();
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [orders, setOrders] = useState<ClientOrder[]>([]);
+  const [orders, setOrders] = useState<ClientOrderListItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [reorderDraft, setReorderDraft] = useState<ClientOrder | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const fetchOrders = useCallback(async () => {
+    if (!currentClient?.id) {
+      setOrders([]);
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+      if (typeof window !== "undefined") {
+        ensureStoragePrimitives();
+      }
+      const result = await listOrdersByClient(currentClient.id);
+      setOrders(result);
+    } catch (caught) {
+      const message =
+        caught instanceof Error
+          ? caught.message
+          : "Impossible de charger les commandes.";
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentClient?.id]);
+
   useEffect(() => {
-    ensureStoragePrimitives();
-    const initialOrders = ensureOrdersDataShape();
-    setOrders(initialOrders);
-  }, []);
-  const refreshOrdersFromStorage = useCallback(() => {
-    const nextOrders = ensureOrdersDataShape();
-    setOrders(nextOrders);
-  }, []);
+    void fetchOrders();
+  }, [fetchOrders]);
+
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
     const handleStorage = (event: StorageEvent) => {
-      if (!event.key || ["oc_orders", "oc_assignments"].includes(event.key)) {
-        refreshOrdersFromStorage();
+      if (!event.key || event.key === "oc_orders") {
+        void fetchOrders();
       }
     };
+
+    const handleOrdersUpdated = () => {
+      void fetchOrders();
+    };
+
     window.addEventListener("storage", handleStorage);
+    window.addEventListener(ORDERS_EVENTS.UPDATED, handleOrdersUpdated);
     return () => {
       window.removeEventListener("storage", handleStorage);
+      window.removeEventListener(ORDERS_EVENTS.UPDATED, handleOrdersUpdated);
     };
-  }, [refreshOrdersFromStorage]);
+  }, [fetchOrders]);
+  const formatOrderDate = (value: string | null) =>
+    formatDateTime(value ?? undefined) || "—";
+
+  const formatCurrencyValue = (amount: number, currency: string) => {
+    try {
+      return new Intl.NumberFormat("fr-FR", {
+        style: "currency",
+        currency: currency || "EUR",
+        minimumFractionDigits: 2,
+      }).format(amount);
+    } catch (error) {
+      console.error("Failed to format currency", error);
+      return `${amount.toFixed(2)} ${currency || "€"}`;
+    }
+  };
+
+  const formatRoutePart = (address: ClientOrderListItem["pickupAddress"]) => {
+    if (!address) {
+      return "Adresse non renseignée";
+    }
+    const location = [address.postalCode, address.city].filter(Boolean).join(" ");
+    return [address.line, location].filter(Boolean).join(" ");
+  };
+
   const getStatusColor = useCallback((status: string) => {
     const normalized = status.toLowerCase();
     if (normalized.includes("livr")) {
@@ -214,13 +279,32 @@ const ClientOrders = () => {
     return "bg-muted text-foreground border-border";
   }, []);
   const filteredOrders = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    const normalizedStatusFilter = statusFilter.toLowerCase();
     return orders.filter(order => {
       const normalizedStatus = order.status.toLowerCase();
-      const matchesStatus = statusFilter === "all" || normalizedStatus.includes(statusFilter.toLowerCase());
-      const haystack = [order.id, order.type, order.from?.address ?? "", order.to?.address ?? ""].filter(Boolean).map(value => value.toLowerCase());
-      const term = searchTerm.trim().toLowerCase();
-      const matchesSearch = term.length === 0 || haystack.some(value => value.includes(term));
-      return matchesStatus && matchesSearch;
+      const matchesStatus =
+        statusFilter === "all" || normalizedStatus.includes(normalizedStatusFilter);
+      if (!matchesStatus) {
+        return false;
+      }
+
+      if (term.length === 0) {
+        return true;
+      }
+
+      const haystack = [
+        order.orderNumber,
+        order.transportLabel,
+        order.pickupAddress?.line ?? "",
+        order.pickupAddress?.city ?? "",
+        order.deliveryAddress?.line ?? "",
+        order.deliveryAddress?.city ?? "",
+      ]
+        .filter(Boolean)
+        .map(value => value.toLowerCase());
+
+      return haystack.some(value => value.includes(term));
     });
   }, [orders, searchTerm, statusFilter]);
   const handleReorder = useCallback((orderId: string) => {
@@ -241,16 +325,21 @@ const ClientOrders = () => {
     setIsModalOpen(false);
     setReorderDraft(null);
   }, []);
-  const handleConfirm = useCallback(async (draft: ClientOrder) => {
-    const result = confirmReorder(draft);
-    setOrders(current => [result.order, ...current.filter(order => order.id !== result.order.id)]);
-    toast({
-      title: "Commande recommandée",
-      description: result.driver ? `Commande ${result.order.id} créée et assignée à ${result.driver.name}.` : `Commande ${result.order.id} créée sans chauffeur disponible pour le moment.`
-    });
-    closeModal();
-  }, [closeModal, toast]);
-  return <DashboardLayout sidebar={<ClientSidebar />} topbar={<Topbar userName="Jean Dupont" />}>
+  const handleConfirm = useCallback(
+    async (draft: ClientOrder) => {
+      const result = confirmReorder(draft);
+      toast({
+        title: "Commande recommandée",
+        description: result.driver
+          ? `Commande ${result.order.id} créée et assignée à ${result.driver.name}.`
+          : `Commande ${result.order.id} créée sans chauffeur disponible pour le moment.`,
+      });
+      closeModal();
+      await fetchOrders();
+    },
+    [closeModal, fetchOrders, toast],
+  );
+  return <DashboardLayout sidebar={<ClientSidebar />} topbar={<Topbar userName={currentUser?.name ?? "Client"} />}> 
       <div className="space-y-6">
         {/* En-tête */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -302,67 +391,125 @@ const ClientOrders = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.map(order => {
-                  const driverName = order.driver?.name ?? "En attente";
-                  const driverPhone = order.driver?.phone ?? "";
-                  const fromAddress = order.from?.address ?? "Adresse non renseignée";
-                  const toAddress = order.to?.address ?? "Adresse non renseignée";
-                  const canContactDriver = driverPhone.trim().length > 0 && order.status.toLowerCase().includes("cours");
-                  const canReorder = !order.status.toLowerCase().includes("cours");
-                  return <tr key={order.id} className="border-b transition-colors hover:bg-muted/30">
-                        <td className="p-4 font-mono text-sm">{order.id}</td>
-                        <td className="p-4 text-sm text-muted-foreground">
-                          {formatDateTime(order.pickupAt) || "—"}
-                        </td>
-                        <td className="p-4 text-sm">{order.type}</td>
-                        <td className="p-4 text-sm text-muted-foreground">
-                          {fromAddress} → {toAddress}
-                        </td>
-                        <td className="p-4 text-sm">
-                          <div className="space-y-1">
-                            <p>{driverName}</p>
-                            {driverPhone && <a href={`tel:${driverPhone}`} className="text-xs text-primary hover:underline">
-                                {driverPhone}
-                              </a>}
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <Badge className={`${getStatusColor(order.status)} border`}>{order.status}</Badge>
-                        </td>
-                        <td className="p-4 text-right font-semibold">
-                          {formatCurrencyEUR(order.price?.total ?? 0)}
-                        </td>
-                        <td className="p-4">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="sm" asChild>
-                              <Link to={`/espace-client/commandes/${order.id}`}>
-                                <Eye className="h-4 w-4" />
-                                <span className="sr-only">Voir la commande {order.id}</span>
-                              </Link>
-                            </Button>
-                            {canReorder && <Button variant="ghost" size="sm" title="Recommander" data-action="reorder" data-order-id={order.id} onClick={() => handleReorder(order.id)}>
-                                <RotateCcw className="h-4 w-4" />
-                                <span className="sr-only">Recommander la commande {order.id}</span>
-                              </Button>}
-                            {canContactDriver && <Button variant="ghost" size="sm" asChild title="Contacter chauffeur">
-                                <a href={`tel:${driverPhone}`}>
-                                  <MessageSquare className="h-4 w-4" />
-                                  <span className="sr-only">Appeler le chauffeur {driverName}</span>
-                                </a>
-                              </Button>}
-                            <Button variant="ghost" size="sm" title="Télécharger PDF">
-                              <Download className="h-4 w-4" />
-                              <span className="sr-only">Télécharger le récapitulatif PDF</span>
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>;
-                })}
-                  {filteredOrders.length === 0 && <tr>
-                      <td colSpan={8} className="p-6 text-center text-sm text-muted-foreground">
-                        Aucune commande ne correspond à votre recherche.
-                      </td>
-                    </tr>}
+                  {isLoading
+                    ? Array.from({ length: 5 }).map((_, index) => (
+                        <tr key={`skeleton-${index}`} className="border-b">
+                          <td className="p-4"><Skeleton className="h-4 w-24" /></td>
+                          <td className="p-4"><Skeleton className="h-4 w-28" /></td>
+                          <td className="p-4"><Skeleton className="h-4 w-24" /></td>
+                          <td className="p-4"><Skeleton className="h-4 w-40" /></td>
+                          <td className="p-4"><Skeleton className="h-4 w-28" /></td>
+                          <td className="p-4"><Skeleton className="h-4 w-20" /></td>
+                          <td className="p-4 text-right"><Skeleton className="ml-auto h-4 w-16" /></td>
+                          <td className="p-4 text-right"><Skeleton className="ml-auto h-4 w-12" /></td>
+                        </tr>
+                      ))
+                    : error
+                    ? (
+                        <tr>
+                          <td colSpan={8} className="p-6 text-center text-sm text-destructive">
+                            {error}
+                          </td>
+                        </tr>
+                      )
+                    : filteredOrders.length > 0
+                      ? filteredOrders.map(order => {
+                          const driverName = order.driverSummary?.name ?? "En attente";
+                          const driverPhone = order.driverSummary?.phone ?? "";
+                          const canContactDriver =
+                            driverPhone.trim().length > 0 && order.status.toLowerCase().includes("cours");
+                          const canReorder = !order.status.toLowerCase().includes("cours");
+                          const pickupDisplay = formatRoutePart(order.pickupAddress);
+                          const deliveryDisplay = formatRoutePart(order.deliveryAddress);
+                          const displayNumber = order.orderNumber || `ORD-${order.id}`;
+                          return (
+                            <tr key={order.id} className="border-b transition-colors hover:bg-muted/30">
+                              <td className="p-4 font-mono text-sm">{displayNumber}</td>
+                              <td className="p-4 text-sm text-muted-foreground">
+                                {formatOrderDate(order.createdAt)}
+                              </td>
+                              <td className="p-4 text-sm">{order.transportLabel}</td>
+                              <td className="p-4 text-sm text-muted-foreground">
+                                <div className="space-y-1 max-w-[260px]">
+                                  <p className="truncate" title={pickupDisplay}>{pickupDisplay}</p>
+                                  <p className="truncate" title={deliveryDisplay}>
+                                    <span className="text-xs text-muted-foreground mr-1">→</span>
+                                    {deliveryDisplay}
+                                  </p>
+                                </div>
+                              </td>
+                              <td className="p-4 text-sm">
+                                <div className="space-y-1">
+                                  <p>{driverName}</p>
+                                  {driverPhone && (
+                                    <a href={`tel:${driverPhone}`} className="text-xs text-primary hover:underline">
+                                      {driverPhone}
+                                    </a>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                <Badge className={`${getStatusColor(order.status)} border`}>{order.status}</Badge>
+                              </td>
+                              <td className="p-4 text-right font-semibold">
+                                {order.amountTTC != null ? (
+                                  formatCurrencyValue(order.amountTTC, order.currency)
+                                ) : (
+                                  <div className="flex items-center justify-end gap-2 text-muted-foreground">
+                                    <span>—</span>
+                                    <Badge variant="outline" className="text-xs uppercase tracking-wide">
+                                      À valider
+                                    </Badge>
+                                  </div>
+                                )}
+                              </td>
+                              <td className="p-4">
+                                <div className="flex justify-end gap-2">
+                                  <Button variant="ghost" size="sm" asChild>
+                                    <Link to={`/espace-client/commandes/${order.id}`}>
+                                      <Eye className="h-4 w-4" />
+                                      <span className="sr-only">Voir la commande {displayNumber}</span>
+                                    </Link>
+                                  </Button>
+                                  {canReorder && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      title="Recommander"
+                                      data-action="reorder"
+                                      data-order-id={order.id}
+                                      onClick={() => handleReorder(order.id)}
+                                    >
+                                      <RotateCcw className="h-4 w-4" />
+                                      <span className="sr-only">Recommander la commande {displayNumber}</span>
+                                    </Button>
+                                  )}
+                                  {canContactDriver && (
+                                    <Button variant="ghost" size="sm" asChild title="Contacter chauffeur">
+                                      <a href={`tel:${driverPhone}`}>
+                                        <MessageSquare className="h-4 w-4" />
+                                        <span className="sr-only">Appeler le chauffeur {driverName}</span>
+                                      </a>
+                                    </Button>
+                                  )}
+                                  <Button variant="ghost" size="sm" title="Télécharger PDF">
+                                    <Download className="h-4 w-4" />
+                                    <span className="sr-only">Télécharger le récapitulatif PDF</span>
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      : (
+                        <tr>
+                          <td colSpan={8} className="p-6 text-center text-sm text-muted-foreground">
+                            {orders.length === 0
+                              ? "Aucune commande n’a encore été enregistrée."
+                              : "Aucune commande ne correspond à votre recherche."}
+                          </td>
+                        </tr>
+                      )}
                 </tbody>
               </table>
             </div>

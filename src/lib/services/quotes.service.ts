@@ -1,4 +1,5 @@
 import { generateId } from "@/lib/stores/driversOrders.store";
+import { getFromStorage, saveToStorage } from "@/lib/reorder";
 
 export interface QuoteOrderPayload {
   customerId: string;
@@ -37,6 +38,42 @@ export interface QuoteOrderResult {
   quote?: QuoteOrderSuccess;
   error?: string;
 }
+
+export interface StoredQuote extends QuoteOrderSuccess {
+  customerId?: string;
+  createdAt: string;
+  payload: QuoteOrderPayload;
+}
+
+const QUOTES_STORAGE_KEY = "oc_quotes";
+
+const readStoredQuotes = (): StoredQuote[] =>
+  getFromStorage<StoredQuote[]>(QUOTES_STORAGE_KEY, []);
+
+const writeStoredQuotes = (list: StoredQuote[]) => {
+  saveToStorage(QUOTES_STORAGE_KEY, list);
+};
+
+const rememberQuote = (payload: QuoteOrderPayload, quote: QuoteOrderSuccess) => {
+  const entry: StoredQuote = {
+    ...quote,
+    customerId: payload.customerId,
+    createdAt: new Date().toISOString(),
+    payload,
+  };
+  const existing = readStoredQuotes();
+  const withoutDuplicate = existing.filter(item => item.id !== entry.id);
+  writeStoredQuotes([entry, ...withoutDuplicate]);
+};
+
+export const getQuoteById = async (id: string): Promise<StoredQuote | null> => {
+  const quotes = readStoredQuotes();
+  const found = quotes.find(entry => entry.id === id);
+  if (found) {
+    return found;
+  }
+  return null;
+};
 
 const roundCurrency = (value: number) => Math.round(value * 100) / 100;
 
@@ -98,6 +135,8 @@ export const quoteOrder = async (payload: QuoteOrderPayload): Promise<QuoteOrder
     },
     expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
   };
+
+  rememberQuote(payload, quote);
 
   return {
     success: true,

@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import CreateOrderButton from "@/components/dashboard/CreateOrderButton";
 import AssignDriverModal from "@/components/admin/orders/AssignDriverModal";
+import { getAssignButtonLabel } from "@/components/admin/orders/orderAssignmentUtils";
 import { driverStatusBadgeClass, driverStatusLabel } from "@/components/admin/orders/driverUtils";
 import { useDriversStore, useNotificationsStore, useOrdersStore } from "@/providers/AdminDataProvider";
 import { cn } from "@/lib/utils";
@@ -163,6 +164,8 @@ const AdminOrders = () => {
             <TableBody>
               {filteredOrders.map((order) => {
                 const driver = driverForOrder(order.driverId);
+                const assignButtonLabel = getAssignButtonLabel(order.status, Boolean(driver));
+
                 return (
                   <TableRow key={order.id} className="hover:bg-muted/30">
                     <TableCell className="font-mono font-semibold">{order.id}</TableCell>
@@ -201,15 +204,17 @@ const AdminOrders = () => {
                             Voir
                           </Button>
                         </Link>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="btn-assign-driver"
-                          data-order-id={order.id}
-                          onClick={() => openAssignModal(order.id)}
-                        >
-                          {driver ? "Modifier" : "Affecter"}
-                        </Button>
+                        {assignButtonLabel && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="btn-assign-driver"
+                            data-order-id={order.id}
+                            onClick={() => openAssignModal(order.id)}
+                          >
+                            {assignButtonLabel}
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

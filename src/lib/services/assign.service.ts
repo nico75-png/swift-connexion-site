@@ -39,6 +39,46 @@ const resolveOrder = (orderId: string, orders: Order[]) => orders.find((order) =
 const isBlockingScheduledStatus = (status: ScheduledAssignmentStatus) =>
   status === "PENDING" || status === "PROCESSING";
 
+export const cancelScheduledAssignmentsForInterval = (
+  driverId: string,
+  interval: { start: string; end: string },
+): ScheduledAssignment[] => {
+  const scheduledAssignments = getScheduledAssignments();
+  const nowTime = Date.now();
+  let hasChanges = false;
+  const cancelled: ScheduledAssignment[] = [];
+
+  const updated = scheduledAssignments.map((assignment) => {
+    if (
+      assignment.driverId !== driverId ||
+      !isBlockingScheduledStatus(assignment.status) ||
+      !hasTimeOverlap(interval.start, interval.end, assignment.start, assignment.end)
+    ) {
+      return assignment;
+    }
+
+    const assignmentStart = new Date(assignment.start).getTime();
+    if (Number.isNaN(assignmentStart) || assignmentStart < nowTime) {
+      return assignment;
+    }
+
+    const updatedAssignment: ScheduledAssignment = {
+      ...assignment,
+      status: "CANCELLED",
+      failureReason: "Annulé (indisponibilité chauffeur)",
+    };
+    cancelled.push(updatedAssignment);
+    hasChanges = true;
+    return updatedAssignment;
+  });
+
+  if (hasChanges) {
+    saveScheduledAssignments(updated);
+  }
+
+  return cancelled;
+};
+
 export const isDriverAvailable = (
   driverId: string,
   dateStart: string,
@@ -47,7 +87,15 @@ export const isDriverAvailable = (
 ) => {
   const drivers = getDrivers();
   const driver = resolveDriver(driverId, drivers);
-  if (!driver || !driver.active || driver.status === "PAUSED") {
+  if (!driver || !driver.active || driver.status === "PAUSED" || driver.lifecycleStatus === "INACTIF") {
+    return false;
+  }
+
+  const hasBlockingUnavailability = (driver.unavailabilities ?? []).some((unavailability) =>
+    hasTimeOverlap(dateStart, dateEnd, unavailability.start, unavailability.end),
+  );
+
+  if (hasBlockingUnavailability) {
     return false;
   }
 
@@ -102,6 +150,10 @@ const findConflictingScheduledAssignment = (
 };
 
 const guardDriverStatus = (driver: Driver): { valid: boolean; error?: string } => {
+  if (driver.lifecycleStatus === "INACTIF") {
+    return { valid: false, error: "Ce chauffeur est inactif" };
+  }
+
   if (!driver.active) {
     return { valid: false, error: "Ce chauffeur est indisponible sur ce créneau" };
   }
@@ -120,6 +172,16 @@ const guardAvailability = (
 ): { valid: boolean; conflictOrderId?: string; error?: string } => {
   const isAvailable = isDriverAvailable(driverId, schedule.start, schedule.end, options);
   if (!isAvailable) {
+    const driver = resolveDriver(driverId, getDrivers());
+    if (driver) {
+      const blockingUnavailability = (driver.unavailabilities ?? []).find((item) =>
+        hasTimeOverlap(schedule.start, schedule.end, item.start, item.end),
+      );
+      if (blockingUnavailability) {
+        return { valid: false, error: "Ce chauffeur est indisponible sur ce créneau" };
+      }
+    }
+
     const conflict = findConflictingAssignment(driverId, schedule.start, schedule.end);
     if (conflict) {
       return {

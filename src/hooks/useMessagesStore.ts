@@ -4,7 +4,7 @@ import { messagingService } from "@/lib/services/messaging.service";
 
 type UserRole = "ADMIN" | "CLIENT" | "DRIVER";
 
-type ConversationContextType = "SUPPORT" | "ORDER" | "INCIDENT";
+type ConversationContextType = "SUPPORT" | "ORDER" | "INCIDENT" | "BILLING";
 
 type Participant = {
   id: string;
@@ -60,11 +60,22 @@ type SendMessageInput = {
   contextReference?: string;
 };
 
+type CreateThreadInput = {
+  fromId: string;
+  toId: string;
+  subject: string;
+  message: string;
+  contextType: ConversationContextType;
+  contextReference?: string;
+};
+
 type MessagesStore = MessagesState & {
   sendMessage: (input: SendMessageInput) => Promise<Conversation>;
+  createThread: (input: CreateThreadInput) => Promise<Conversation>;
   getParticipant: (id: string) => Participant | undefined;
   getConversationsFor: (participantId: string) => Conversation[];
   getRecipientsFor: (participantId: string) => Participant[];
+  listRecentDriversForClient: (clientId: string) => Promise<Participant[]>;
 };
 
 type Listener = () => void;
@@ -365,6 +376,63 @@ notify();
   return updatedConversation;
 };
 
+const createThread = async (input: CreateThreadInput): Promise<Conversation> => {
+  const snapshot = getState();
+  const sender = snapshot.participants.find((participant) => participant.id === input.fromId);
+  const recipient = snapshot.participants.find((participant) => participant.id === input.toId);
+
+  if (!sender || !recipient) {
+    throw new Error("Participant introuvable pour créer la conversation");
+  }
+
+  const serviceResponse = await messagingService.sendMessage({
+    subject: input.subject,
+    content: input.message,
+    fromId: sender.id,
+    toId: recipient.id,
+    contextType: input.contextType,
+    contextReference: input.contextReference,
+  });
+
+  const timestamp = serviceResponse.timestamp ?? nowIso();
+  const messageId = serviceResponse.id ?? createId();
+  const conversationId = createId();
+
+  const reference = input.contextReference?.trim() ? input.contextReference.trim() : undefined;
+
+  const newMessage: Message = {
+    id: messageId,
+    conversationId,
+    subject: input.subject,
+    content: input.message,
+    senderId: sender.id,
+    senderRole: sender.role,
+    recipientId: recipient.id,
+    recipientRole: recipient.role,
+    timestamp,
+  };
+
+  const newConversation: Conversation = {
+    id: conversationId,
+    participants: [sender.id, recipient.id],
+    context: { type: input.contextType, reference },
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    messages: [newMessage],
+  };
+
+  const nextState: MessagesState = {
+    participants: snapshot.participants,
+    conversations: sortConversations([...snapshot.conversations, newConversation]),
+  };
+
+  state = nextState;
+  cachedSnapshot = buildSnapshot();
+  notify();
+
+  return newConversation;
+};
+
 const getParticipant = (id: string) => getState().participants.find((participant) => participant.id === id);
 
 const getConversationsFor = (participantId: string) =>
@@ -391,12 +459,35 @@ const getRecipientsFor = (participantId: string) => {
   return all.filter((item) => item.role !== "DRIVER");
 };
 
+const listRecentDriversForClient = async (clientId: string): Promise<Participant[]> => {
+  const snapshot = getState();
+  const client = snapshot.participants.find((participant) => participant.id === clientId);
+  const clientOrders = client?.metadata?.orders ?? [];
+
+  const drivers = snapshot.participants.filter((participant) => {
+    if (participant.role !== "DRIVER") {
+      return false;
+    }
+
+    if (clientOrders.length === 0) {
+      return true;
+    }
+
+    const driverOrders = participant.metadata?.orders ?? [];
+    return driverOrders.some((order) => clientOrders.includes(order));
+  });
+
+  return drivers;
+};
+
 const buildSnapshot = (): MessagesStore => ({
   ...state,
   sendMessage,
+  createThread,
   getParticipant,
   getConversationsFor,
   getRecipientsFor,
+  listRecentDriversForClient,
 });
 
 let cachedSnapshot: MessagesStore = buildSnapshot();
@@ -406,3 +497,12 @@ const getSnapshot = (): MessagesStore => cachedSnapshot;
 export const useMessagesStore = () => useSyncExternalStore<MessagesStore>(subscribe, getSnapshot, getSnapshot);
 
 export type { Conversation, ConversationContextType, Message, Participant, UserRole };
+
+export const messagesStoreActions = {
+  sendMessage,
+  createThread,
+  getParticipant,
+  getConversationsFor,
+  getRecipientsFor,
+  listRecentDriversForClient,
+};

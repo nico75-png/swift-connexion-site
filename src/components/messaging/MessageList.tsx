@@ -12,6 +12,7 @@ const CONTEXT_LABELS: Record<string, string> = {
   SUPPORT: "Support",
   ORDER: "Commande",
   INCIDENT: "Incident",
+  BILLING: "Facturation",
 };
 
 interface MessageListProps {

@@ -17,6 +17,8 @@ export interface CreateOrderPayload {
   weight: number;
   volume: number;
   driverInstructions?: string;
+  quoteId: string;
+  quoteAmount: number;
 }
 
 interface CreateOrderOptions {
@@ -53,7 +55,7 @@ const buildNewOrder = (
     client: options.customerCompany,
     type: payload.transportType,
     status: "En attente",
-    amount: 0,
+    amount: payload.quoteAmount,
     schedule: {
       start: scheduleStart.toISOString(),
       end: scheduleEnd.toISOString(),
@@ -91,6 +93,8 @@ export const createOrder = async (
         customerId: payload.customerId,
         weight: payload.weight,
         volume: payload.volume,
+        quoteId: payload.quoteId,
+        quoteAmount: payload.quoteAmount,
       },
     });
 

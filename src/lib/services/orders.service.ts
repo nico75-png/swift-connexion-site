@@ -6,6 +6,8 @@ import {
   getOrders,
   saveOrders,
 } from "@/lib/stores/driversOrders.store";
+import { appendClientOrderFromCreate } from "@/lib/stores/clientOrders.store";
+import { getQuoteById } from "@/lib/services/quotes.service";
 
 export interface CreateOrderPayload {
   customerId: string;
@@ -81,6 +83,23 @@ export const createOrder = async (
 
     const orders = getOrders();
     saveOrders([newOrder, ...orders]);
+
+    const storedQuote = await getQuoteById(payload.quoteId);
+    appendClientOrderFromCreate({
+      id: orderId,
+      customerId: payload.customerId,
+      transportType: payload.transportType,
+      pickupAddress: payload.pickupAddress,
+      deliveryAddress: payload.deliveryAddress,
+      scheduleStart: newOrder.schedule.start,
+      scheduleEnd: newOrder.schedule.end,
+      weightKg: payload.weight,
+      volumeM3: payload.volume,
+      quoteAmount: payload.quoteAmount,
+      quoteId: payload.quoteId,
+      currency: storedQuote?.currency ?? "EUR",
+      instructions: payload.driverInstructions,
+    });
 
     appendActivity({
       id: generateId(),

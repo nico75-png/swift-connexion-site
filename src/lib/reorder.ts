@@ -56,10 +56,12 @@ export interface ClientOrder {
   previousOrderId?: string;
   reference?: string;
   status: string;
+  customerId?: string;
   createdAt?: string;
   pickupAt: string;
   dropoffEta?: string;
   type: string;
+  transportTypeCode?: string;
   description?: string;
   from: LocationDetails;
   to: LocationDetails;
@@ -72,6 +74,8 @@ export interface ClientOrder {
   driverId: string | null;
   driver?: Nullable<{ id: string; name: string; phone?: string }>;
   notes?: string;
+  quoteId?: string | null;
+  currency?: string;
   history?: Array<{ label: string; at: string }>;
   cancellation?: {
     reason: CancelOrderReason;
@@ -467,10 +471,12 @@ export function ensureOrdersDataShape(): ClientOrder[] {
     {
       id: "009",
       status: "Livré",
+      customerId: "CLI-2001",
       createdAt: "2025-01-15T12:00:00.000Z",
       pickupAt: "2025-01-14T09:30:00.000Z",
       dropoffEta: "2025-01-14T11:00:00.000Z",
       type: "Document juridique",
+      transportTypeCode: "juridique",
       from: {
         address: "12 rue de la Paix, 75002 Paris",
         contact: { name: "Cabinet Dupont", phone: "0145234567" },
@@ -486,6 +492,8 @@ export function ensureOrdersDataShape(): ClientOrder[] {
       parcelsCount: 2,
       options: { express: true, fragile: false },
       price: estimatePrice({ base: 18, km: 14, express: true, fragile: false }),
+      currency: "EUR",
+      quoteId: "Q-009",
       driverId: "DRV-2001",
       driver: { id: "DRV-2001", name: "Marc Dubois", phone: "0612345678" },
       notes: "Remettre en main propre",
@@ -493,10 +501,12 @@ export function ensureOrdersDataShape(): ClientOrder[] {
     {
       id: "010",
       status: "Livré",
+      customerId: "CLI-2001",
       createdAt: "2025-01-13T10:00:00.000Z",
       pickupAt: "2025-01-13T08:15:00.000Z",
       dropoffEta: "2025-01-13T09:00:00.000Z",
       type: "Colis médical",
+      transportTypeCode: "colis",
       from: {
         address: "22 boulevard de Sébastopol, 75004 Paris",
         contact: { name: "Clinique Sébastopol", phone: "0156759800" },
@@ -512,6 +522,8 @@ export function ensureOrdersDataShape(): ClientOrder[] {
       parcelsCount: 1,
       options: { express: true, fragile: true },
       price: estimatePrice({ base: 22, km: 19, express: true, fragile: true }),
+      currency: "EUR",
+      quoteId: "Q-010",
       driverId: "DRV-2003",
       driver: { id: "DRV-2003", name: "Thomas Renard", phone: "0676543210" },
       notes: "Transport à température contrôlée",
@@ -519,10 +531,12 @@ export function ensureOrdersDataShape(): ClientOrder[] {
     {
       id: "1000",
       status: "En cours",
+      customerId: "CLI-2001",
       createdAt: "2025-01-16T07:30:00.000Z",
       pickupAt: "2025-01-16T08:00:00.000Z",
       dropoffEta: "2025-01-16T09:15:00.000Z",
       type: "Monture optique",
+      transportTypeCode: "monture",
       from: {
         address: "78 rue Montorgueil, 75002 Paris",
         contact: { name: "Maison Optique", phone: "0186752390" },
@@ -538,6 +552,8 @@ export function ensureOrdersDataShape(): ClientOrder[] {
       parcelsCount: 1,
       options: { express: false, fragile: true },
       price: estimatePrice({ base: 16, km: 9, express: false, fragile: true }),
+      currency: "EUR",
+      quoteId: "Q-1000",
       driverId: "DRV-2002",
       driver: { id: "DRV-2002", name: "Julie Lambert", phone: "0698765432" },
       notes: "Fragile, manipuler avec précaution",
@@ -545,10 +561,12 @@ export function ensureOrdersDataShape(): ClientOrder[] {
     {
       id: "1001",
       status: "En attente",
+      customerId: "CLI-2001",
       createdAt: "2025-01-17T10:00:00.000Z",
       pickupAt: "2025-01-17T14:30:00.000Z",
       dropoffEta: "2025-01-17T16:00:00.000Z",
       type: "Document express",
+      transportTypeCode: "document",
       from: {
         address: "5 rue de la République, 93100 Montreuil",
         contact: { name: "Cabinet Martin", phone: "0149203040" },
@@ -564,6 +582,8 @@ export function ensureOrdersDataShape(): ClientOrder[] {
       parcelsCount: 1,
       options: { express: true, fragile: false },
       price: estimatePrice({ base: 20, km: 12, express: true, fragile: false }),
+      currency: "EUR",
+      quoteId: "Q-1001",
       driverId: null,
       driver: null,
       notes: "Code porte 27B",

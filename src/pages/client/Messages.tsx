@@ -26,7 +26,7 @@ const ClientMessages = () => {
       id: "driver-marc",
       name: "Marc Dupuis (Chauffeur)",
       type: "driver",
-      order: "CMD-2025-001",
+      order: "HORDE25001",
       lastMessage: "J'arrive dans 10 minutes",
       time: "Il y a 5 min",
       unread: 2,

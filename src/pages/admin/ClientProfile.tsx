@@ -37,10 +37,10 @@ const AdminClientProfile = () => {
   };
 
   const recentOrders = [
-    { id: "CMD-247", date: "2025-01-15", status: "En cours", amount: 45.50 },
-    { id: "CMD-243", date: "2025-01-14", status: "Livré", amount: 38.00 },
-    { id: "CMD-238", date: "2025-01-12", status: "Livré", amount: 52.00 },
-    { id: "CMD-235", date: "2025-01-10", status: "Livré", amount: 41.00 },
+    { id: "HORDE26047", date: "2025-01-15", status: "En cours", amount: 45.5 },
+    { id: "HORDE26043", date: "2025-01-14", status: "Livré", amount: 38 },
+    { id: "HORDE26038", date: "2025-01-12", status: "Livré", amount: 52 },
+    { id: "HORDE26035", date: "2025-01-10", status: "Livré", amount: 41 },
   ];
 
   const invoices = [

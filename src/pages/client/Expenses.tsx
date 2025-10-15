@@ -24,10 +24,10 @@ const ClientExpenses = () => {
   ];
 
   const expenses = [
-    { id: "CMD-2025-001", date: "15/01/2025", status: "En cours", amount: 45.50 },
-    { id: "CMD-2025-002", date: "14/01/2025", status: "Livré", amount: 52.00 },
-    { id: "CMD-2025-003", date: "14/01/2025", status: "Livré", amount: 38.00 },
-    { id: "CMD-2025-004", date: "13/01/2025", status: "En attente", amount: 35.00 },
+    { id: "HORDE25001", date: "15/01/2025", status: "En cours", amount: 45.5 },
+    { id: "HORDE25002", date: "14/01/2025", status: "Livré", amount: 52 },
+    { id: "HORDE25003", date: "14/01/2025", status: "Livré", amount: 38 },
+    { id: "HORDE25004", date: "13/01/2025", status: "En attente", amount: 35 },
   ];
 
   const getStatusColor = (status: string) => {

@@ -35,10 +35,10 @@ const Admin = () => {
 
   // Dernières commandes
   const recentOrders = [
-    { id: "CMD-247", client: "Cabinet Dupont", status: "En cours", driver: "Marc D.", amount: 45.50, time: "Il y a 15 min" },
-    { id: "CMD-246", client: "Optique Vision", status: "Livré", driver: "Julie L.", amount: 38.00, time: "Il y a 1h" },
-    { id: "CMD-245", client: "Lab Médical", status: "En attente", driver: "-", amount: 52.00, time: "Il y a 2h" },
-    { id: "CMD-244", client: "Avocat & Associés", status: "Enlevé", driver: "Pierre M.", amount: 41.00, time: "Il y a 3h" },
+    { id: "HORDE26047", client: "Cabinet Dupont", status: "En cours", driver: "Marc D.", amount: 45.5, time: "Il y a 15 min" },
+    { id: "HORDE26046", client: "Optique Vision", status: "Livré", driver: "Julie L.", amount: 38, time: "Il y a 1h" },
+    { id: "HORDE26045", client: "Lab Médical", status: "En attente", driver: "-", amount: 52, time: "Il y a 2h" },
+    { id: "HORDE26044", client: "Avocat & Associés", status: "Enlevé", driver: "Pierre M.", amount: 41, time: "Il y a 3h" },
   ];
 
   // Nouveaux clients

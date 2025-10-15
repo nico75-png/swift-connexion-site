@@ -15,7 +15,7 @@ import { Link } from "react-router-dom";
  */
 const ClientDashboard = () => {
   const notifications = [
-    { id: "1", message: "Votre commande CMD-2025-001 est en cours de livraison", time: "Il y a 5 min", read: false },
+    { id: "1", message: "Votre commande HORDE25001 est en cours de livraison", time: "Il y a 5 min", read: false },
     { id: "2", message: "Nouveau message du chauffeur", time: "Il y a 1h", read: false },
     { id: "3", message: "Facture FACT-2025-01 disponible", time: "Il y a 2h", read: true },
   ];
@@ -28,9 +28,9 @@ const ClientDashboard = () => {
   ];
 
   const recentOrders = [
-    { id: "CMD-2025-001", date: "15/01/2025", type: "Document juridique", status: "En cours", color: "info" },
-    { id: "CMD-2025-002", date: "14/01/2025", type: "Colis médical", status: "Livré", color: "success" },
-    { id: "CMD-2025-003", date: "14/01/2025", type: "Monture optique", status: "Livré", color: "success" },
+    { id: "HORDE25001", date: "15/01/2025", type: "Document juridique", status: "En cours", color: "info" },
+    { id: "HORDE25002", date: "14/01/2025", type: "Colis médical", status: "Livré", color: "success" },
+    { id: "HORDE25003", date: "14/01/2025", type: "Monture optique", status: "Livré", color: "success" },
   ];
 
   const getStatusColor = (color: string) => {

@@ -43,7 +43,7 @@ beforeEach(() => {
 
 describe("assign.service", () => {
   it("assigne un chauffeur actif quelle que soit la zone de la commande", () => {
-    const result = assignDriver("CMD-245", "DRV-101");
+    const result = assignDriver("HORDE26045", "DRV-101");
 
     expect(result.success).toBe(true);
     expect(result.error).toBeUndefined();
@@ -51,7 +51,7 @@ describe("assign.service", () => {
   });
 
   it("refuse l'affectation pour un chauffeur en pause", () => {
-    const result = assignDriver("CMD-245", "DRV-103");
+    const result = assignDriver("HORDE26045", "DRV-103");
 
     expect(result.success).toBe(false);
     expect(result.error).toBe("Chauffeur en pause — sélection impossible");
@@ -60,7 +60,7 @@ describe("assign.service", () => {
   it("considère les planifications lors du calcul de disponibilité", () => {
     const scheduled: ScheduledAssignment = {
       id: "SCHED-1",
-      orderId: "CMD-245",
+      orderId: "HORDE26045",
       driverId: "DRV-101",
       start: "2025-01-15T16:00:00+01:00",
       end: "2025-01-15T17:30:00+01:00",
@@ -77,7 +77,7 @@ describe("assign.service", () => {
 
   it("exécute les planifications arrivées à échéance", () => {
     const futureDate = new Date(Date.now() + 60_000).toISOString();
-    const scheduleResult = scheduleDriverAssignment("CMD-245", "DRV-101", futureDate);
+    const scheduleResult = scheduleDriverAssignment("HORDE26045", "DRV-101", futureDate);
 
     expect(scheduleResult.success).toBe(true);
 
@@ -94,7 +94,7 @@ describe("assign.service", () => {
     const [updated] = getScheduledAssignments();
     expect(updated.status).toBe("COMPLETED");
 
-    const order = getOrders().find((item) => item.id === "CMD-245");
+    const order = getOrders().find((item) => item.id === "HORDE26045");
     expect(order?.driverId).toBe("DRV-101");
   });
 });

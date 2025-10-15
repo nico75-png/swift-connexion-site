@@ -1,5 +1,10 @@
 import { differenceInMinutes } from "date-fns";
 import {
+  getDrivers as getAdminDrivers,
+  isDriverAssignable,
+  type DriverUnavailability,
+} from "@/lib/stores/driversOrders.store";
+import {
   assertUniqueOrderIdOrThrow,
   generateNextOrderNumber,
   reconcileGlobalOrderSeq,
@@ -78,6 +83,7 @@ export interface StoredDriver {
   capacityKg?: number;
   lastLocation?: Coordinates | null;
   vehicleType?: string;
+  unavailabilities?: DriverUnavailability[];
   [key: string]: unknown;
 }
 
@@ -168,38 +174,11 @@ export function mockGeocode(address: string | undefined): Coordinates | null {
   return point;
 }
 
-const overlapsInterval = (start: number, end: number, windowStart: number, windowEnd: number) => {
-  return Math.max(start, windowStart) < Math.min(end, windowEnd);
-};
-
 export function isDriverAvailable(driver: StoredDriver | undefined, startISO: string, endISO: string): boolean {
   if (!driver) return false;
-  if (driver.status !== "ACTIF" || driver.onPause === true) return false;
-  const start = new Date(startISO).getTime();
-  const end = new Date(endISO).getTime();
-  if (Number.isNaN(start) || Number.isNaN(end)) {
-    return false;
-  }
-  const assignments = getFromStorage<AssignmentEntry[]>("oc_assignments", []);
-  const scheduled = getFromStorage<Array<AssignmentEntry & { status?: string }>>("oc_scheduled_assignments", []);
-  for (const assignment of assignments) {
-    if (assignment.driverId !== driver.id) continue;
-    const aStart = new Date(assignment.start).getTime();
-    const aEnd = new Date(assignment.end).getTime();
-    if (overlapsInterval(aStart, aEnd, start, end)) {
-      return false;
-    }
-  }
-  for (const schedule of scheduled) {
-    if (schedule.driverId !== driver.id) continue;
-    if (schedule.status === "CANCELLED") continue;
-    const sStart = new Date(schedule.start).getTime();
-    const sEnd = new Date(schedule.end ?? schedule.start).getTime();
-    if (overlapsInterval(sStart, sEnd, start, end)) {
-      return false;
-    }
-  }
-  return true;
+  const record = getAdminDrivers().find((item) => item.id === driver.id);
+  const result = isDriverAssignable(record, startISO, endISO);
+  return result.assignable;
 }
 
 export function selectNearestAvailableDriver(params: {
@@ -210,13 +189,18 @@ export function selectNearestAvailableDriver(params: {
 }): StoredDriver | null {
   const { pickup, start, end, minCapacityKg = 0 } = params;
   const drivers = getFromStorage<StoredDriver[]>("oc_drivers", []);
+  const driverRecords = getAdminDrivers();
+  const driverRecordMap = new Map(driverRecords.map((entry) => [entry.id, entry]));
   const candidates: Array<{ driver: StoredDriver; distKm: number }> = [];
   for (const driver of drivers) {
     if (driver.status !== "ACTIF" || driver.onPause === true) continue;
     if ((driver.capacityKg ?? 0) < minCapacityKg) continue;
     const position = driver.lastLocation;
     if (!position || typeof position.lat !== "number" || typeof position.lng !== "number") continue;
-    if (!isDriverAvailable(driver, start, end)) continue;
+    const record = driverRecordMap.get(driver.id);
+    if (!record) continue;
+    const assignability = isDriverAssignable(record, start, end);
+    if (!assignability.assignable) continue;
     const distKm = haversineKm(pickup, position);
     candidates.push({ driver, distKm });
   }
@@ -386,6 +370,7 @@ export function ensureDriverDataShape(): StoredDriver[] {
         capacityKg: 400,
         lastLocation: { lat: 48.8566, lng: 2.3522 },
         vehicleType: "utilitaire",
+        unavailabilities: [],
       },
       {
         id: "DRV-2002",
@@ -396,6 +381,7 @@ export function ensureDriverDataShape(): StoredDriver[] {
         capacityKg: 150,
         lastLocation: { lat: 48.8738, lng: 2.295 },
         vehicleType: "voiture",
+        unavailabilities: [],
       },
       {
         id: "DRV-2003",
@@ -406,6 +392,7 @@ export function ensureDriverDataShape(): StoredDriver[] {
         capacityKg: 250,
         lastLocation: { lat: 48.902, lng: 2.369 },
         vehicleType: "fourgon",
+        unavailabilities: [],
       },
       {
         id: "DRV-2004",
@@ -416,6 +403,7 @@ export function ensureDriverDataShape(): StoredDriver[] {
         capacityKg: 200,
         lastLocation: { lat: 48.821, lng: 2.28 },
         vehicleType: "moto",
+        unavailabilities: [],
       },
     ];
     saveToStorage("oc_drivers", seeded);
@@ -441,6 +429,9 @@ export function ensureDriverDataShape(): StoredDriver[] {
       onPause: driver.onPause === true ? true : false,
       capacityKg,
       lastLocation,
+      unavailabilities: Array.isArray(driver.unavailabilities)
+        ? (driver.unavailabilities as DriverUnavailability[])
+        : [],
     } satisfies StoredDriver;
   });
   saveToStorage("oc_drivers", enhanced);

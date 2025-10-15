@@ -94,6 +94,11 @@ export interface ScheduledAssignment {
   failureReason?: string;
 }
 
+const BLOCKING_SCHEDULED_STATUSES: ScheduledAssignmentStatus[] = ["PENDING", "PROCESSING"];
+
+export const isBlockingScheduledStatus = (status: ScheduledAssignmentStatus) =>
+  BLOCKING_SCHEDULED_STATUSES.includes(status);
+
 export interface Assignment {
   id: string;
   orderId: string;
@@ -888,10 +893,83 @@ export const createDriver = (payload: CreateDriverPayload): CreateDriverResult =
   return { success: true, driver };
 };
 
-export const hasTimeOverlap = (startA: string, endA: string, startB: string, endB: string) => {
+export function hasTimeOverlap(startA: string, endA: string, startB: string, endB: string) {
   const diffStart = differenceInMinutes(parseISO(endA), parseISO(startB));
   const diffEnd = differenceInMinutes(parseISO(endB), parseISO(startA));
   return diffStart > 0 && diffEnd > 0;
+}
+
+export interface DriverAssignabilityResult {
+  assignable: boolean;
+  reason?: string;
+  conflictOrderId?: string;
+}
+
+export const isDriverAssignable = (
+  driver: Driver | undefined | null,
+  start: string,
+  end: string,
+  options: { ignoreScheduledId?: string; currentOrderId?: string | null } = {},
+): DriverAssignabilityResult => {
+  if (!driver) {
+    return { assignable: false, reason: "Chauffeur introuvable" };
+  }
+
+  if (driver.lifecycleStatus === "INACTIF") {
+    return { assignable: false, reason: "Ce chauffeur est inactif" };
+  }
+
+  if (!driver.active) {
+    return { assignable: false, reason: "Ce chauffeur est indisponible sur ce créneau" };
+  }
+
+  if (driver.status === "PAUSED") {
+    return { assignable: false, reason: "Chauffeur en pause — sélection impossible" };
+  }
+
+  const blockingUnavailability = (driver.unavailabilities ?? []).find((item) =>
+    hasTimeOverlap(start, end, item.start, item.end),
+  );
+  if (blockingUnavailability) {
+    return { assignable: false, reason: "Ce chauffeur est indisponible sur ce créneau" };
+  }
+
+  const assignments = getAssignments();
+  const conflictingAssignment = assignments.find(
+    (assignment) =>
+      assignment.driverId === driver.id &&
+      assignment.orderId !== (options.currentOrderId ?? null) &&
+      !assignment.endedAt &&
+      hasTimeOverlap(start, end, assignment.start, assignment.end),
+  );
+
+  if (conflictingAssignment) {
+    return {
+      assignable: false,
+      reason: `Conflit horaire détecté avec la commande #${conflictingAssignment.orderId}`,
+      conflictOrderId: conflictingAssignment.orderId,
+    };
+  }
+
+  const scheduledAssignments = getScheduledAssignments();
+  const conflictingScheduled = scheduledAssignments.find(
+    (assignment) =>
+      assignment.driverId === driver.id &&
+      assignment.id !== options.ignoreScheduledId &&
+      assignment.orderId !== (options.currentOrderId ?? null) &&
+      isBlockingScheduledStatus(assignment.status) &&
+      hasTimeOverlap(start, end, assignment.start, assignment.end),
+  );
+
+  if (conflictingScheduled) {
+    return {
+      assignable: false,
+      reason: `Conflit horaire détecté avec une planification pour la commande #${conflictingScheduled.orderId}`,
+      conflictOrderId: conflictingScheduled.orderId,
+    };
+  }
+
+  return { assignable: true };
 };
 
 export const resetMockStores = () => {

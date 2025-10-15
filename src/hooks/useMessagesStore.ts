@@ -358,8 +358,9 @@ const sendMessage = async (input: SendMessageInput): Promise<Conversation> => {
     ),
   };
 
-  state = nextState;
-  notify();
+state = nextState;
+cachedSnapshot = buildSnapshot();
+notify();
 
   return updatedConversation;
 };
@@ -390,13 +391,17 @@ const getRecipientsFor = (participantId: string) => {
   return all.filter((item) => item.role !== "DRIVER");
 };
 
-const getSnapshot = (): MessagesStore => ({
+const buildSnapshot = (): MessagesStore => ({
   ...state,
   sendMessage,
   getParticipant,
   getConversationsFor,
   getRecipientsFor,
 });
+
+let cachedSnapshot: MessagesStore = buildSnapshot();
+
+const getSnapshot = (): MessagesStore => cachedSnapshot;
 
 export const useMessagesStore = () => useSyncExternalStore<MessagesStore>(subscribe, getSnapshot, getSnapshot);
 

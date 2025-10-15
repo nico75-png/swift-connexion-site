@@ -6,6 +6,7 @@ import {
   NotificationEntry,
   Order,
   ScheduledAssignment,
+  ScheduledAssignmentStatus,
   generateId,
   getAssignments,
   getDrivers,
@@ -321,8 +322,10 @@ export const cancelScheduledAssignment = (scheduledId: string): ScheduleResult =
     return { success: false, error: "Cette planification ne peut plus être annulée" };
   }
 
-  const updated = scheduledAssignments.map((item) =>
-    item.id === scheduledId ? { ...item, status: "CANCELLED" as ScheduledAssignmentStatus, failureReason: undefined } : item,
+  const updated: ScheduledAssignment[] = scheduledAssignments.map((item) =>
+    item.id === scheduledId
+      ? { ...item, status: "CANCELLED" as ScheduledAssignmentStatus, failureReason: undefined }
+      : item,
   );
   saveScheduledAssignments(updated);
 

@@ -26,4 +26,4 @@ export const messagingService = {
   },
 };
 
-export type { SendMessagePayload };
+

@@ -969,10 +969,14 @@ const CreateOrderForClientDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Créer une commande</DialogTitle>
-          <DialogDescription>
+      <DialogContent
+        className="flex h-[100vh] flex-col overflow-hidden bg-[#F5F7FA] p-0 text-[#1F1F1F] sm:h-auto sm:max-h-[90vh] sm:max-w-2xl sm:rounded-2xl"
+      >
+        <DialogHeader className="px-6 pb-4 pt-6">
+          <DialogTitle className="text-xl font-bold text-[#0F3556]">
+            Créer une commande
+          </DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
             {client.company} · {client.contact}
           </DialogDescription>
         </DialogHeader>
@@ -980,7 +984,7 @@ const CreateOrderForClientDialog = ({
         <form
           id="form-create-order-client"
           onSubmit={handleSubmit}
-          className="space-y-4"
+          className="flex-1 space-y-4 overflow-y-auto px-6 pb-6"
         >
           <div>
             <Label
@@ -1263,31 +1267,33 @@ const CreateOrderForClientDialog = ({
           )}
         </form>
 
-        <DialogFooter className="mt-2 flex flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full sm:w-auto"
-            onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
-          >
-            Annuler
-          </Button>
-          <Button
-            type="submit"
-            form="form-create-order-client"
-            disabled={isSubmitting}
-            className="w-full sm:w-auto bg-[#0F3556] hover:bg-[#0d2b46] text-white disabled:bg-[#0F3556]/50"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Enregistrement...
-              </>
-            ) : (
-              "Créer la commande"
-            )}
-          </Button>
+        <DialogFooter className="border-t border-border bg-[#F5F7FA] px-6 py-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Annuler
+            </Button>
+            <Button
+              type="submit"
+              form="form-create-order-client"
+              disabled={isSubmitting}
+              className="w-full sm:w-auto bg-[#0F3556] hover:bg-[#0d2b46] text-white disabled:bg-[#0F3556]/50"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Enregistrement...
+                </>
+              ) : (
+                "Créer la commande"
+              )}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

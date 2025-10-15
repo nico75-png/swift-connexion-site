@@ -1,5 +1,13 @@
 import { differenceInMinutes } from "date-fns";
 
+import {
+  generateNextHordeId,
+  getFromStorage,
+  initOrderSequence,
+  reconcileOrderSequence,
+  saveToStorage,
+} from "@/lib/hordeSequence";
+
 export type Nullable<T> = T | null;
 
 export interface Coordinates {
@@ -105,36 +113,6 @@ export interface NotificationEntry {
   at: string;
   read?: boolean;
   [key: string]: unknown;
-}
-
-export const getFromStorage = <T,>(key: string, fallback: T = [] as T): T => {
-  if (typeof window === "undefined") return fallback;
-  try {
-    const stored = window.localStorage.getItem(key);
-    if (!stored) return fallback;
-    return JSON.parse(stored) as T;
-  } catch (error) {
-    console.error(`Failed to read storage key "${key}":`, error);
-    return fallback;
-  }
-};
-
-export const saveToStorage = (key: string, value: unknown) => {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(key, JSON.stringify(value));
-  } catch (error) {
-    console.error(`Failed to write storage key "${key}":`, error);
-  }
-};
-
-export function generateUniqueOrderId(): string {
-  const orders = getFromStorage<ClientOrder[]>("oc_orders", []);
-  let id: string;
-  do {
-    id = `ORD-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-  } while (orders.some((order) => order.id === id));
-  return id;
 }
 
 export function haversineKm(a: Coordinates, b: Coordinates): number {
@@ -260,7 +238,7 @@ export function createReorderDraft(orderId: string): ClientOrder {
   const base = source.price?.breakdown?.base ?? 10;
   return {
     ...source,
-    id: generateUniqueOrderId(),
+    id: generateNextHordeId(),
     previousOrderId: source.id,
     status: "À valider",
     driverId: null,
@@ -468,7 +446,7 @@ export function ensureOrdersDataShape(): ClientOrder[] {
 
   const fallback: ClientOrder[] = [
     {
-      id: "ORD-2025-001",
+      id: "HORDE25001",
       status: "Livré",
       createdAt: "2025-01-15T12:00:00.000Z",
       pickupAt: "2025-01-14T09:30:00.000Z",
@@ -494,7 +472,7 @@ export function ensureOrdersDataShape(): ClientOrder[] {
       notes: "Remettre en main propre",
     },
     {
-      id: "ORD-2025-002",
+      id: "HORDE25002",
       status: "Livré",
       createdAt: "2025-01-13T10:00:00.000Z",
       pickupAt: "2025-01-13T08:15:00.000Z",
@@ -520,7 +498,7 @@ export function ensureOrdersDataShape(): ClientOrder[] {
       notes: "Transport à température contrôlée",
     },
     {
-      id: "ORD-2025-003",
+      id: "HORDE25003",
       status: "En cours",
       createdAt: "2025-01-16T07:30:00.000Z",
       pickupAt: "2025-01-16T08:00:00.000Z",
@@ -546,7 +524,7 @@ export function ensureOrdersDataShape(): ClientOrder[] {
       notes: "Fragile, manipuler avec précaution",
     },
     {
-      id: "ORD-2025-004",
+      id: "HORDE25004",
       status: "En attente",
       createdAt: "2025-01-17T10:00:00.000Z",
       pickupAt: "2025-01-17T14:30:00.000Z",
@@ -574,6 +552,7 @@ export function ensureOrdersDataShape(): ClientOrder[] {
   ];
 
   saveToStorage("oc_orders", fallback);
+  reconcileOrderSequence();
   return fallback;
 }
 
@@ -593,6 +572,8 @@ export function ensureStoragePrimitives() {
   getFromStorage<ActivityEntry[]>("oc_activity_log", []);
   getFromStorage<NotificationEntry[]>("oc_notifications", []);
   getFromStorage<Record<string, Coordinates>>("oc_geocache", {});
+  initOrderSequence();
+  reconcileOrderSequence();
 }
 
 export const formatDateTime = (value: string | undefined, locale = "fr-FR") => {

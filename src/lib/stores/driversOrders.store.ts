@@ -232,7 +232,7 @@ const defaultDrivers: Driver[] = [
 
 const defaultOrders: Order[] = [
   {
-    id: "CMD-247",
+    id: "HORDE26047",
     client: "Cabinet Dupont",
     type: "Express",
     status: "En cours",
@@ -251,7 +251,7 @@ const defaultOrders: Order[] = [
     driverAssignedAt: "2025-01-15T12:30:00+01:00",
   },
   {
-    id: "CMD-246",
+    id: "HORDE26046",
     client: "Optique Vision",
     type: "Standard",
     status: "Livré",
@@ -269,7 +269,7 @@ const defaultOrders: Order[] = [
     driverAssignedAt: "2025-01-15T11:15:00+01:00",
   },
   {
-    id: "CMD-245",
+    id: "HORDE26045",
     client: "Lab Médical",
     type: "Fragile",
     status: "En attente",
@@ -287,7 +287,7 @@ const defaultOrders: Order[] = [
     driverAssignedAt: null,
   },
   {
-    id: "CMD-244",
+    id: "HORDE26044",
     client: "Avocat & Associés",
     type: "Express",
     status: "Enlevé",
@@ -305,7 +305,7 @@ const defaultOrders: Order[] = [
     driverAssignedAt: "2025-01-15T09:00:00+01:00",
   },
   {
-    id: "CMD-243",
+    id: "HORDE26043",
     client: "Pharmacie Centrale",
     type: "Standard",
     status: "Livré",
@@ -323,7 +323,7 @@ const defaultOrders: Order[] = [
     driverAssignedAt: "2025-01-15T07:30:00+01:00",
   },
   {
-    id: "CMD-242",
+    id: "HORDE26042",
     client: "Cabinet Martin",
     type: "Express",
     status: "Annulé",
@@ -345,28 +345,28 @@ const defaultOrders: Order[] = [
 const defaultAssignments: Assignment[] = [
   {
     id: "ASN-1",
-    orderId: "CMD-247",
+    orderId: "HORDE26047",
     driverId: "DRV-101",
     start: "2025-01-15T13:45:00+01:00",
     end: "2025-01-15T14:45:00+01:00",
   },
   {
     id: "ASN-2",
-    orderId: "CMD-246",
+    orderId: "HORDE26046",
     driverId: "DRV-102",
     start: "2025-01-15T12:30:00+01:00",
     end: "2025-01-15T13:15:00+01:00",
   },
   {
     id: "ASN-3",
-    orderId: "CMD-244",
+    orderId: "HORDE26044",
     driverId: "DRV-104",
     start: "2025-01-15T09:45:00+01:00",
     end: "2025-01-15T10:45:00+01:00",
   },
   {
     id: "ASN-4",
-    orderId: "CMD-243",
+    orderId: "HORDE26043",
     driverId: "DRV-103",
     start: "2025-01-15T08:30:00+01:00",
     end: "2025-01-15T09:15:00+01:00",
@@ -379,7 +379,7 @@ const defaultActivity: ActivityEntry[] = [
   {
     id: "ACT-1",
     type: "CREATE",
-    orderId: "CMD-247",
+    orderId: "HORDE26047",
     at: "2025-01-15T12:00:00+01:00",
     by: "system",
     message: "Commande créée",
@@ -387,7 +387,7 @@ const defaultActivity: ActivityEntry[] = [
   {
     id: "ACT-2",
     type: "ASSIGN",
-    orderId: "CMD-247",
+    orderId: "HORDE26047",
     driverId: "DRV-101",
     at: "2025-01-15T12:30:00+01:00",
     by: "admin.sophie",
@@ -396,7 +396,7 @@ const defaultActivity: ActivityEntry[] = [
   {
     id: "ACT-3",
     type: "STATUS_UPDATE",
-    orderId: "CMD-247",
+    orderId: "HORDE26047",
     at: "2025-01-15T13:00:00+01:00",
     by: "DRV-101",
     message: "Statut mis à jour : Enlevé",
@@ -407,10 +407,10 @@ const defaultNotifications: NotificationEntry[] = [
   {
     id: "NOTIF-1",
     channel: "ADMIN",
-    orderId: "CMD-247",
+    orderId: "HORDE26047",
     driverId: "DRV-101",
     read: true,
-    message: "Chauffeur Marc Dubois affecté à #CMD-247",
+    message: "Chauffeur Marc Dubois affecté à #HORDE26047",
     createdAt: "2025-01-15T12:30:00+01:00",
   },
 ];

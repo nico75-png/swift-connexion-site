@@ -1,6 +1,14 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, Search, Filter, Plus, Mail, Phone, Loader2 } from "lucide-react";
+import {
+  AlertTriangle,
+  Search,
+  Filter,
+  Plus,
+  Mail,
+  Phone,
+  Loader2,
+} from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import AdminSidebar from "@/components/dashboard/AdminSidebar";
 import Topbar from "@/components/dashboard/Topbar";
@@ -9,8 +17,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -53,10 +74,17 @@ import {
   type ZoneCode,
 } from "@/lib/stores/driversOrders.store";
 
-const SECTOR_OPTIONS = ["Médical", "Optique", "Événementiel", "Juridique", "Autre"];
+const SECTOR_OPTIONS = [
+  "Médical",
+  "Optique",
+  "Événementiel",
+  "Juridique",
+  "Autre",
+];
 const STATUS_OPTIONS = ["Actif", "Inactif"];
 
-const EMAIL_REGEX = /^(?:[a-zA-Z0-9_'^&/+-])+(?:\.(?:[a-zA-Z0-9_'^&/+-])+)*@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/;
+const EMAIL_REGEX =
+  /^(?:[a-zA-Z0-9_'^&/+-])+(?:\.(?:[a-zA-Z0-9_'^&/+-])+)*@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/;
 const PHONE_REGEX = /^\+?\d[\d\s]{8,16}$/;
 const SIRET_REGEX = /^\d{14}$/;
 const MIN_ADDRESS_LENGTH = 6;
@@ -107,7 +135,9 @@ const inferZoneFromAddresses = (pickup: string, dropoff: string): ZoneCode => {
   }
 
   const hasPetiteCouronne = normalized.some((code) => /^(92|93|94)/.test(code));
-  const hasGrandeCouronne = normalized.some((code) => /^(77|78|91|95)/.test(code));
+  const hasGrandeCouronne = normalized.some((code) =>
+    /^(77|78|91|95)/.test(code),
+  );
 
   if (hasGrandeCouronne) {
     return "GRANDE_COURONNE";
@@ -163,7 +193,10 @@ const estimateDistanceKm = (pickup: string, dropoff: string): number => {
 
   const pickupWords = new Set(normalizedPickup.split(/\s+/).filter(Boolean));
   const dropoffWords = normalizedDropoff.split(/\s+/).filter(Boolean);
-  const common = dropoffWords.reduce((count, word) => (pickupWords.has(word) ? count + 1 : count), 0);
+  const common = dropoffWords.reduce(
+    (count, word) => (pickupWords.has(word) ? count + 1 : count),
+    0,
+  );
 
   if (common >= 2) {
     return 9.5;
@@ -220,8 +253,10 @@ const INITIAL_TOUCHED: Record<keyof FormValues, boolean> = {
 const DUPLICATE_MESSAGES: Record<DuplicateReason, string> = {
   siret: "Un client avec ce SIRET existe déjà.",
   email: "Un client avec cet email existe déjà.",
-  companyAddress: "Un client avec la même entreprise et la même adresse existe déjà.",
-  companyPhone: "Un client avec ce téléphone pour cette entreprise existe déjà.",
+  companyAddress:
+    "Un client avec la même entreprise et la même adresse existe déjà.",
+  companyPhone:
+    "Un client avec ce téléphone pour cette entreprise existe déjà.",
 };
 
 const DUPLICATE_FIELDS: Record<DuplicateReason, (keyof FormValues)[]> = {
@@ -288,8 +323,12 @@ const AdminClients = () => {
   const [clients, setClients] = useState<ClientRecord[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
-  const [orderDialogClient, setOrderDialogClient] = useState<ClientRecord | null>(null);
-  const [orderAlert, setOrderAlert] = useState<{ title: string; description: string } | null>(null);
+  const [orderDialogClient, setOrderDialogClient] =
+    useState<ClientRecord | null>(null);
+  const [orderAlert, setOrderAlert] = useState<{
+    title: string;
+    description: string;
+  } | null>(null);
   const createButtonRef = useRef<HTMLButtonElement | null>(null);
   const wasModalOpenRef = useRef(false);
 
@@ -324,8 +363,10 @@ const AdminClients = () => {
       const matchesSearch =
         client.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
         client.contact.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesSector = sectorFilter === "all" || client.sector === sectorFilter;
-      const matchesStatus = statusFilter === "all" || client.status === statusFilter;
+      const matchesSector =
+        sectorFilter === "all" || client.sector === sectorFilter;
+      const matchesStatus =
+        statusFilter === "all" || client.status === statusFilter;
       return matchesSearch && matchesSector && matchesStatus;
     });
   }, [clients, searchTerm, sectorFilter, statusFilter]);
@@ -338,7 +379,8 @@ const AdminClients = () => {
     () => clients.filter((client) => client.status === "Actif").length,
     [clients],
   );
-  const averageOrders = clients.length > 0 ? Math.round(totalOrders / clients.length) : 0;
+  const averageOrders =
+    clients.length > 0 ? Math.round(totalOrders / clients.length) : 0;
 
   const handleClientCreated = (client: ClientRecord) => {
     setClients((previous) => [client, ...previous]);
@@ -351,7 +393,9 @@ const AdminClients = () => {
 
   const handleOrderCreated = (updatedClient: ClientRecord) => {
     setClients((previous) => {
-      const index = previous.findIndex((entry) => entry.id === updatedClient.id);
+      const index = previous.findIndex(
+        (entry) => entry.id === updatedClient.id,
+      );
       if (index === -1) {
         return previous;
       }
@@ -392,7 +436,8 @@ const AdminClients = () => {
     if (!SIRET_REGEX.test(trimmedSiret)) {
       setOrderAlert({
         title: "Informations client manquantes",
-        description: "Le SIRET du client est invalide. Corrigez la fiche avant de créer une commande.",
+        description:
+          "Le SIRET du client est invalide. Corrigez la fiche avant de créer une commande.",
       });
       return;
     }
@@ -401,7 +446,8 @@ const AdminClients = () => {
     if (trimmedAddress.length < MIN_ADDRESS_LENGTH) {
       setOrderAlert({
         title: "Adresse insuffisante",
-        description: "L'adresse du client est incomplète. Mettez-la à jour avant de créer une commande.",
+        description:
+          "L'adresse du client est incomplète. Mettez-la à jour avant de créer une commande.",
       });
       return;
     }
@@ -413,171 +459,188 @@ const AdminClients = () => {
 
   return (
     <>
-      <DashboardLayout sidebar={<AdminSidebar />} topbar={<Topbar title="Gestion des clients" />}>
+      <DashboardLayout
+        sidebar={<AdminSidebar />}
+        topbar={<Topbar title="Gestion des clients" />}
+      >
         <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Rechercher par entreprise ou contact..."
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            className="pl-10 focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556]"
-          />
-        </div>
-
-        <Select value={sectorFilter} onValueChange={setSectorFilter}>
-          <SelectTrigger className="w-full md:w-48 focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556]">
-            <Filter className="h-4 w-4 mr-2 text-[#0F3556]" />
-            <SelectValue placeholder="Secteur" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous les secteurs</SelectItem>
-            {sectorOptions.map((sector) => (
-              <SelectItem key={sector} value={sector}>
-                {sector}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full md:w-48 focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556]">
-            <SelectValue placeholder="Statut" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous les statuts</SelectItem>
-            {STATUS_OPTIONS.map((status) => (
-              <SelectItem key={status} value={status}>
-                {status}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogTrigger asChild>
-            <Button
-              id="btn-create-client"
-              ref={createButtonRef}
-              variant="cta"
-              className="bg-[#0F3556] hover:bg-[#0d2b46] text-white"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Créer un client
-            </Button>
-          </DialogTrigger>
-          <CreateClientModal
-            open={isModalOpen}
-            onOpenChange={setIsModalOpen}
-            onClientCreated={handleClientCreated}
-          />
-        </Dialog>
-      </div>
-
-      <div className="bg-card rounded-lg border border-border shadow-soft overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table id="table-clients">
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead className="font-semibold">Entreprise</TableHead>
-                <TableHead className="font-semibold">Contact</TableHead>
-                <TableHead className="font-semibold">Secteur</TableHead>
-                <TableHead className="font-semibold">Email</TableHead>
-                <TableHead className="font-semibold">Téléphone</TableHead>
-                <TableHead className="font-semibold text-center">Commandes</TableHead>
-                <TableHead className="font-semibold">Statut</TableHead>
-                <TableHead className="font-semibold text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredClients.map((client) => (
-                <TableRow key={client.id} className="hover:bg-muted/30">
-                  <TableCell className="font-semibold">{client.company}</TableCell>
-                  <TableCell>{client.contact}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{client.sector}</Badge>
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    <a
-                      href={`mailto:${client.email}`}
-                      className="text-[#0F3556] hover:underline flex items-center gap-2"
-                    >
-                      <Mail className="h-3 w-3" />
-                      {client.email}
-                    </a>
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    <a
-                      href={`tel:${client.phone.replace(/\s+/g, "")}`}
-                      className="text-[#0F3556] hover:underline flex items-center gap-2"
-                    >
-                      <Phone className="h-3 w-3" />
-                      {client.phone}
-                    </a>
-                  </TableCell>
-                  <TableCell className="text-center font-semibold">{client.orders ?? 0}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={
-                        client.status === "Actif"
-                          ? "bg-[#0F3556]/10 text-[#0F3556] border-[#0F3556]/20"
-                          : "bg-muted text-muted-foreground border-border"
-                      }
-                    >
-                      {client.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Link to={`/admin/clients/${client.id}`}>
-                        <Button variant="ghost" size="sm">
-                          Voir fiche
-                        </Button>
-                      </Link>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="btn-create-order"
-                        data-client-id={client.id}
-                        onClick={() => openOrderCreationForClient(client.id)}
-                      >
-                        Créer commande
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-
-        {filteredClients.length === 0 && (
-          <div className="text-center py-12" role="status">
-            <p className="text-muted-foreground">Aucun client trouvé</p>
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              className="pl-10 focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556]"
+            />
           </div>
-        )}
-      </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-        <div className="p-4 bg-[#F5F7FA] rounded-lg border border-[#0F3556]/10">
-          <p className="text-xs text-muted-foreground mb-1">Total clients</p>
-          <p className="text-2xl font-bold text-[#0F3556]">{clients.length}</p>
+          <Select value={sectorFilter} onValueChange={setSectorFilter}>
+            <SelectTrigger className="w-full md:w-48 focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556]">
+              <Filter className="h-4 w-4 mr-2 text-[#0F3556]" />
+              <SelectValue placeholder="Secteur" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les secteurs</SelectItem>
+              {sectorOptions.map((sector) => (
+                <SelectItem key={sector} value={sector}>
+                  {sector}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full md:w-48 focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556]">
+              <SelectValue placeholder="Statut" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les statuts</SelectItem>
+              {STATUS_OPTIONS.map((status) => (
+                <SelectItem key={status} value={status}>
+                  {status}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+            <DialogTrigger asChild>
+              <Button
+                id="btn-create-client"
+                ref={createButtonRef}
+                variant="cta"
+                className="bg-[#0F3556] hover:bg-[#0d2b46] text-white"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Créer un client
+              </Button>
+            </DialogTrigger>
+            <CreateClientModal
+              open={isModalOpen}
+              onOpenChange={setIsModalOpen}
+              onClientCreated={handleClientCreated}
+            />
+          </Dialog>
         </div>
-        <div className="p-4 bg-[#0F3556]/10 rounded-lg border border-[#0F3556]/20">
-          <p className="text-xs text-[#0F3556] mb-1">Actifs</p>
-          <p className="text-2xl font-bold text-[#0F3556]">{activeCount}</p>
+
+        <div className="bg-card rounded-lg border border-border shadow-soft overflow-hidden">
+          <div className="overflow-x-auto">
+            <Table id="table-clients">
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="font-semibold">Entreprise</TableHead>
+                  <TableHead className="font-semibold">Contact</TableHead>
+                  <TableHead className="font-semibold">Secteur</TableHead>
+                  <TableHead className="font-semibold">Email</TableHead>
+                  <TableHead className="font-semibold">Téléphone</TableHead>
+                  <TableHead className="font-semibold text-center">
+                    Commandes
+                  </TableHead>
+                  <TableHead className="font-semibold">Statut</TableHead>
+                  <TableHead className="font-semibold text-right">
+                    Actions
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredClients.map((client) => (
+                  <TableRow key={client.id} className="hover:bg-muted/30">
+                    <TableCell className="font-semibold">
+                      {client.company}
+                    </TableCell>
+                    <TableCell>{client.contact}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{client.sector}</Badge>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      <a
+                        href={`mailto:${client.email}`}
+                        className="text-[#0F3556] hover:underline flex items-center gap-2"
+                      >
+                        <Mail className="h-3 w-3" />
+                        {client.email}
+                      </a>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      <a
+                        href={`tel:${client.phone.replace(/\s+/g, "")}`}
+                        className="text-[#0F3556] hover:underline flex items-center gap-2"
+                      >
+                        <Phone className="h-3 w-3" />
+                        {client.phone}
+                      </a>
+                    </TableCell>
+                    <TableCell className="text-center font-semibold">
+                      {client.orders ?? 0}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={
+                          client.status === "Actif"
+                            ? "bg-[#0F3556]/10 text-[#0F3556] border-[#0F3556]/20"
+                            : "bg-muted text-muted-foreground border-border"
+                        }
+                      >
+                        {client.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Link to={`/admin/clients/${client.id}`}>
+                          <Button variant="ghost" size="sm">
+                            Voir fiche
+                          </Button>
+                        </Link>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="btn-create-order"
+                          data-client-id={client.id}
+                          onClick={() => openOrderCreationForClient(client.id)}
+                        >
+                          Créer commande
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {filteredClients.length === 0 && (
+            <div className="text-center py-12" role="status">
+              <p className="text-muted-foreground">Aucun client trouvé</p>
+            </div>
+          )}
         </div>
-        <div className="p-4 bg-[#FFB800]/10 rounded-lg border border-[#FFB800]/40">
-          <p className="text-xs text-[#FFB800] mb-1">Total commandes</p>
-          <p className="text-2xl font-bold text-[#FFB800]">{totalOrders}</p>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+          <div className="p-4 bg-[#F5F7FA] rounded-lg border border-[#0F3556]/10">
+            <p className="text-xs text-muted-foreground mb-1">Total clients</p>
+            <p className="text-2xl font-bold text-[#0F3556]">
+              {clients.length}
+            </p>
+          </div>
+          <div className="p-4 bg-[#0F3556]/10 rounded-lg border border-[#0F3556]/20">
+            <p className="text-xs text-[#0F3556] mb-1">Actifs</p>
+            <p className="text-2xl font-bold text-[#0F3556]">{activeCount}</p>
+          </div>
+          <div className="p-4 bg-[#FFB800]/10 rounded-lg border border-[#FFB800]/40">
+            <p className="text-xs text-[#FFB800] mb-1">Total commandes</p>
+            <p className="text-2xl font-bold text-[#FFB800]">{totalOrders}</p>
+          </div>
+          <div className="p-4 bg-muted rounded-lg border border-border">
+            <p className="text-xs text-muted-foreground mb-1">
+              Moyenne / client
+            </p>
+            <p className="text-2xl font-bold text-muted-foreground">
+              {averageOrders}
+            </p>
+          </div>
         </div>
-        <div className="p-4 bg-muted rounded-lg border border-border">
-          <p className="text-xs text-muted-foreground mb-1">Moyenne / client</p>
-          <p className="text-2xl font-bold text-muted-foreground">{averageOrders}</p>
-        </div>
-      </div>
       </DashboardLayout>
 
       <CreateOrderForClientDialog
@@ -587,11 +650,18 @@ const AdminClients = () => {
         onOrderCreated={handleOrderCreated}
       />
 
-      <AlertDialog open={Boolean(orderAlert)} onOpenChange={handleOrderAlertChange}>
+      <AlertDialog
+        open={Boolean(orderAlert)}
+        onOpenChange={handleOrderAlertChange}
+      >
         <AlertDialogContent className="sm:max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>{orderAlert?.title ?? "Action impossible"}</AlertDialogTitle>
-            <AlertDialogDescription>{orderAlert?.description}</AlertDialogDescription>
+            <AlertDialogTitle>
+              {orderAlert?.title ?? "Action impossible"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {orderAlert?.description}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogAction autoFocus>Fermer</AlertDialogAction>
@@ -668,22 +738,24 @@ const CreateOrderForClientDialog = ({
     setIsSubmitting(false);
   }, [open, client]);
 
-  const handleFieldChange = (field: keyof OrderFormValues) => (value: string) => {
-    setFormValues((previous) => ({ ...previous, [field]: value }));
-    setErrors((previous) => {
-      const next = { ...previous };
-      delete next[field];
-      if (field === "date" || field === "time") {
-        delete next.time;
-      }
-      return next;
-    });
-  };
+  const handleFieldChange =
+    (field: keyof OrderFormValues) => (value: string) => {
+      setFormValues((previous) => ({ ...previous, [field]: value }));
+      setErrors((previous) => {
+        const next = { ...previous };
+        delete next[field];
+        if (field === "date" || field === "time") {
+          delete next.time;
+        }
+        return next;
+      });
+    };
 
-  const handleCheckboxChange = (field: "express" | "fragile") => (checked: boolean | string) => {
-    const value = Boolean(checked);
-    setFormValues((previous) => ({ ...previous, [field]: value }));
-  };
+  const handleCheckboxChange =
+    (field: "express" | "fragile") => (checked: boolean | string) => {
+      const value = Boolean(checked);
+      setFormValues((previous) => ({ ...previous, [field]: value }));
+    };
 
   const validateOrderForm = (values: OrderFormValues): OrderFormErrors => {
     const nextErrors: OrderFormErrors = {};
@@ -738,7 +810,10 @@ const CreateOrderForClientDialog = ({
 
     const pickup = formValues.pickup.trim();
     const delivery = formValues.delivery.trim();
-    if (pickup.length < MIN_ADDRESS_LENGTH || delivery.length < MIN_ADDRESS_LENGTH) {
+    if (
+      pickup.length < MIN_ADDRESS_LENGTH ||
+      delivery.length < MIN_ADDRESS_LENGTH
+    ) {
       return null;
     }
 
@@ -768,7 +843,15 @@ const CreateOrderForClientDialog = ({
       km,
       base,
     };
-  }, [client, formValues.delivery, formValues.express, formValues.fragile, formValues.pickup, formValues.volume, formValues.weight]);
+  }, [
+    client,
+    formValues.delivery,
+    formValues.express,
+    formValues.fragile,
+    formValues.pickup,
+    formValues.volume,
+    formValues.weight,
+  ]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -794,11 +877,20 @@ const CreateOrderForClientDialog = ({
 
       const inferredZone = inferZoneFromAddresses(pickup, delivery);
       const zone = pricePreview?.zone ?? inferredZone;
-      const base = pricePreview?.base ?? DEFAULT_BASE_BY_ZONE[zone] ?? DEFAULT_BASE_BY_ZONE.INTRA_PARIS;
+      const base =
+        pricePreview?.base ??
+        DEFAULT_BASE_BY_ZONE[zone] ??
+        DEFAULT_BASE_BY_ZONE.INTRA_PARIS;
       const distance = pricePreview?.km ?? estimateDistanceKm(pickup, delivery);
       const km = distance > 0 ? Number.parseFloat(distance.toFixed(1)) : 1;
       const price =
-        pricePreview ?? estimatePrice({ base, km, express: formValues.express, fragile: formValues.fragile });
+        pricePreview ??
+        estimatePrice({
+          base,
+          km,
+          express: formValues.express,
+          fragile: formValues.fragile,
+        });
 
       const orders = getOrders();
       const orderId = generateNextOrderNumber();
@@ -835,7 +927,9 @@ const CreateOrderForClientDialog = ({
       reconcileGlobalOrderSeq();
 
       const storedClients = getClients();
-      const clientIndex = storedClients.findIndex((entry) => entry.id === client.id);
+      const clientIndex = storedClients.findIndex(
+        (entry) => entry.id === client.id,
+      );
       let updatedClient = client;
       if (clientIndex !== -1) {
         const nextClient: ClientRecord = {
@@ -859,7 +953,9 @@ const CreateOrderForClientDialog = ({
       toast({
         title: "Erreur lors de la création",
         description:
-          error instanceof Error ? error.message : "Impossible d'enregistrer la commande.",
+          error instanceof Error
+            ? error.message
+            : "Impossible d'enregistrer la commande.",
         variant: "destructive",
       });
     } finally {
@@ -881,12 +977,22 @@ const CreateOrderForClientDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <form id="form-create-order-client" onSubmit={handleSubmit} className="space-y-4">
+        <form
+          id="form-create-order-client"
+          onSubmit={handleSubmit}
+          className="space-y-4"
+        >
           <div>
-            <Label htmlFor="order-type" className="text-sm font-semibold text-[#0F3556]">
+            <Label
+              htmlFor="order-type"
+              className="text-sm font-semibold text-[#0F3556]"
+            >
               Type de transport *
             </Label>
-            <Select value={formValues.type} onValueChange={handleFieldChange("type")}>
+            <Select
+              value={formValues.type}
+              onValueChange={handleFieldChange("type")}
+            >
               <SelectTrigger
                 id="order-type"
                 className={`mt-1 focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
@@ -911,13 +1017,18 @@ const CreateOrderForClientDialog = ({
           </div>
 
           <div>
-            <Label htmlFor="order-pickup" className="text-sm font-semibold text-[#0F3556]">
+            <Label
+              htmlFor="order-pickup"
+              className="text-sm font-semibold text-[#0F3556]"
+            >
               Adresse de départ *
             </Label>
             <Input
               id="order-pickup"
               value={formValues.pickup}
-              onChange={(event) => handleFieldChange("pickup")(event.target.value)}
+              onChange={(event) =>
+                handleFieldChange("pickup")(event.target.value)
+              }
               className={`mt-1 focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
                 errors.pickup ? "border-red-500 focus-visible:ring-red-500" : ""
               }`}
@@ -932,15 +1043,22 @@ const CreateOrderForClientDialog = ({
           </div>
 
           <div>
-            <Label htmlFor="order-delivery" className="text-sm font-semibold text-[#0F3556]">
+            <Label
+              htmlFor="order-delivery"
+              className="text-sm font-semibold text-[#0F3556]"
+            >
               Adresse d'arrivée *
             </Label>
             <Input
               id="order-delivery"
               value={formValues.delivery}
-              onChange={(event) => handleFieldChange("delivery")(event.target.value)}
+              onChange={(event) =>
+                handleFieldChange("delivery")(event.target.value)
+              }
               className={`mt-1 focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
-                errors.delivery ? "border-red-500 focus-visible:ring-red-500" : ""
+                errors.delivery
+                  ? "border-red-500 focus-visible:ring-red-500"
+                  : ""
               }`}
               placeholder="Adresse complète"
               autoComplete="street-address"
@@ -954,14 +1072,19 @@ const CreateOrderForClientDialog = ({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <Label htmlFor="order-date" className="text-sm font-semibold text-[#0F3556]">
+              <Label
+                htmlFor="order-date"
+                className="text-sm font-semibold text-[#0F3556]"
+              >
                 Date *
               </Label>
               <Input
                 id="order-date"
                 type="date"
                 value={formValues.date}
-                onChange={(event) => handleFieldChange("date")(event.target.value)}
+                onChange={(event) =>
+                  handleFieldChange("date")(event.target.value)
+                }
                 className={`mt-1 focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
                   errors.date ? "border-red-500 focus-visible:ring-red-500" : ""
                 }`}
@@ -973,14 +1096,19 @@ const CreateOrderForClientDialog = ({
               )}
             </div>
             <div>
-              <Label htmlFor="order-time" className="text-sm font-semibold text-[#0F3556]">
+              <Label
+                htmlFor="order-time"
+                className="text-sm font-semibold text-[#0F3556]"
+              >
                 Heure *
               </Label>
               <Input
                 id="order-time"
                 type="time"
                 value={formValues.time}
-                onChange={(event) => handleFieldChange("time")(event.target.value)}
+                onChange={(event) =>
+                  handleFieldChange("time")(event.target.value)
+                }
                 className={`mt-1 focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
                   errors.time ? "border-red-500 focus-visible:ring-red-500" : ""
                 }`}
@@ -995,7 +1123,10 @@ const CreateOrderForClientDialog = ({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <Label htmlFor="order-weight" className="text-sm font-semibold text-[#0F3556]">
+              <Label
+                htmlFor="order-weight"
+                className="text-sm font-semibold text-[#0F3556]"
+              >
                 Poids (kg) *
               </Label>
               <Input
@@ -1005,9 +1136,13 @@ const CreateOrderForClientDialog = ({
                 min="0"
                 step="0.1"
                 value={formValues.weight}
-                onChange={(event) => handleFieldChange("weight")(event.target.value)}
+                onChange={(event) =>
+                  handleFieldChange("weight")(event.target.value)
+                }
                 className={`mt-1 focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
-                  errors.weight ? "border-red-500 focus-visible:ring-red-500" : ""
+                  errors.weight
+                    ? "border-red-500 focus-visible:ring-red-500"
+                    : ""
                 }`}
                 placeholder="Ex : 2.5"
               />
@@ -1018,7 +1153,10 @@ const CreateOrderForClientDialog = ({
               )}
             </div>
             <div>
-              <Label htmlFor="order-volume" className="text-sm font-semibold text-[#0F3556]">
+              <Label
+                htmlFor="order-volume"
+                className="text-sm font-semibold text-[#0F3556]"
+              >
                 Volume (m³) *
               </Label>
               <Input
@@ -1028,9 +1166,13 @@ const CreateOrderForClientDialog = ({
                 min="0"
                 step="0.01"
                 value={formValues.volume}
-                onChange={(event) => handleFieldChange("volume")(event.target.value)}
+                onChange={(event) =>
+                  handleFieldChange("volume")(event.target.value)
+                }
                 className={`mt-1 focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
-                  errors.volume ? "border-red-500 focus-visible:ring-red-500" : ""
+                  errors.volume
+                    ? "border-red-500 focus-visible:ring-red-500"
+                    : ""
                 }`}
                 placeholder="Ex : 0.8"
               />
@@ -1049,7 +1191,10 @@ const CreateOrderForClientDialog = ({
                 checked={formValues.express}
                 onCheckedChange={handleCheckboxChange("express")}
               />
-              <Label htmlFor="order-express" className="text-sm font-medium text-[#0F3556]">
+              <Label
+                htmlFor="order-express"
+                className="text-sm font-medium text-[#0F3556]"
+              >
                 Livraison express (+30%)
               </Label>
             </div>
@@ -1059,7 +1204,10 @@ const CreateOrderForClientDialog = ({
                 checked={formValues.fragile}
                 onCheckedChange={handleCheckboxChange("fragile")}
               />
-              <Label htmlFor="order-fragile" className="text-sm font-medium text-[#0F3556]">
+              <Label
+                htmlFor="order-fragile"
+                className="text-sm font-medium text-[#0F3556]"
+              >
                 Colis fragile (+15%)
               </Label>
             </div>
@@ -1069,30 +1217,44 @@ const CreateOrderForClientDialog = ({
             <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Zone estimée</span>
-                <span className="font-semibold text-[#0F3556]">{ZONE_LABELS[pricePreview.zone]}</span>
+                <span className="font-semibold text-[#0F3556]">
+                  {ZONE_LABELS[pricePreview.zone]}
+                </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Distance estimée</span>
-                <span className="font-semibold">{pricePreview.km.toFixed(1)} km</span>
+                <span className="font-semibold">
+                  {pricePreview.km.toFixed(1)} km
+                </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Base</span>
-                <span className="font-semibold">{formatCurrencyEUR(pricePreview.base)}</span>
+                <span className="font-semibold">
+                  {formatCurrencyEUR(pricePreview.base)}
+                </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Distance</span>
-                <span className="font-semibold">{formatCurrencyEUR(pricePreview.breakdown.km)}</span>
+                <span className="font-semibold">
+                  {formatCurrencyEUR(pricePreview.breakdown.km)}
+                </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Express</span>
-                <span className="font-semibold">{pricePreview.breakdown.express}</span>
+                <span className="font-semibold">
+                  {pricePreview.breakdown.express}
+                </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Fragile</span>
-                <span className="font-semibold">{pricePreview.breakdown.fragile}</span>
+                <span className="font-semibold">
+                  {pricePreview.breakdown.fragile}
+                </span>
               </div>
               <div className="flex items-center justify-between border-t border-border pt-3">
-                <span className="text-sm font-semibold text-muted-foreground">Estimation</span>
+                <span className="text-sm font-semibold text-muted-foreground">
+                  Estimation
+                </span>
                 <span className="text-lg font-bold text-[#0F3556]">
                   {formatCurrencyEUR(pricePreview.total)}
                 </span>
@@ -1138,13 +1300,23 @@ interface CreateClientModalProps {
   onClientCreated: (client: ClientRecord) => void;
 }
 
-const CreateClientModal = ({ open, onOpenChange, onClientCreated }: CreateClientModalProps) => {
+const CreateClientModal = ({
+  open,
+  onOpenChange,
+  onClientCreated,
+}: CreateClientModalProps) => {
   const [values, setValues] = useState<FormValues>(INITIAL_FORM_VALUES);
-  const [touched, setTouched] = useState<Record<keyof FormValues, boolean>>(INITIAL_TOUCHED);
+  const [touched, setTouched] =
+    useState<Record<keyof FormValues, boolean>>(INITIAL_TOUCHED);
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [duplicateErrors, setDuplicateErrors] = useState<Partial<Record<keyof FormValues, string>>>({});
-  const [duplicateBanner, setDuplicateBanner] = useState<{ reason: DuplicateReason; existingId?: string } | null>(null);
+  const [duplicateErrors, setDuplicateErrors] = useState<
+    Partial<Record<keyof FormValues, string>>
+  >({});
+  const [duplicateBanner, setDuplicateBanner] = useState<{
+    reason: DuplicateReason;
+    existingId?: string;
+  } | null>(null);
   const firstFieldRef = useRef<HTMLInputElement | null>(null);
   const timeoutRef = useRef<number | null>(null);
 
@@ -1159,7 +1331,10 @@ const CreateClientModal = ({ open, onOpenChange, onClientCreated }: CreateClient
     });
     return merged;
   }, [baseErrors, duplicateErrors]);
-  const isFormValid = useMemo(() => Object.values(baseErrors).every((error) => error === ""), [baseErrors]);
+  const isFormValid = useMemo(
+    () => Object.values(baseErrors).every((error) => error === ""),
+    [baseErrors],
+  );
 
   useEffect(() => {
     if (open) {
@@ -1251,7 +1426,10 @@ const CreateClientModal = ({ open, onOpenChange, onClientCreated }: CreateClient
   };
 
   const shouldShowError = (field: keyof FormValues) => {
-    return (touched[field] || submitAttempted || Boolean(duplicateErrors[field])) && Boolean(combinedErrors[field]);
+    return (
+      (touched[field] || submitAttempted || Boolean(duplicateErrors[field])) &&
+      Boolean(combinedErrors[field])
+    );
   };
 
   const getErrorId = (field: keyof FormValues) => `${field}-error`;
@@ -1268,7 +1446,10 @@ const CreateClientModal = ({ open, onOpenChange, onClientCreated }: CreateClient
       nextErrors[field] = message;
     });
     setDuplicateErrors(nextErrors);
-    setDuplicateBanner({ reason: result.reason, existingId: result.existingId });
+    setDuplicateBanner({
+      reason: result.reason,
+      existingId: result.existingId,
+    });
     setTouched((previous) => {
       const updated = { ...previous };
       fields.forEach((field) => {
@@ -1282,7 +1463,9 @@ const CreateClientModal = ({ open, onOpenChange, onClientCreated }: CreateClient
     event.preventDefault();
     setSubmitAttempted(true);
 
-    const hasBaseErrors = Object.values(baseErrors).some((error) => error !== "");
+    const hasBaseErrors = Object.values(baseErrors).some(
+      (error) => error !== "",
+    );
     if (hasBaseErrors) {
       setTouched({
         company: true,
@@ -1355,96 +1538,135 @@ const CreateClientModal = ({ open, onOpenChange, onClientCreated }: CreateClient
       className="flex h-[100vh] flex-col overflow-hidden bg-[#F5F7FA] text-[#1F1F1F] p-0 sm:h-auto sm:max-h-[90vh] sm:max-w-xl sm:rounded-2xl"
     >
       <DialogHeader className="px-6 pt-6 text-left">
-        <DialogTitle id="create-client-title" className="text-xl font-bold text-[#0F3556]">
+        <DialogTitle
+          id="create-client-title"
+          className="text-xl font-bold text-[#0F3556]"
+        >
           Créer un client
         </DialogTitle>
         <DialogDescription className="text-sm text-[#1F1F1F]/70">
-          Tous les champs sont obligatoires. Les validations sont appliquées en temps réel.
+          Tous les champs sont obligatoires. Les validations sont appliquées en
+          temps réel.
         </DialogDescription>
       </DialogHeader>
 
-    {duplicateBanner && (
-      <div
-        className="mx-6 mb-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800"
-        role="alert"
-      >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" aria-hidden="true" />
-            <p className="font-semibold">
-              Doublon détecté : {DUPLICATE_MESSAGES[duplicateBanner.reason]}
-            </p>
-          </div>
-          {duplicateBanner.existingId && (
-            <Link to={`/admin/clients/${duplicateBanner.existingId}`} className="flex-shrink-0">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="border-[#0F3556] text-[#0F3556] hover:bg-[#0F3556]/10"
+      {duplicateBanner && (
+        <div
+          className="mx-6 mb-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+          role="alert"
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <AlertTriangle
+                className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600"
+                aria-hidden="true"
+              />
+              <p className="font-semibold">
+                Doublon détecté : {DUPLICATE_MESSAGES[duplicateBanner.reason]}
+              </p>
+            </div>
+            {duplicateBanner.existingId && (
+              <Link
+                to={`/admin/clients/${duplicateBanner.existingId}`}
+                className="flex-shrink-0"
               >
-                Voir la fiche (#{duplicateBanner.existingId})
-              </Button>
-            </Link>
-          )}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="border-[#0F3556] text-[#0F3556] hover:bg-[#0F3556]/10"
+                >
+                  Voir la fiche (#{duplicateBanner.existingId})
+                </Button>
+              </Link>
+            )}
+          </div>
         </div>
-      </div>
-    )}
+      )}
 
-    <form
-      id="form-create-client"
-      className="flex-1 space-y-4 overflow-y-auto px-6 pb-4 pt-4"
-      onSubmit={handleSubmit}
+      <form
+        id="form-create-client"
+        className="flex-1 space-y-4 overflow-y-auto px-6 pb-4 pt-4"
+        onSubmit={handleSubmit}
       >
         <div>
-          <Label htmlFor="company" className="text-sm font-semibold text-[#0F3556]">
+          <Label
+            htmlFor="company"
+            className="text-sm font-semibold text-[#0F3556]"
+          >
             Entreprise
           </Label>
           <Input
             id="company"
             ref={firstFieldRef}
             value={values.company}
-            onChange={(event) => handleFieldChange("company", event.target.value)}
+            onChange={(event) =>
+              handleFieldChange("company", event.target.value)
+            }
             onBlur={() => handleBlur("company")}
             aria-invalid={combinedErrors.company ? "true" : "false"}
-            aria-describedby={shouldShowError("company") ? getErrorId("company") : undefined}
+            aria-describedby={
+              shouldShowError("company") ? getErrorId("company") : undefined
+            }
             className={`mt-1 bg-white text-[#1F1F1F] focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
-              shouldShowError("company") ? "border-red-500 focus-visible:ring-red-500" : ""
+              shouldShowError("company")
+                ? "border-red-500 focus-visible:ring-red-500"
+                : ""
             }`}
             autoComplete="organization"
           />
           {shouldShowError("company") && (
-            <p id={getErrorId("company")} className="mt-1 text-sm text-red-600" role="alert">
+            <p
+              id={getErrorId("company")}
+              className="mt-1 text-sm text-red-600"
+              role="alert"
+            >
               {combinedErrors.company}
             </p>
           )}
         </div>
 
         <div>
-          <Label htmlFor="contact" className="text-sm font-semibold text-[#0F3556]">
+          <Label
+            htmlFor="contact"
+            className="text-sm font-semibold text-[#0F3556]"
+          >
             Contact principal
           </Label>
           <Input
             id="contact"
             value={values.contact}
-            onChange={(event) => handleFieldChange("contact", event.target.value)}
+            onChange={(event) =>
+              handleFieldChange("contact", event.target.value)
+            }
             onBlur={() => handleBlur("contact")}
             aria-invalid={combinedErrors.contact ? "true" : "false"}
-            aria-describedby={shouldShowError("contact") ? getErrorId("contact") : undefined}
+            aria-describedby={
+              shouldShowError("contact") ? getErrorId("contact") : undefined
+            }
             className={`mt-1 bg-white text-[#1F1F1F] focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
-              shouldShowError("contact") ? "border-red-500 focus-visible:ring-red-500" : ""
+              shouldShowError("contact")
+                ? "border-red-500 focus-visible:ring-red-500"
+                : ""
             }`}
             autoComplete="name"
           />
           {shouldShowError("contact") && (
-            <p id={getErrorId("contact")} className="mt-1 text-sm text-red-600" role="alert">
+            <p
+              id={getErrorId("contact")}
+              className="mt-1 text-sm text-red-600"
+              role="alert"
+            >
               {combinedErrors.contact}
             </p>
           )}
         </div>
 
         <div>
-          <Label htmlFor="email" className="text-sm font-semibold text-[#0F3556]">
+          <Label
+            htmlFor="email"
+            className="text-sm font-semibold text-[#0F3556]"
+          >
             Email
           </Label>
           <Input
@@ -1455,21 +1677,32 @@ const CreateClientModal = ({ open, onOpenChange, onClientCreated }: CreateClient
             onChange={(event) => handleFieldChange("email", event.target.value)}
             onBlur={() => handleBlur("email")}
             aria-invalid={combinedErrors.email ? "true" : "false"}
-            aria-describedby={shouldShowError("email") ? getErrorId("email") : undefined}
+            aria-describedby={
+              shouldShowError("email") ? getErrorId("email") : undefined
+            }
             className={`mt-1 bg-white text-[#1F1F1F] focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
-              shouldShowError("email") ? "border-red-500 focus-visible:ring-red-500" : ""
+              shouldShowError("email")
+                ? "border-red-500 focus-visible:ring-red-500"
+                : ""
             }`}
             autoComplete="email"
           />
           {shouldShowError("email") && (
-            <p id={getErrorId("email")} className="mt-1 text-sm text-red-600" role="alert">
+            <p
+              id={getErrorId("email")}
+              className="mt-1 text-sm text-red-600"
+              role="alert"
+            >
               {combinedErrors.email}
             </p>
           )}
         </div>
 
         <div>
-          <Label htmlFor="phone" className="text-sm font-semibold text-[#0F3556]">
+          <Label
+            htmlFor="phone"
+            className="text-sm font-semibold text-[#0F3556]"
+          >
             Téléphone
           </Label>
           <Input
@@ -1480,21 +1713,32 @@ const CreateClientModal = ({ open, onOpenChange, onClientCreated }: CreateClient
             onChange={(event) => handleFieldChange("phone", event.target.value)}
             onBlur={() => handleBlur("phone")}
             aria-invalid={combinedErrors.phone ? "true" : "false"}
-            aria-describedby={shouldShowError("phone") ? getErrorId("phone") : undefined}
+            aria-describedby={
+              shouldShowError("phone") ? getErrorId("phone") : undefined
+            }
             className={`mt-1 bg-white text-[#1F1F1F] focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
-              shouldShowError("phone") ? "border-red-500 focus-visible:ring-red-500" : ""
+              shouldShowError("phone")
+                ? "border-red-500 focus-visible:ring-red-500"
+                : ""
             }`}
             autoComplete="tel"
           />
           {shouldShowError("phone") && (
-            <p id={getErrorId("phone")} className="mt-1 text-sm text-red-600" role="alert">
+            <p
+              id={getErrorId("phone")}
+              className="mt-1 text-sm text-red-600"
+              role="alert"
+            >
               {combinedErrors.phone}
             </p>
           )}
         </div>
 
         <div>
-          <Label htmlFor="sector" className="text-sm font-semibold text-[#0F3556]">
+          <Label
+            htmlFor="sector"
+            className="text-sm font-semibold text-[#0F3556]"
+          >
             Secteur
           </Label>
           <Select
@@ -1508,9 +1752,13 @@ const CreateClientModal = ({ open, onOpenChange, onClientCreated }: CreateClient
               id="sector"
               onBlur={() => handleBlur("sector")}
               aria-invalid={combinedErrors.sector ? "true" : "false"}
-              aria-describedby={shouldShowError("sector") ? getErrorId("sector") : undefined}
+              aria-describedby={
+                shouldShowError("sector") ? getErrorId("sector") : undefined
+              }
               className={`mt-1 bg-white text-[#1F1F1F] focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
-                shouldShowError("sector") ? "border-red-500 focus-visible:ring-red-500" : ""
+                shouldShowError("sector")
+                  ? "border-red-500 focus-visible:ring-red-500"
+                  : ""
               }`}
             >
               <SelectValue placeholder="Sélectionner un secteur" />
@@ -1524,55 +1772,88 @@ const CreateClientModal = ({ open, onOpenChange, onClientCreated }: CreateClient
             </SelectContent>
           </Select>
           {shouldShowError("sector") && (
-            <p id={getErrorId("sector")} className="mt-1 text-sm text-red-600" role="alert">
+            <p
+              id={getErrorId("sector")}
+              className="mt-1 text-sm text-red-600"
+              role="alert"
+            >
               {combinedErrors.sector}
             </p>
           )}
         </div>
 
         <div>
-          <Label htmlFor="address" className="text-sm font-semibold text-[#0F3556]">
+          <Label
+            htmlFor="address"
+            className="text-sm font-semibold text-[#0F3556]"
+          >
             Adresse
           </Label>
           <Input
             id="address"
             value={values.address}
-            onChange={(event) => handleFieldChange("address", event.target.value)}
+            onChange={(event) =>
+              handleFieldChange("address", event.target.value)
+            }
             onBlur={() => handleBlur("address")}
             aria-invalid={combinedErrors.address ? "true" : "false"}
-            aria-describedby={shouldShowError("address") ? getErrorId("address") : undefined}
+            aria-describedby={
+              shouldShowError("address") ? getErrorId("address") : undefined
+            }
             className={`mt-1 bg-white text-[#1F1F1F] focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
-              shouldShowError("address") ? "border-red-500 focus-visible:ring-red-500" : ""
+              shouldShowError("address")
+                ? "border-red-500 focus-visible:ring-red-500"
+                : ""
             }`}
             autoComplete="street-address"
           />
           {shouldShowError("address") && (
-            <p id={getErrorId("address")} className="mt-1 text-sm text-red-600" role="alert">
+            <p
+              id={getErrorId("address")}
+              className="mt-1 text-sm text-red-600"
+              role="alert"
+            >
               {combinedErrors.address}
             </p>
           )}
         </div>
 
         <div>
-          <Label htmlFor="siret" className="text-sm font-semibold text-[#0F3556]">
+          <Label
+            htmlFor="siret"
+            className="text-sm font-semibold text-[#0F3556]"
+          >
             SIRET
           </Label>
           <Input
             id="siret"
             inputMode="numeric"
             value={values.siret}
-            onChange={(event) => handleFieldChange("siret", event.target.value.replace(/[^\d]/g, ""))}
+            onChange={(event) =>
+              handleFieldChange(
+                "siret",
+                event.target.value.replace(/[^\d]/g, ""),
+              )
+            }
             onBlur={() => handleBlur("siret")}
             aria-invalid={combinedErrors.siret ? "true" : "false"}
-            aria-describedby={shouldShowError("siret") ? getErrorId("siret") : undefined}
+            aria-describedby={
+              shouldShowError("siret") ? getErrorId("siret") : undefined
+            }
             className={`mt-1 bg-white text-[#1F1F1F] focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
-              shouldShowError("siret") ? "border-red-500 focus-visible:ring-red-500" : ""
+              shouldShowError("siret")
+                ? "border-red-500 focus-visible:ring-red-500"
+                : ""
             }`}
             maxLength={14}
             autoComplete="off"
           />
           {shouldShowError("siret") && (
-            <p id={getErrorId("siret")} className="mt-1 text-sm text-red-600" role="alert">
+            <p
+              id={getErrorId("siret")}
+              className="mt-1 text-sm text-red-600"
+              role="alert"
+            >
               {combinedErrors.siret}
             </p>
           )}
@@ -1580,7 +1861,12 @@ const CreateClientModal = ({ open, onOpenChange, onClientCreated }: CreateClient
       </form>
 
       <DialogFooter className="sticky bottom-0 left-0 right-0 gap-3 bg-[#F5F7FA] px-6 pb-6 pt-4 sm:flex-row">
-        <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={handleCancel}>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full sm:w-auto"
+          onClick={handleCancel}
+        >
           Annuler
         </Button>
         <Button
@@ -1602,5 +1888,7 @@ const CreateClientModal = ({ open, onOpenChange, onClientCreated }: CreateClient
     </DialogContent>
   );
 };
+
+export { CreateOrderForClientDialog };
 
 export default AdminClients;

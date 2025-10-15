@@ -1,52 +1,24 @@
-<!DOCTYPE html>
-<html lang="fr" data-theme="light">
+<!doctype html>
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>One Connexion – Portail client</title>
-    <meta
-      name="description"
-      content="Tableau de bord One Connexion : suivez vos livraisons urgentes et programmées en temps réel."
-    />
+    <title>One Connexion - Livraison urgente et programmée en Île-de-France</title>
+    <meta name="description" content="Transport B2B express en Île-de-France : livraison médicale, juridique, optique et événementiel. Tarifs transparents, suivi en temps réel." />
     <meta name="author" content="One Connexion" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <meta property="og:title" content="One Connexion - Transport B2B Express" />
+    <meta property="og:description" content="Livraison urgente et programmée en Île-de-France. Tarifs transparents, suivi en temps réel." />
+    <meta property="og:type" content="website" />
+
+    <meta name="twitter:card" content="summary_large_image" />
   </head>
+
   <body>
-    <div id="app" role="application" aria-label="Portail One Connexion"></div>
-    <script>
-      window.addEventListener('error', (e) => {
-        console.error(e?.error || e);
-        showFatal('Une erreur empêche l\'affichage.');
-      });
-      window.addEventListener('unhandledrejection', (e) => {
-        console.error(e?.reason || e);
-        showFatal('Une erreur empêche l\'affichage.');
-      });
-      function showFatal(msg) {
-        let b = document.getElementById('fatal-banner');
-        if (!b) {
-          b = document.createElement('div');
-          b.id = 'fatal-banner';
-          b.setAttribute('role', 'alert');
-          b.setAttribute('aria-live', 'assertive');
-          b.style.cssText =
-            'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#1f1f1f;color:#fff;z-index:99999;padding:24px;';
-          document.body.appendChild(b);
-        }
-        b.innerHTML =
-          '<div style="background:#ff4d4f;padding:12px 16px;border-radius:8px;font:600 14px/1.4 Inter,Arial">' +
-          msg +
-          ' (voir console)</div>';
-      }
-      window.showFatal = window.showFatal || showFatal;
-    </script>
-    <script type="module" src="./js/main.js"></script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

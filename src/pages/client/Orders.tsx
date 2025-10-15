@@ -8,83 +8,132 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Download, Eye, RotateCcw, MessageSquare, Search } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+
+import { useToast } from "@/components/ui/use-toast";
+import {
+  ClientOrder,
+  confirmReorder,
+  createReorderDraft,
+  ensureOrdersDataShape,
+  ensureStoragePrimitives,
+  formatCurrencyEUR,
+  formatDateTime,
+} from "@/lib/reorder";
+import ReorderModal from "./components/ReorderModal";
 
 /**
  * Page listant toutes les commandes du client
  * Avec filtres et actions
  */
 const ClientOrders = () => {
+  const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [orders, setOrders] = useState<ClientOrder[]>([]);
+  const [reorderDraft, setReorderDraft] = useState<ClientOrder | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const orders = [
-    {
-      id: "CMD-2025-001",
-      date: "15/01/2025",
-      type: "Document juridique",
-      from: "Paris 75001",
-      to: "Boulogne 92100",
-      status: "En cours",
-      statusColor: "info",
-      price: 45.50,
-      driver: "Marc D.",
-      driverPhone: "06 12 34 56 78",
-    },
-    {
-      id: "CMD-2025-002",
-      date: "14/01/2025",
-      type: "Colis médical",
-      from: "Paris 75008",
-      to: "Versailles 78000",
-      status: "Livré",
-      statusColor: "success",
-      price: 52.00,
-      driver: "Sophie L.",
-      driverPhone: "06 23 45 67 89",
-    },
-    {
-      id: "CMD-2025-003",
-      date: "14/01/2025",
-      type: "Monture optique",
-      from: "Paris 75015",
-      to: "Saint-Cloud 92210",
-      status: "Livré",
-      statusColor: "success",
-      price: 38.00,
-      driver: "Thomas R.",
-      driverPhone: "06 34 56 78 90",
-    },
-    {
-      id: "CMD-2025-004",
-      date: "13/01/2025",
-      type: "Document express",
-      from: "Paris 75002",
-      to: "Neuilly 92200",
-      status: "En attente",
-      statusColor: "warning",
-      price: 35.00,
-      driver: "En attente",
-      driverPhone: "-",
-    },
-  ];
+  useEffect(() => {
+    ensureStoragePrimitives();
+    const initialOrders = ensureOrdersDataShape();
+    setOrders(initialOrders);
+  }, []);
 
-  const getStatusColor = (color: string) => {
-    const colors: Record<string, string> = {
-      info: "bg-info/10 text-info border-info/20",
-      success: "bg-success/10 text-success border-success/20",
-      warning: "bg-warning/10 text-warning border-warning/20",
+  const refreshOrdersFromStorage = useCallback(() => {
+    const nextOrders = ensureOrdersDataShape();
+    setOrders(nextOrders);
+  }, []);
+
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (!event.key || ["oc_orders", "oc_assignments"].includes(event.key)) {
+        refreshOrdersFromStorage();
+      }
     };
-    return colors[color] || colors.info;
-  };
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [refreshOrdersFromStorage]);
 
-  const filteredOrders = orders.filter((order) => {
-    const matchesStatus = statusFilter === "all" || order.status.toLowerCase().includes(statusFilter.toLowerCase());
-    const matchesSearch = order.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          order.type.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesStatus && matchesSearch;
-  });
+  const getStatusColor = useCallback((status: string) => {
+    const normalized = status.toLowerCase();
+    if (normalized.includes("livr")) {
+      return "bg-success/10 text-success border-success/20";
+    }
+    if (normalized.includes("cours")) {
+      return "bg-info/10 text-info border-info/20";
+    }
+    if (normalized.includes("attent")) {
+      return "bg-warning/10 text-warning border-warning/20";
+    }
+    if (normalized.includes("valid")) {
+      return "bg-amber-100 text-amber-800 border-amber-200";
+    }
+    if (normalized.includes("annul")) {
+      return "bg-destructive/10 text-destructive border-destructive/20";
+    }
+    return "bg-muted text-foreground border-border";
+  }, []);
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      const normalizedStatus = order.status.toLowerCase();
+      const matchesStatus =
+        statusFilter === "all" || normalizedStatus.includes(statusFilter.toLowerCase());
+      const haystack = [
+        order.id,
+        order.type,
+        order.from?.address ?? "",
+        order.to?.address ?? "",
+      ]
+        .filter(Boolean)
+        .map((value) => value.toLowerCase());
+      const term = searchTerm.trim().toLowerCase();
+      const matchesSearch = term.length === 0 || haystack.some((value) => value.includes(term));
+      return matchesStatus && matchesSearch;
+    });
+  }, [orders, searchTerm, statusFilter]);
+
+  const handleReorder = useCallback(
+    (orderId: string) => {
+      try {
+        const draft = createReorderDraft(orderId);
+        setReorderDraft(draft);
+        setIsModalOpen(true);
+      } catch (error) {
+        console.error(error);
+        toast({
+          title: "Recommandation impossible",
+          description: "Impossible de préparer la recommandation pour cette commande.",
+          variant: "destructive",
+        });
+      }
+    },
+    [toast],
+  );
+
+  const closeModal = useCallback(() => {
+    setIsModalOpen(false);
+    setReorderDraft(null);
+  }, []);
+
+  const handleConfirm = useCallback(
+    async (draft: ClientOrder) => {
+      const result = confirmReorder(draft);
+      setOrders((current) => [result.order, ...current.filter((order) => order.id !== result.order.id)]);
+      toast({
+        title: "Commande recommandée",
+        description: result.driver
+          ? `Commande ${result.order.id} créée et assignée à ${result.driver.name}.`
+          : `Commande ${result.order.id} créée sans chauffeur disponible pour le moment.`,
+      });
+      closeModal();
+    },
+    [closeModal, toast],
+  );
 
   return (
     <DashboardLayout
@@ -147,61 +196,98 @@ const ClientOrders = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.map((order) => (
-                    <tr key={order.id} className="border-b hover:bg-muted/30 transition-colors">
-                      <td className="p-4 font-mono text-sm">{order.id}</td>
-                      <td className="p-4 text-sm text-muted-foreground">{order.date}</td>
-                      <td className="p-4 text-sm">{order.type}</td>
-                      <td className="p-4 text-sm text-muted-foreground">
-                        {order.from} → {order.to}
-                      </td>
-                      <td className="p-4 text-sm">
-                        <div>
-                          <p>{order.driver}</p>
-                          {order.driverPhone !== "-" && (
-                            <a href={`tel:${order.driverPhone}`} className="text-xs text-primary hover:underline">
-                              {order.driverPhone}
-                            </a>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <Badge className={getStatusColor(order.statusColor)}>
-                          {order.status}
-                        </Badge>
-                      </td>
-                      <td className="p-4 text-right font-semibold">{order.price.toFixed(2)}€</td>
-                      <td className="p-4">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link to={`/espace-client/commandes/${order.id}`}>
-                              <Eye className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                          {order.status === "Livré" && (
-                            <>
-                              <Button variant="ghost" size="sm" title="Recommander">
-                                <RotateCcw className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm" title="Télécharger PDF">
-                                <Download className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                          {order.status === "En cours" && order.driverPhone !== "-" && (
-                            <Button variant="ghost" size="sm" title="Contacter chauffeur">
-                              <MessageSquare className="h-4 w-4" />
+                  {filteredOrders.map((order) => {
+                    const driverName = order.driver?.name ?? "En attente";
+                    const driverPhone = order.driver?.phone ?? "";
+                    const fromAddress = order.from?.address ?? "Adresse non renseignée";
+                    const toAddress = order.to?.address ?? "Adresse non renseignée";
+                    const canContactDriver = driverPhone.trim().length > 0 && order.status.toLowerCase().includes("cours");
+                    const canReorder = !order.status.toLowerCase().includes("cours");
+                    return (
+                      <tr key={order.id} className="border-b transition-colors hover:bg-muted/30">
+                        <td className="p-4 font-mono text-sm">{order.id}</td>
+                        <td className="p-4 text-sm text-muted-foreground">
+                          {formatDateTime(order.pickupAt) || "—"}
+                        </td>
+                        <td className="p-4 text-sm">{order.type}</td>
+                        <td className="p-4 text-sm text-muted-foreground">
+                          {fromAddress} → {toAddress}
+                        </td>
+                        <td className="p-4 text-sm">
+                          <div className="space-y-1">
+                            <p>{driverName}</p>
+                            {driverPhone && (
+                              <a
+                                href={`tel:${driverPhone}`}
+                                className="text-xs text-primary hover:underline"
+                              >
+                                {driverPhone}
+                              </a>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <Badge className={`${getStatusColor(order.status)} border`}>{order.status}</Badge>
+                        </td>
+                        <td className="p-4 text-right font-semibold">
+                          {formatCurrencyEUR(order.price?.total ?? 0)}
+                        </td>
+                        <td className="p-4">
+                          <div className="flex justify-end gap-2">
+                            <Button variant="ghost" size="sm" asChild>
+                              <Link to={`/espace-client/commandes/${order.id}`}>
+                                <Eye className="h-4 w-4" />
+                                <span className="sr-only">Voir la commande {order.id}</span>
+                              </Link>
                             </Button>
-                          )}
-                        </div>
+                            {canReorder && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Recommander"
+                                data-action="reorder"
+                                data-order-id={order.id}
+                                onClick={() => handleReorder(order.id)}
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                                <span className="sr-only">Recommander la commande {order.id}</span>
+                              </Button>
+                            )}
+                            {canContactDriver && (
+                              <Button variant="ghost" size="sm" asChild title="Contacter chauffeur">
+                                <a href={`tel:${driverPhone}`}>
+                                  <MessageSquare className="h-4 w-4" />
+                                  <span className="sr-only">Appeler le chauffeur {driverName}</span>
+                                </a>
+                              </Button>
+                            )}
+                            <Button variant="ghost" size="sm" title="Télécharger PDF">
+                              <Download className="h-4 w-4" />
+                              <span className="sr-only">Télécharger le récapitulatif PDF</span>
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {filteredOrders.length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="p-6 text-center text-sm text-muted-foreground">
+                        Aucune commande ne correspond à votre recherche.
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
           </CardContent>
         </Card>
+        <ReorderModal
+          draft={reorderDraft}
+          open={isModalOpen}
+          onCancel={closeModal}
+          onConfirm={handleConfirm}
+        />
       </div>
     </DashboardLayout>
   );

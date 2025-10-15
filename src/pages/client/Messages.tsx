@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { MessageCircle, Plus } from "lucide-react";
@@ -10,8 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import MessageComposer from "@/components/messaging/MessageComposer";
-import MessageList from "@/components/messaging/MessageList";
+import ThreadView from "@/components/messaging/ThreadView";
+import MessageComposerFullScreen from "@/components/messaging/MessageComposerFullScreen";
 import { useMessagesStore } from "@/hooks/useMessagesStore";
 import type { Conversation, Participant } from "@/hooks/useMessagesStore";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,7 @@ const CONTEXT_LABELS: Record<string, string> = {
   SUPPORT: "Support",
   ORDER: "Commande",
   INCIDENT: "Incident",
+  BILLING: "Facturation",
 };
 
 const safeRelative = (value: string) => {
@@ -39,9 +41,11 @@ const buildParticipantsMap = (participants: Participant[]) =>
   }, {});
 
 const ClientMessages = () => {
-  const { participants, getConversationsFor, getParticipant, getRecipientsFor } = useMessagesStore();
+  const { participants, getConversationsFor, getParticipant } = useMessagesStore();
+  const navigate = useNavigate();
+  const params = useParams<{ threadId?: string }>();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
-  const [isStartingNewConversation, setIsStartingNewConversation] = useState(false);
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
 
   const participantsMap = useMemo(() => buildParticipantsMap(participants), [participants]);
 
@@ -56,8 +60,18 @@ const ClientMessages = () => {
   }, [getConversationsFor, getParticipant]);
 
   useEffect(() => {
-    if (isStartingNewConversation) {
+    if (isComposerOpen) {
       return;
+    }
+
+    const routeThreadId = params.threadId;
+
+    if (routeThreadId) {
+      const exists = clientConversations.some((item) => item.conversation.id === routeThreadId);
+      if (exists) {
+        setSelectedConversationId(routeThreadId);
+        return;
+      }
     }
 
     if (!selectedConversationId && clientConversations.length > 0) {
@@ -71,13 +85,9 @@ const ClientMessages = () => {
     ) {
       setSelectedConversationId(clientConversations[0]?.conversation.id ?? null);
     }
-  }, [clientConversations, selectedConversationId, isStartingNewConversation]);
+  }, [clientConversations, selectedConversationId, params.threadId, isComposerOpen]);
 
   const selectedConversation: Conversation | null = useMemo(() => {
-    if (isStartingNewConversation) {
-      return null;
-    }
-
     if (!selectedConversationId) {
       return null;
     }
@@ -85,23 +95,42 @@ const ClientMessages = () => {
     return (
       clientConversations.find((item) => item.conversation.id === selectedConversationId)?.conversation ?? null
     );
-  }, [clientConversations, selectedConversationId, isStartingNewConversation]);
-
-  const composerRecipients = useMemo(() => getRecipientsFor(CLIENT_ID), [getRecipientsFor]);
+  }, [clientConversations, selectedConversationId]);
 
   const handleSelectConversation = (conversationId: string) => {
-    setIsStartingNewConversation(false);
+    setIsComposerOpen(false);
     setSelectedConversationId(conversationId);
+    navigate(`/espace-client/messages/${conversationId}`);
   };
 
   const handleStartNewConversation = () => {
     setSelectedConversationId(null);
-    setIsStartingNewConversation(true);
+    setIsComposerOpen(true);
+    navigate(`/espace-client/messages`);
+  };
+
+  const handleThreadCreated = (conversation: Conversation) => {
+    setIsComposerOpen(false);
+    setSelectedConversationId(conversation.id);
+    navigate(`/espace-client/messages/${conversation.id}`);
+  };
+
+  const handleComposerClose = () => {
+    setIsComposerOpen(false);
+    if (selectedConversationId) {
+      navigate(`/espace-client/messages/${selectedConversationId}`);
+    }
   };
 
   const handleMessageSent = (conversationId: string) => {
-    setIsStartingNewConversation(false);
+    setIsComposerOpen(false);
     setSelectedConversationId(conversationId);
+    navigate(`/espace-client/messages/${conversationId}`);
+  };
+
+  const handleBackToList = () => {
+    navigate(`/espace-client/messages`);
+    setSelectedConversationId(null);
   };
 
   return (
@@ -134,7 +163,7 @@ const ClientMessages = () => {
               <ScrollArea className="flex-1">
                 <div className="space-y-2 p-2">
                   {clientConversations.map(({ conversation, otherParticipant, lastMessage }) => {
-                    const isActive = conversation.id === selectedConversationId && !isStartingNewConversation;
+                    const isActive = conversation.id === selectedConversationId && !isComposerOpen;
 
                     return (
                       <button
@@ -198,34 +227,34 @@ const ClientMessages = () => {
 
           <div className="flex flex-col gap-4">
             {selectedConversation ? (
-              <MessageList
+              <ThreadView
                 conversation={selectedConversation}
                 currentUserId={CLIENT_ID}
                 participantsMap={participantsMap}
+                onBack={handleBackToList}
+                onMessageSent={handleMessageSent}
               />
             ) : (
               <Card className="flex h-[480px] items-center justify-center text-center text-sm text-muted-foreground">
                 <CardContent className="space-y-3">
                   <MessageCircle className="mx-auto h-8 w-8" />
                   <p>
-                    {isStartingNewConversation
-                      ? "Renseignez les informations ci-dessous pour démarrer une nouvelle discussion."
+                    {isComposerOpen
+                      ? "Renseignez les informations dans la fenêtre de composition pour démarrer une nouvelle discussion."
                       : "Sélectionnez une conversation pour afficher les messages."}
                   </p>
                 </CardContent>
               </Card>
             )}
-
-            <MessageComposer
-              actorId={CLIENT_ID}
-              actorRole="CLIENT"
-              conversation={isStartingNewConversation ? null : selectedConversation}
-              recipients={composerRecipients}
-              onMessageSent={handleMessageSent}
-            />
           </div>
         </div>
       </div>
+      <MessageComposerFullScreen
+        open={isComposerOpen}
+        actorId={CLIENT_ID}
+        onClose={handleComposerClose}
+        onCreated={handleThreadCreated}
+      />
     </DashboardLayout>
   );
 };

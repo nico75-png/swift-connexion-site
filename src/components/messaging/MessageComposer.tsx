@@ -15,6 +15,7 @@ import type { Conversation, ConversationContextType, Participant, UserRole } fro
 const contextOptions: { label: string; value: ConversationContextType }[] = [
   { label: "Support", value: "SUPPORT" },
   { label: "Commande", value: "ORDER" },
+  { label: "Facturation", value: "BILLING" },
   { label: "Incident", value: "INCIDENT" },
 ];
 
@@ -23,7 +24,7 @@ const composerSchema = z
     recipientId: z.string({ required_error: "Sélectionnez un destinataire" }).min(1, "Sélectionnez un destinataire"),
     subject: z.string({ required_error: "L'objet est obligatoire" }).min(1, "L'objet est obligatoire"),
     content: z.string({ required_error: "Le message est obligatoire" }).min(1, "Le message est obligatoire"),
-    contextType: z.enum(["SUPPORT", "ORDER", "INCIDENT"] as const),
+    contextType: z.enum(["SUPPORT", "ORDER", "BILLING", "INCIDENT"] as const),
     contextReference: z.string().optional(),
   })
   .superRefine((data, ctx) => {

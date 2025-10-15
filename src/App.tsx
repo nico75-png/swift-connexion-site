@@ -62,6 +62,7 @@ const App = () => (
           <Route path="/espace-client/factures" element={<ClientInvoices />} />
           <Route path="/espace-client/depenses" element={<ClientExpenses />} />
           <Route path="/espace-client/messages" element={<ClientMessages />} />
+          <Route path="/espace-client/messages/:threadId" element={<ClientMessages />} />
           <Route path="/espace-client/profil" element={<ClientProfile />} />
           <Route path="/espace-client/preferences" element={<ClientPreferences />} />
           <Route path="/admin" element={<Admin />} />

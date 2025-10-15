@@ -36,7 +36,7 @@ const formatDateTime = (iso: string) => format(new Date(iso), "dd MMM yyyy · HH
 const AdminOrderDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
-  const { ready, orders, assignments, unassignDriver } = useOrdersStore();
+  const { ready, orders, assignments, unassignDriver, reportDriverIncident } = useOrdersStore();
   const { drivers } = useDriversStore();
   const { activityLog } = useActivityLogStore();
   const { notifications } = useNotificationsStore();

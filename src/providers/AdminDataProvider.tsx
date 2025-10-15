@@ -242,6 +242,7 @@ export const useOrdersStore = () => {
     assignDriver,
     reassignDriver,
     unassignDriver,
+    reportDriverIncident,
     scheduleDriverAssignment,
     cancelScheduledAssignment,
     refreshAll,

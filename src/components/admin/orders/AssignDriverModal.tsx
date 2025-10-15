@@ -100,13 +100,21 @@ const AssignDriverModal = ({ orderId, open, onOpenChange, excludeDriverIds = [] 
 
   useEffect(() => {
     if (open) {
+      const excluded = new Set(excludeDriverIds);
+      const defaultDriverId = order?.driverId ?? null;
       setSearch("");
       setAvailabilityFilter("AVAILABLE");
       setFormError(null);
-      setSelectedDriverId(order?.driverId ?? null);
+      setSelectedDriverId(defaultDriverId && excluded.has(defaultDriverId) ? null : defaultDriverId);
       setTimeout(() => searchRef.current?.focus(), 100);
     }
-  }, [open, order?.driverId]);
+  }, [excludeDriverIds, open, order?.driverId]);
+
+  useEffect(() => {
+    if (selectedDriverId && excludeDriverIds.includes(selectedDriverId)) {
+      setSelectedDriverId(null);
+    }
+  }, [excludeDriverIds, selectedDriverId]);
 
   useEffect(() => {
     if (selectedDriver) {

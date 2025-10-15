@@ -1,5 +1,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Search, Plus, Phone, Car, Mail } from "lucide-react";
+import { Search, Plus, Phone, Car, Mail, Pencil, Trash2 } from "lucide-react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import AdminSidebar from "@/components/dashboard/AdminSidebar";
@@ -14,10 +16,18 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/components/ui/use-toast";
+import {
+  Driver,
+  DriverLifecycleStatus,
+  DriverUnavailability,
+  getDrivers,
+  hasTimeOverlap,
+  saveDrivers,
+} from "@/lib/stores/driversOrders.store";
+import { cancelScheduledAssignmentsForInterval } from "@/lib/services/assign.service";
+import { useDriversStore } from "@/providers/AdminDataProvider";
 
-const STORAGE_KEY = "oc_drivers";
-
-export type DriverStatus = "ACTIF" | "INACTIF";
+export type DriverStatus = DriverLifecycleStatus;
 
 type VehicleType = "vélo" | "scooter" | "moto" | "voiture" | "utilitaire" | "fourgon";
 
@@ -31,11 +41,37 @@ interface DriverRecord {
   capacityKg: number;
   plateRaw: string;
   plate: string;
-  status: DriverStatus;
+  lifecycleStatus: DriverStatus;
   comment: string;
   createdAt: string;
   updatedAt: string;
+  deactivated?: boolean;
+  deactivatedAt?: string;
+  unavailabilities: DriverUnavailability[];
 }
+
+interface EditDriverModalProps {
+  open: boolean;
+  driver: DriverRecord | null;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (updates: { lifecycleStatus: DriverStatus; unavailabilities: DriverUnavailability[] }) => void;
+}
+
+interface UnavailabilityFormState {
+  id: string | null;
+  type: "" | DriverUnavailability["type"];
+  start: string;
+  end: string;
+  reason: string;
+}
+
+type UnavailabilityFormErrors = {
+  type?: string;
+  start?: string;
+  end?: string;
+  reason?: string;
+  overlap?: string;
+};
 
 const VEHICLE_OPTIONS: Array<{ value: VehicleType; label: string }> = [
   { value: "vélo", label: "Vélo" },
@@ -56,31 +92,212 @@ const STATUS_BADGE_CLASSES: Record<DriverStatus, string> = {
   INACTIF: "bg-slate-200 text-slate-700 border-slate-300",
 };
 
-export const getFromStorage = <T,>(key: string, fallback: T = [] as T) => {
-  if (typeof window === "undefined") {
-    return fallback;
-  }
-  try {
-    const stored = window.localStorage.getItem(key);
-    if (!stored) {
-      return fallback;
-    }
-    return JSON.parse(stored) as T;
-  } catch (error) {
-    console.error(`Failed to read storage key "${key}":`, error);
-    return fallback;
-  }
+const UNAVAILABILITY_TYPE_LABELS: Record<DriverUnavailability["type"], string> = {
+  VACANCES: "Vacances",
+  RENDEZ_VOUS: "Rendez-vous",
 };
 
-export const saveToStorage = (key: string, value: unknown) => {
-  if (typeof window === "undefined") {
-    return;
+const VEHICLE_LABEL_BY_VALUE = new Map(VEHICLE_OPTIONS.map((option) => [option.value, option.label]));
+const VEHICLE_VALUE_BY_LABEL = new Map(
+  VEHICLE_OPTIONS.map((option) => [option.label.toLowerCase(), option.value]),
+);
+const DEFAULT_VEHICLE_VALUE: VehicleType = "voiture";
+
+const cloneUnavailabilities = (list: DriverUnavailability[] = []) =>
+  [...list].sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+
+const areUnavailabilitiesEqual = (
+  a: DriverUnavailability[] = [],
+  b: DriverUnavailability[] = [],
+) => {
+  const left = cloneUnavailabilities(a);
+  const right = cloneUnavailabilities(b);
+  if (left.length !== right.length) {
+    return false;
   }
-  try {
-    window.localStorage.setItem(key, JSON.stringify(value));
-  } catch (error) {
-    console.error(`Failed to write storage key "${key}":`, error);
+  return left.every((item, index) => {
+    const other = right[index];
+    return (
+      item.id === other.id &&
+      item.type === other.type &&
+      item.start === other.start &&
+      item.end === other.end &&
+      (item.reason ?? "") === (other.reason ?? "")
+    );
+  });
+};
+
+const validateUnavailabilityFormState = (
+  state: UnavailabilityFormState,
+  list: DriverUnavailability[],
+): { errors: UnavailabilityFormErrors; startIso: string | null; endIso: string | null } => {
+  const errors: UnavailabilityFormErrors = {};
+
+  if (!state.type) {
+    errors.type = "Sélectionnez un type";
   }
+
+  if (!state.start) {
+    errors.start = "Renseignez la date de début";
+  }
+  if (!state.end) {
+    errors.end = "Renseignez la date de fin";
+  }
+
+  const startIso = toIsoFromLocalValue(state.start);
+  const endIso = toIsoFromLocalValue(state.end);
+
+  if (state.start && !startIso) {
+    errors.start = "Format de date invalide";
+  }
+  if (state.end && !endIso) {
+    errors.end = "Format de date invalide";
+  }
+
+  if (startIso && endIso) {
+    if (new Date(startIso).getTime() >= new Date(endIso).getTime()) {
+      errors.end = "La fin doit être postérieure au début";
+    }
+  }
+
+  const reason = state.reason.trim();
+  if (reason.length > 200) {
+    errors.reason = "200 caractères maximum";
+  }
+
+  if (!errors.start && !errors.end && startIso && endIso) {
+    const overlap = list.some(
+      (item) => item.id !== state.id && hasTimeOverlap(startIso, endIso, item.start, item.end),
+    );
+    if (overlap) {
+      errors.overlap = "Une indisponibilité existe déjà sur ce créneau.";
+    }
+  }
+
+  return { errors, startIso: startIso ?? null, endIso: endIso ?? null };
+};
+
+const computeChangedUnavailabilities = (
+  previous: DriverUnavailability[],
+  next: DriverUnavailability[],
+) => {
+  const previousMap = new Map(previous.map((item) => [item.id, item]));
+  return next.filter((item) => {
+    const existing = previousMap.get(item.id);
+    if (!existing) {
+      return true;
+    }
+    return existing.start !== item.start || existing.end !== item.end;
+  });
+};
+
+const mapDriverToRecord = (driver: Driver): DriverRecord => {
+  const lifecycleStatus = driver.lifecycleStatus === "INACTIF" ? "INACTIF" : "ACTIF";
+  const vehicleLabel = driver.vehicle?.type ?? VEHICLE_LABEL_BY_VALUE.get(DEFAULT_VEHICLE_VALUE) ?? "Voiture";
+  const vehicleValue =
+    VEHICLE_VALUE_BY_LABEL.get(vehicleLabel.toLowerCase()) ?? (DEFAULT_VEHICLE_VALUE as VehicleType);
+  const phoneNormalized = driver.phoneNormalized ?? normalizePhoneFR06(driver.phone).normalized;
+  const plateRaw = driver.vehicle?.registration ?? driver.plate ?? "";
+  const plateNormalized = driver.plateNormalized ?? normalizePlate(plateRaw);
+
+  return {
+    id: driver.id,
+    name: driver.fullname ?? driver.name ?? "Chauffeur",
+    phoneRaw: driver.phone ?? formatPhoneFR10(phoneNormalized) ?? phoneNormalized,
+    phone: phoneNormalized,
+    email: driver.email ?? "",
+    vehicleType: vehicleValue,
+    capacityKg: driver.vehicle?.capacityKg ?? Number.parseInt(driver.vehicle?.capacity ?? "0", 10) || 0,
+    plateRaw: plateRaw,
+    plate: plateNormalized,
+    lifecycleStatus,
+    comment: driver.comment ?? "",
+    createdAt: driver.createdAt ?? new Date().toISOString(),
+    updatedAt: driver.updatedAt ?? driver.createdAt ?? new Date().toISOString(),
+    deactivated: driver.deactivated,
+    deactivatedAt: driver.deactivatedAt,
+    unavailabilities: cloneUnavailabilities(driver.unavailabilities ?? []),
+  } satisfies DriverRecord;
+};
+
+const resolveVehicleLabel = (value: VehicleType) => VEHICLE_LABEL_BY_VALUE.get(value) ?? "Voiture";
+
+const mapRecordToDriver = (record: DriverRecord, existing?: Driver): Driver => {
+  const now = new Date().toISOString();
+  const lifecycleStatus = record.lifecycleStatus === "INACTIF" ? "INACTIF" : "ACTIF";
+  const status = existing?.status ?? "AVAILABLE";
+  const workflowStatus = existing?.workflowStatus ?? (status === "ON_TRIP" ? "EN_COURSE" : status === "PAUSED" ? "EN_PAUSE" : "ACTIF");
+  const phoneNormalized = record.phone || normalizePhoneFR06(record.phoneRaw).normalized;
+  const phoneDisplay =
+    record.phoneRaw || (phoneNormalized ? formatPhoneFR10(phoneNormalized) : phoneNormalized);
+  const capacityLabel = new Intl.NumberFormat("fr-FR").format(Math.max(0, record.capacityKg));
+  const registration = record.plateRaw || record.plate;
+  const existingDeactivated = existing?.deactivated ?? false;
+  const isInactive = lifecycleStatus === "INACTIF";
+  const deactivated = existingDeactivated || isInactive || record.deactivated === true;
+  const deactivatedAt = isInactive
+    ? existing?.deactivatedAt ?? record.deactivatedAt ?? now
+    : record.deactivatedAt ?? existing?.deactivatedAt;
+
+  return {
+    id: record.id,
+    name: record.name,
+    fullname: record.name,
+    phone: phoneDisplay,
+    phoneNormalized,
+    email: record.email,
+    vehicle: {
+      type: resolveVehicleLabel(record.vehicleType),
+      capacity: `${capacityLabel} kg`,
+      capacityKg: record.capacityKg,
+      registration,
+    },
+    plate: record.plate,
+    plateNormalized: record.plate,
+    status,
+    workflowStatus,
+    nextFreeSlot: existing?.nextFreeSlot ?? "À planifier",
+    active: lifecycleStatus !== "INACTIF" && status !== "PAUSED",
+    lifecycleStatus,
+    deactivated,
+    deactivatedAt,
+    unavailabilities: cloneUnavailabilities(record.unavailabilities),
+    comment: record.comment,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+    zone: existing?.zone,
+    coversAllZones: true,
+  } satisfies Driver;
+};
+
+const getNextUnavailability = (list: DriverUnavailability[]) => {
+  const nowTime = Date.now();
+  return (
+    cloneUnavailabilities(list).find((item) => new Date(item.end).getTime() > nowTime) ?? null
+  );
+};
+
+const formatUnavailabilityLabel = (item: DriverUnavailability | null) => {
+  if (!item) return "-";
+  const start = format(new Date(item.start), "dd MMM yyyy · HH'h'mm", { locale: fr });
+  const end = format(new Date(item.end), "HH'h'mm", { locale: fr });
+  const reason = item.reason ? ` — ${item.reason}` : "";
+  return `${start} → ${end}${reason}`;
+};
+
+const toLocalDateTimeValue = (iso: string) => {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const tzOffset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
+};
+
+const toIsoFromLocalValue = (value: string) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
 };
 
 export const createId = (prefix: string) => `${prefix}-${Date.now()}`;
@@ -109,7 +326,7 @@ interface FormState {
   vehicleType: "" | VehicleType;
   capacityKg: string;
   plate: string;
-  status: DriverStatus;
+  lifecycleStatus: DriverStatus;
   comment: string;
 }
 
@@ -120,17 +337,19 @@ const initialFormState: FormState = {
   vehicleType: "",
   capacityKg: "",
   plate: "",
-  status: "ACTIF",
+  lifecycleStatus: "ACTIF",
   comment: "",
 };
 
 const AdminDrivers = () => {
   const { toast } = useToast();
+  const { refreshAll } = useDriversStore();
   const [drivers, setDrivers] = useState<DriverRecord[]>([]);
-  const [isStorageReady, setIsStorageReady] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | DriverStatus>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingDriverId, setEditingDriverId] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormState>(initialFormState);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [touched, setTouched] = useState<Partial<Record<keyof FormState, boolean>>>({});
@@ -141,72 +360,114 @@ const AdminDrivers = () => {
   const phoneFieldRef = useRef<HTMLInputElement>(null);
   const plateFieldRef = useRef<HTMLInputElement>(null);
   const wasOpenRef = useRef(false);
+  const driversMapRef = useRef<Record<string, Driver>>({});
 
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
+  const persistDrivers = useCallback(
+    (records: DriverRecord[]) => {
+      const driverList = records.map((record) =>
+        mapRecordToDriver(record, driversMapRef.current[record.id]),
+      );
+      saveDrivers(driverList);
+      driversMapRef.current = Object.fromEntries(driverList.map((driver) => [driver.id, driver]));
+      refreshAll();
+    },
+    [refreshAll],
+  );
+
+  const editingDriver = useMemo(() => {
+    if (!editingDriverId) {
+      return null;
     }
-    const stored = getFromStorage<DriverRecord[]>(STORAGE_KEY, []);
-    if (Array.isArray(stored) && stored.length > 0) {
-      const sanitized = stored
-        .filter((item): item is Partial<DriverRecord> & { fullname?: string } => Boolean(item) && typeof item === "object")
-        .map((item) => {
-          const normalizedPhone = typeof item.phone === "string" ? item.phone.replace(/\D/g, "") : "";
-          const normalizedPlateValue = typeof item.plate === "string" ? item.plate : item.plateRaw ?? "";
-          const plateRawValue =
-            typeof item.plateRaw === "string"
-              ? item.plateRaw
-              : typeof normalizedPlateValue === "string"
-                ? normalizedPlateValue
-                : "";
-          const vehicle = VEHICLE_OPTIONS.some((option) => option.value === item.vehicleType)
-            ? (item.vehicleType as VehicleType)
-            : "voiture";
+    return drivers.find((driver) => driver.id === editingDriverId) ?? null;
+  }, [drivers, editingDriverId]);
 
-          return {
-            id: typeof item.id === "string" ? item.id : createId("DRV"),
-            name:
-              typeof item.name === "string"
-                ? item.name
-                : typeof item.fullname === "string"
-                  ? item.fullname
-                  : normalizedPhone
-                    ? formatPhoneFR10(normalizedPhone)
-                    : "Chauffeur",
-            phoneRaw:
-              typeof item.phoneRaw === "string"
-                ? item.phoneRaw
-                : normalizedPhone
-                  ? formatPhoneFR10(normalizedPhone)
-                  : "",
-            phone: normalizedPhone,
-            email: typeof item.email === "string" ? item.email : "",
-            vehicleType: vehicle,
-            capacityKg: Number(item.capacityKg) || 0,
-            plateRaw: plateRawValue.toString().toUpperCase(),
-            plate: normalizePlate(plateRawValue ?? ""),
-            status: item.status === "INACTIF" ? "INACTIF" : "ACTIF",
-            comment: typeof item.comment === "string" ? item.comment : "",
-            createdAt: typeof item.createdAt === "string" ? item.createdAt : new Date().toISOString(),
-            updatedAt:
-              typeof item.updatedAt === "string"
-                ? item.updatedAt
-                : typeof item.createdAt === "string"
-                  ? item.createdAt
-                  : new Date().toISOString(),
-          } satisfies DriverRecord;
+  const handleEditSubmit = useCallback(
+    (updates: { lifecycleStatus: DriverStatus; unavailabilities: DriverUnavailability[] }) => {
+      if (!editingDriverId) {
+        return;
+      }
+
+      const now = new Date().toISOString();
+      let previousDriver: DriverRecord | null = null;
+      let updatedRecord: DriverRecord | null = null;
+
+      setDrivers((prev) => {
+        const target = prev.find((driver) => driver.id === editingDriverId);
+        if (!target) {
+          return prev;
+        }
+
+        previousDriver = target;
+        const nextRecord: DriverRecord = {
+          ...target,
+          lifecycleStatus: updates.lifecycleStatus,
+          deactivated: target.deactivated || updates.lifecycleStatus === "INACTIF",
+          deactivatedAt:
+            updates.lifecycleStatus === "INACTIF"
+              ? target.deactivatedAt ?? now
+              : target.deactivatedAt,
+          unavailabilities: cloneUnavailabilities(updates.unavailabilities),
+          updatedAt: now,
+        };
+
+        updatedRecord = nextRecord;
+        const nextList = prev.map((driver) =>
+          driver.id === nextRecord.id ? nextRecord : driver,
+        );
+        persistDrivers(nextList);
+        return nextList;
+      });
+
+      if (!previousDriver || !updatedRecord) {
+        setIsEditModalOpen(false);
+        setEditingDriverId(null);
+        return;
+      }
+
+      setIsEditModalOpen(false);
+      setEditingDriverId(null);
+
+      const changed = computeChangedUnavailabilities(
+        previousDriver.unavailabilities,
+        updatedRecord.unavailabilities,
+      );
+
+      let cancelledCount = 0;
+      changed.forEach((item) => {
+        const cancelled = cancelScheduledAssignmentsForInterval(updatedRecord!.id, {
+          start: item.start,
+          end: item.end,
         });
-      setDrivers(sanitized);
-    }
-    setIsStorageReady(true);
-  }, []);
+        cancelledCount += cancelled.length;
+      });
+
+      const updatesMessages: string[] = [];
+      if (previousDriver.lifecycleStatus !== updates.lifecycleStatus) {
+        updatesMessages.push(
+          updates.lifecycleStatus === "INACTIF"
+            ? "Statut mis à jour : INACTIF — ce chauffeur ne sera plus assigné automatiquement."
+            : "Statut mis à jour : ACTIF.",
+        );
+      }
+      if (cancelledCount > 0) {
+        updatesMessages.push(`${cancelledCount} affectation(s) planifiée(s) annulée(s).`);
+      }
+
+      toast({
+        title: "✅ Chauffeur mis à jour",
+        description: updatesMessages.length
+          ? updatesMessages.join(" ")
+          : "Modifications enregistrées.",
+      });
+    },
+    [editingDriverId, persistDrivers, toast],
+  );
 
   useEffect(() => {
-    if (!isStorageReady) {
-      return;
-    }
-    saveToStorage(STORAGE_KEY, drivers);
-  }, [drivers, isStorageReady]);
+    const storedDrivers = getDrivers();
+    driversMapRef.current = Object.fromEntries(storedDrivers.map((driver) => [driver.id, driver]));
+    setDrivers(storedDrivers.map(mapDriverToRecord));
+  }, []);
 
   useEffect(() => {
     if (isModalOpen) {
@@ -259,7 +520,7 @@ const AdminDrivers = () => {
           ? undefined
           : "Immatriculation invalide";
       }
-      case "status":
+      case "lifecycleStatus":
         return STATUS_LABELS[value as DriverStatus] ? undefined : "Statut invalide";
       case "comment":
         return trimmed.length <= 500 ? undefined : "500 caractères maximum";
@@ -275,13 +536,13 @@ const AdminDrivers = () => {
     "vehicleType",
     "capacityKg",
     "plate",
-    "status",
+    "lifecycleStatus",
   ];
 
   const isSubmitDisabled = useMemo(() => {
     const hasEmptyRequired = requiredFields.some((field) => {
       const value = formData[field];
-      return field === "status" ? !value : value.trim() === "";
+      return field === "lifecycleStatus" ? !value : value.trim() === "";
     });
     if (hasEmptyRequired) {
       return true;
@@ -298,13 +559,18 @@ const AdminDrivers = () => {
         const createdAtTime = Number(new Date(driver.createdAt).getTime()) || 0;
         const displayCapacity = `${new Intl.NumberFormat("fr-FR").format(driver.capacityKg)} kg`;
         const displayPlate = driver.plateRaw || driver.plate || "-";
-        const displayPhone = formatPhoneFR10(driver.phone) || driver.phoneRaw;
+        const displayPhone = driver.phoneRaw || formatPhoneFR10(driver.phone) || driver.phone;
+        const nextUnavailability = getNextUnavailability(driver.unavailabilities);
+        const vehicleLabel = VEHICLE_LABEL_BY_VALUE.get(driver.vehicleType) ?? driver.vehicleType;
         return {
           ...driver,
           createdAtTime,
           displayCapacity,
           displayPlate,
           displayPhone,
+          vehicleLabel,
+          nextUnavailability,
+          nextUnavailabilityLabel: formatUnavailabilityLabel(nextUnavailability),
         };
       })
       .sort((a, b) => b.createdAtTime - a.createdAtTime || a.name.localeCompare(b.name));
@@ -327,15 +593,15 @@ const AdminDrivers = () => {
         .map((value) => value.toString().toLowerCase());
 
       const matchesSearch = term.length === 0 || haystack.some((value) => value.includes(term));
-      const matchesStatus = statusFilter === "all" || driver.status === statusFilter;
+      const matchesStatus = statusFilter === "all" || driver.lifecycleStatus === statusFilter;
       return matchesSearch && matchesStatus;
     });
   }, [enhancedDrivers, searchTerm, statusFilter]);
 
   const statusCounts = useMemo(
     () => ({
-      ACTIF: enhancedDrivers.filter((driver) => driver.status === "ACTIF").length,
-      INACTIF: enhancedDrivers.filter((driver) => driver.status === "INACTIF").length,
+      ACTIF: enhancedDrivers.filter((driver) => driver.lifecycleStatus === "ACTIF").length,
+      INACTIF: enhancedDrivers.filter((driver) => driver.lifecycleStatus === "INACTIF").length,
     }),
     [enhancedDrivers],
   );
@@ -398,6 +664,8 @@ const AdminDrivers = () => {
     }
 
     const timestamp = new Date().toISOString();
+    const lifecycleStatus = formData.lifecycleStatus;
+    const commentValue = formData.comment.trim().slice(0, 500);
     const newDriver: DriverRecord = {
       id: createId("DRV"),
       name: formData.fullname.trim(),
@@ -408,13 +676,20 @@ const AdminDrivers = () => {
       capacityKg: Number(formData.capacityKg),
       plateRaw: formData.plate.trim().toUpperCase(),
       plate: plateNormalized,
-      status: formData.status,
-      comment: formData.comment.trim().slice(0, 500),
+      lifecycleStatus,
+      comment: commentValue,
       createdAt: timestamp,
       updatedAt: timestamp,
+      deactivated: lifecycleStatus === "INACTIF",
+      deactivatedAt: lifecycleStatus === "INACTIF" ? timestamp : undefined,
+      unavailabilities: [],
     };
 
-    setDrivers((prev) => [newDriver, ...prev]);
+    setDrivers((prev) => {
+      const next = [newDriver, ...prev];
+      persistDrivers(next);
+      return next;
+    });
 
     toast({ title: "✅ Chauffeur créé" });
     resetForm();
@@ -473,6 +748,10 @@ const AdminDrivers = () => {
                   <TableHead className="font-semibold text-[#1F1F1F]">Véhicule</TableHead>
                   <TableHead className="font-semibold text-[#1F1F1F]">Immatriculation</TableHead>
                   <TableHead className="font-semibold text-[#1F1F1F]">Statut</TableHead>
+                  <TableHead className="font-semibold text-[#1F1F1F]">
+                    Prochaine indisponibilité
+                  </TableHead>
+                  <TableHead className="font-semibold text-[#1F1F1F] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -504,7 +783,7 @@ const AdminDrivers = () => {
                     <TableCell>
                       <div className="flex items-center gap-2 text-[#1F1F1F]">
                         <Car className="h-4 w-4 text-muted-foreground" aria-hidden />
-                        <span className="capitalize">{driver.vehicleType}</span>
+                        <span className="capitalize">{driver.vehicleLabel}</span>
                         <span className="text-sm text-muted-foreground">{driver.displayCapacity}</span>
                       </div>
                     </TableCell>
@@ -514,10 +793,37 @@ const AdminDrivers = () => {
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className={`${STATUS_BADGE_CLASSES[driver.status]} border`}
+                        className={`${STATUS_BADGE_CLASSES[driver.lifecycleStatus]} border`}
                       >
-                        {STATUS_LABELS[driver.status]}
+                        {STATUS_LABELS[driver.lifecycleStatus]}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-muted-foreground">
+                        {driver.nextUnavailabilityLabel}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        data-action="edit"
+                        aria-haspopup="dialog"
+                        aria-controls="modal-edit-driver"
+                        onClick={() => {
+                          setEditingDriverId(driver.id);
+                          setIsEditModalOpen(true);
+                        }}
+                      >
+                        <span aria-hidden className="mr-2 flex items-center gap-1">
+                          <span role="img" aria-hidden>
+                            🛠️
+                          </span>
+                          <Pencil className="h-4 w-4" aria-hidden />
+                        </span>
+                        <span className="sr-only md:not-sr-only">Modifier</span>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -773,7 +1079,396 @@ const AdminDrivers = () => {
           </form>
         </DialogContent>
       </Dialog>
+      <EditDriverModal
+        open={isEditModalOpen && Boolean(editingDriver)}
+        driver={editingDriver}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsEditModalOpen(false);
+            setEditingDriverId(null);
+          } else {
+            setIsEditModalOpen(true);
+          }
+        }}
+        onSubmit={handleEditSubmit}
+      />
     </DashboardLayout>
+  );
+};
+
+const EditDriverModal = ({ open, driver, onOpenChange, onSubmit }: EditDriverModalProps) => {
+  const [status, setStatus] = useState<DriverStatus>("ACTIF");
+  const [items, setItems] = useState<DriverUnavailability[]>([]);
+  const [form, setForm] = useState<UnavailabilityFormState>({
+    id: null,
+    type: "",
+    start: "",
+    end: "",
+    reason: "",
+  });
+  const [formTouched, setFormTouched] = useState(false);
+  const [formErrors, setFormErrors] = useState<UnavailabilityFormErrors>({});
+  const statusTriggerRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (open && driver) {
+      const nextItems = cloneUnavailabilities(driver.unavailabilities);
+      setStatus(driver.lifecycleStatus);
+      setItems(nextItems);
+      setForm({ id: null, type: "", start: "", end: "", reason: "" });
+      setFormTouched(false);
+      setFormErrors({});
+      window.setTimeout(() => statusTriggerRef.current?.focus(), 50);
+    }
+    if (!open) {
+      setForm({ id: null, type: "", start: "", end: "", reason: "" });
+      setFormTouched(false);
+      setFormErrors({});
+    }
+  }, [open, driver]);
+
+  const validation = useMemo(
+    () => validateUnavailabilityFormState(form, items),
+    [form, items],
+  );
+
+  useEffect(() => {
+    if (formTouched) {
+      setFormErrors(validation.errors);
+    }
+  }, [formTouched, validation]);
+
+  const isFormEmpty =
+    !form.type && !form.start && !form.end && form.reason.trim().length === 0;
+  const addDisabled = isFormEmpty || Object.keys(validation.errors).length > 0;
+
+  const handleAddOrUpdate = () => {
+    setFormTouched(true);
+    setFormErrors(validation.errors);
+    if (Object.keys(validation.errors).length > 0 || !validation.startIso || !validation.endIso) {
+      return;
+    }
+    const reasonValue = form.reason.trim();
+    const now = new Date().toISOString();
+    if (form.id) {
+      setItems((prev) =>
+        cloneUnavailabilities(
+          prev.map((item) =>
+            item.id === form.id
+              ? {
+                  ...item,
+                  type: form.type as DriverUnavailability["type"],
+                  start: validation.startIso!,
+                  end: validation.endIso!,
+                  reason: reasonValue ? reasonValue : undefined,
+                  updatedAt: now,
+                }
+              : item,
+          ),
+        ),
+      );
+    } else {
+      const newItem: DriverUnavailability = {
+        id: `UNAV-${Date.now()}`,
+        type: form.type as DriverUnavailability["type"],
+        start: validation.startIso!,
+        end: validation.endIso!,
+        reason: reasonValue ? reasonValue : undefined,
+        createdAt: now,
+        updatedAt: now,
+      };
+      setItems((prev) => cloneUnavailabilities([...prev, newItem]));
+    }
+    setForm({ id: null, type: "", start: "", end: "", reason: "" });
+    setFormTouched(false);
+    setFormErrors({});
+  };
+
+  const handleEditItem = (item: DriverUnavailability) => {
+    setForm({
+      id: item.id,
+      type: item.type,
+      start: toLocalDateTimeValue(item.start),
+      end: toLocalDateTimeValue(item.end),
+      reason: item.reason ?? "",
+    });
+    setFormTouched(false);
+    setFormErrors({});
+  };
+
+  const handleDeleteItem = (id: string) => {
+    setItems((prev) => prev.filter((item) => item.id !== id));
+    if (form.id === id) {
+      setForm({ id: null, type: "", start: "", end: "", reason: "" });
+      setFormTouched(false);
+      setFormErrors({});
+    }
+  };
+
+  const hasStatusChanged = driver ? status !== driver.lifecycleStatus : false;
+  const hasUnavailabilityChanges = driver
+    ? !areUnavailabilitiesEqual(items, driver.unavailabilities)
+    : false;
+  const hasChanges = hasStatusChanged || hasUnavailabilityChanges;
+  const pendingInvalid = !isFormEmpty && Object.keys(validation.errors).length > 0;
+  const canSave = Boolean(driver) && hasChanges && !pendingInvalid;
+
+  const handleSave = () => {
+    if (!driver) {
+      onOpenChange(false);
+      return;
+    }
+    if (!canSave) {
+      setFormTouched(true);
+      setFormErrors(validation.errors);
+      return;
+    }
+    onSubmit({ lifecycleStatus: status, unavailabilities: items });
+  };
+
+  return (
+    <Dialog open={open && Boolean(driver)} onOpenChange={onOpenChange}>
+      <DialogContent
+        id="modal-edit-driver"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edit-driver-title"
+        className="flex max-h-screen w-full max-w-4xl flex-col overflow-hidden rounded-none border-none bg-[#F5F7FA] p-0 shadow-2xl focus:outline-none sm:rounded-2xl"
+      >
+        <DialogHeader className="bg-[#0F3556] px-6 py-5 text-white">
+          <DialogTitle id="edit-driver-title" className="text-2xl font-semibold">
+            Modifier le chauffeur
+          </DialogTitle>
+          <DialogDescription className="text-white/80">
+            {driver
+              ? `${driver.name} · ${driver.phoneRaw || formatPhoneFR10(driver.phone)}`
+              : "Aucun chauffeur sélectionné."}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-6 overflow-y-auto px-6 py-6">
+          <section className="space-y-3">
+            <Label htmlFor="edit-driver-status" className="text-base font-medium text-[#1F1F1F]">
+              Statut
+            </Label>
+            <Select value={status} onValueChange={(value: DriverStatus) => setStatus(value)}>
+              <SelectTrigger
+                id="edit-driver-status"
+                ref={statusTriggerRef}
+                className="bg-white"
+                aria-describedby="edit-driver-status-help"
+              >
+                <SelectValue placeholder="Sélectionnez un statut" />
+              </SelectTrigger>
+              <SelectContent>
+                {(["ACTIF", "INACTIF"] as DriverStatus[]).map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {STATUS_LABELS[value]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p id="edit-driver-status-help" className="text-sm text-muted-foreground">
+              INACTIF ⇒ ne sera plus jamais assigné automatiquement.
+            </p>
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="text-lg font-semibold text-[#1F1F1F]">Indisponibilités</h3>
+              <span className="text-sm text-muted-foreground">
+                {items.length} enregistrée{items.length > 1 ? "s" : ""}
+              </span>
+            </div>
+
+            {items.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-border bg-white/70 p-4 text-sm text-muted-foreground">
+                Aucune indisponibilité enregistrée.
+              </p>
+            ) : (
+              <div className="overflow-x-auto rounded-lg border border-border bg-white">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                    <tr>
+                      <th className="px-4 py-3 font-semibold">Type</th>
+                      <th className="px-4 py-3 font-semibold">Du</th>
+                      <th className="px-4 py-3 font-semibold">Au</th>
+                      <th className="px-4 py-3 font-semibold">Raison</th>
+                      <th className="px-4 py-3 text-right font-semibold">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item) => (
+                      <tr key={item.id} className="border-t border-border/60">
+                        <td className="px-4 py-3 font-medium text-[#1F1F1F]">
+                          {UNAVAILABILITY_TYPE_LABELS[item.type]}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {format(new Date(item.start), "dd MMM yyyy · HH'h'mm", { locale: fr })}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {format(new Date(item.end), "dd MMM yyyy · HH'h'mm", { locale: fr })}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {item.reason ? item.reason : "—"}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditItem(item)}
+                              aria-label="Modifier cette indisponibilité"
+                            >
+                              <Pencil className="h-4 w-4" aria-hidden />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteItem(item.id)}
+                              aria-label="Supprimer cette indisponibilité"
+                            >
+                              <Trash2 className="h-4 w-4" aria-hidden />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="space-y-3 rounded-lg border border-dashed border-border bg-white/80 p-4">
+              <h4 className="text-sm font-semibold text-[#1F1F1F]">
+                {form.id ? "Modifier l'indisponibilité" : "Ajouter une indisponibilité"}
+              </h4>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-unav-type">Type</Label>
+                  <Select
+                    value={form.type}
+                    onValueChange={(value: DriverUnavailability["type"]) => {
+                      setForm((prev) => ({ ...prev, type: value }));
+                    }}
+                  >
+                    <SelectTrigger
+                      id="edit-unav-type"
+                      aria-invalid={Boolean(formErrors.type)}
+                      aria-describedby={formErrors.type ? "edit-unav-type-error" : undefined}
+                      className="bg-white"
+                    >
+                      <SelectValue placeholder="Sélectionner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="VACANCES">Vacances</SelectItem>
+                      <SelectItem value="RENDEZ_VOUS">Rendez-vous</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {formErrors.type && (
+                    <p id="edit-unav-type-error" className="text-sm text-destructive">
+                      {formErrors.type}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-unav-start">Début</Label>
+                  <Input
+                    id="edit-unav-start"
+                    type="datetime-local"
+                    value={form.start}
+                    onChange={(event) => setForm((prev) => ({ ...prev, start: event.target.value }))}
+                    aria-invalid={Boolean(formErrors.start)}
+                    aria-describedby={formErrors.start ? "edit-unav-start-error" : undefined}
+                  />
+                  {formErrors.start && (
+                    <p id="edit-unav-start-error" className="text-sm text-destructive">
+                      {formErrors.start}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-unav-end">Fin</Label>
+                  <Input
+                    id="edit-unav-end"
+                    type="datetime-local"
+                    value={form.end}
+                    onChange={(event) => setForm((prev) => ({ ...prev, end: event.target.value }))}
+                    aria-invalid={Boolean(formErrors.end)}
+                    aria-describedby={formErrors.end ? "edit-unav-end-error" : undefined}
+                  />
+                  {formErrors.end && (
+                    <p id="edit-unav-end-error" className="text-sm text-destructive">
+                      {formErrors.end}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2 md:col-span-1">
+                  <Label htmlFor="edit-unav-reason">Raison (200 caractères max)</Label>
+                  <Textarea
+                    id="edit-unav-reason"
+                    rows={2}
+                    value={form.reason}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, reason: event.target.value.slice(0, 200) }))
+                    }
+                    aria-invalid={Boolean(formErrors.reason)}
+                    aria-describedby={formErrors.reason ? "edit-unav-reason-error" : undefined}
+                  />
+                  {formErrors.reason && (
+                    <p id="edit-unav-reason-error" className="text-sm text-destructive">
+                      {formErrors.reason}
+                    </p>
+                  )}
+                </div>
+              </div>
+              {formErrors.overlap && (
+                <p className="text-sm text-destructive">{formErrors.overlap}</p>
+              )}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                {form.id && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      setForm({ id: null, type: "", start: "", end: "", reason: "" });
+                      setFormTouched(false);
+                      setFormErrors({});
+                    }}
+                  >
+                    Annuler l'édition
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleAddOrUpdate}
+                  disabled={addDisabled}
+                  className="self-end"
+                >
+                  {form.id ? "Mettre à jour" : "Ajouter"}
+                </Button>
+              </div>
+            </div>
+          </section>
+        </div>
+        <DialogFooter className="flex flex-col gap-3 border-t border-border bg-white px-6 py-4 sm:flex-row sm:justify-end">
+          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+            Annuler
+          </Button>
+          <Button
+            type="button"
+            variant="cta"
+            onClick={handleSave}
+            disabled={!canSave}
+            className="bg-[#FFB800] text-[#1F1F1F] hover:bg-[#ffcb33] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Enregistrer
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

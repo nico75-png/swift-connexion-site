@@ -4,6 +4,20 @@ export type DriverStatus = "AVAILABLE" | "ON_TRIP" | "PAUSED";
 
 export type DriverWorkflowStatus = "ACTIF" | "EN_PAUSE" | "EN_COURSE";
 
+export type DriverLifecycleStatus = "ACTIF" | "INACTIF";
+
+export type DriverUnavailabilityType = "VACANCES" | "RENDEZ_VOUS";
+
+export interface DriverUnavailability {
+  id: string;
+  type: DriverUnavailabilityType;
+  start: string;
+  end: string;
+  reason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type ZoneCode = "INTRA_PARIS" | "PETITE_COURONNE" | "GRANDE_COURONNE";
 
 export interface Driver {
@@ -24,9 +38,14 @@ export interface Driver {
   status: DriverStatus;
   nextFreeSlot: string;
   active: boolean;
+  lifecycleStatus?: DriverLifecycleStatus;
   workflowStatus?: DriverWorkflowStatus;
+  deactivated?: boolean;
+  deactivatedAt?: string;
+  unavailabilities?: DriverUnavailability[];
   comment?: string;
   createdAt?: string;
+  updatedAt?: string;
   /**
    * @deprecated Tous les chauffeurs couvrent toutes les zones.
    * Ce champ est conservé pour compatibilité mais n'est plus utilisé.
@@ -146,6 +165,8 @@ const defaultDrivers: Driver[] = [
     workflowStatus: "ACTIF",
     nextFreeSlot: "Aujourd'hui · 16:00",
     active: true,
+    lifecycleStatus: "ACTIF",
+    unavailabilities: [],
     comment: "Polyvalent et réactif",
     createdAt: "2025-01-14T08:15:00.000Z",
     coversAllZones: true,
@@ -164,6 +185,8 @@ const defaultDrivers: Driver[] = [
     workflowStatus: "EN_COURSE",
     nextFreeSlot: "Aujourd'hui · 18:15",
     active: true,
+    lifecycleStatus: "ACTIF",
+    unavailabilities: [],
     createdAt: "2025-01-14T09:45:00.000Z",
     coversAllZones: true,
   },
@@ -181,6 +204,8 @@ const defaultDrivers: Driver[] = [
     workflowStatus: "EN_PAUSE",
     nextFreeSlot: "Demain · 08:00",
     active: true,
+    lifecycleStatus: "ACTIF",
+    unavailabilities: [],
     createdAt: "2025-01-13T15:30:00.000Z",
     coversAllZones: true,
   },
@@ -198,6 +223,8 @@ const defaultDrivers: Driver[] = [
     workflowStatus: "ACTIF",
     nextFreeSlot: "Aujourd'hui · 15:30",
     active: true,
+    lifecycleStatus: "ACTIF",
+    unavailabilities: [],
     createdAt: "2025-01-12T11:10:00.000Z",
     coversAllZones: true,
   },
@@ -443,10 +470,14 @@ export const saveOrders = (list: Order[]) => {
   writeStore(STORAGE_KEYS.orders, list);
 };
 
-export const getDrivers = (): Driver[] => readStore(STORAGE_KEYS.drivers, defaultDrivers);
+export const getDrivers = (): Driver[] => {
+  const raw = readStore<unknown[]>(STORAGE_KEYS.drivers, defaultDrivers as unknown as unknown[]);
+  return normalizeDriversArray(raw, { fallbackToDefault: true });
+};
 
 export const saveDrivers = (list: Driver[]) => {
-  writeStore(STORAGE_KEYS.drivers, list);
+  const sanitized = normalizeDriversArray(list as unknown[], { fallbackToDefault: false });
+  writeStore(STORAGE_KEYS.drivers, sanitized);
 };
 
 export const getAssignments = (): Assignment[] => readStore(STORAGE_KEYS.assignments, defaultAssignments);
@@ -488,6 +519,274 @@ export const appendNotifications = (entries: NotificationEntry | NotificationEnt
 export const normalizeDriverPhone = (value: string) => value.replace(/\D/g, "");
 
 export const normalizeDriverPlate = (value: string) => value.trim().toUpperCase().replace(/\s+/g, "");
+
+const VEHICLE_LABELS: Record<string, string> = {
+  vélo: "Vélo",
+  velo: "Vélo",
+  scooter: "Scooter",
+  moto: "Moto",
+  voiture: "Voiture",
+  utilitaire: "Utilitaire",
+  fourgon: "Fourgon",
+};
+
+const DRIVER_STATUS_VALUES: DriverStatus[] = ["AVAILABLE", "ON_TRIP", "PAUSED"];
+
+const DRIVER_LIFECYCLE_VALUES: DriverLifecycleStatus[] = ["ACTIF", "INACTIF"];
+
+const formatPhoneDisplay = (normalized: string) =>
+  normalized.length === 10 ? normalized.replace(/(\d{2})(?=(\d{2})+(?!\d))/g, "$1 ").trim() : normalized;
+
+const sanitizeUnavailabilities = (value: unknown): DriverUnavailability[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const now = new Date().toISOString();
+
+  const sanitized = value
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const entry = item as Record<string, unknown>;
+      const startRaw = typeof entry.start === "string" ? entry.start : null;
+      const endRaw = typeof entry.end === "string" ? entry.end : null;
+      if (!startRaw || !endRaw) {
+        return null;
+      }
+
+      const startDate = new Date(startRaw);
+      const endDate = new Date(endRaw);
+      if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+        return null;
+      }
+      if (startDate.getTime() >= endDate.getTime()) {
+        return null;
+      }
+
+      const typeValue = entry.type === "RENDEZ_VOUS" ? "RENDEZ_VOUS" : "VACANCES";
+
+      return {
+        id:
+          typeof entry.id === "string" && entry.id.trim()
+            ? entry.id
+            : `UNAV-${startDate.getTime()}`,
+        type: typeValue,
+        start: startDate.toISOString(),
+        end: endDate.toISOString(),
+        reason:
+          typeof entry.reason === "string" && entry.reason.trim()
+            ? entry.reason.trim().slice(0, 200)
+            : undefined,
+        createdAt:
+          typeof entry.createdAt === "string" && entry.createdAt.trim()
+            ? entry.createdAt
+            : now,
+        updatedAt:
+          typeof entry.updatedAt === "string" && entry.updatedAt.trim()
+            ? entry.updatedAt
+            : now,
+      } satisfies DriverUnavailability;
+    })
+    .filter((item): item is DriverUnavailability => Boolean(item))
+    .sort((a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime());
+
+  return sanitized;
+};
+
+const sanitizeDriverEntry = (value: Partial<Driver>): Driver | null => {
+  const id = typeof value.id === "string" && value.id.trim() ? value.id.trim() : `DRV-${Date.now()}`;
+  const nameValue = typeof value.name === "string" && value.name.trim() ? value.name.trim() : undefined;
+  const fullnameValue =
+    typeof value.fullname === "string" && value.fullname.trim() ? value.fullname.trim() : nameValue;
+
+  const phoneInput =
+    typeof value.phone === "string" && value.phone.trim()
+      ? value.phone.trim()
+      : typeof value.phoneNormalized === "string" && value.phoneNormalized.trim()
+        ? value.phoneNormalized.trim()
+        : "";
+
+  const phoneNormalized = normalizeDriverPhone(
+    typeof value.phoneNormalized === "string" && value.phoneNormalized.trim()
+      ? value.phoneNormalized.trim()
+      : phoneInput,
+  );
+
+  const phoneDisplay = phoneInput || (phoneNormalized ? formatPhoneDisplay(phoneNormalized) : "");
+
+  const vehicleRaw = value.vehicle ?? {};
+  const vehicleTypeRaw =
+    typeof vehicleRaw.type === "string" && vehicleRaw.type.trim()
+      ? vehicleRaw.type.trim()
+      : undefined;
+  const vehicleTypeKey = vehicleTypeRaw?.toLowerCase();
+  const vehicleType =
+    (vehicleTypeKey && VEHICLE_LABELS[vehicleTypeKey]) || vehicleTypeRaw || "Véhicule";
+
+  const capacityKg =
+    typeof vehicleRaw.capacityKg === "number" && Number.isFinite(vehicleRaw.capacityKg)
+      ? Math.max(0, Math.round(vehicleRaw.capacityKg))
+      : Number.parseInt(String(vehicleRaw.capacity ?? "").replace(/\D/g, ""), 10) || 0;
+
+  const plateRaw =
+    typeof vehicleRaw.registration === "string" && vehicleRaw.registration.trim()
+      ? vehicleRaw.registration.trim().toUpperCase()
+      : typeof value.plate === "string" && value.plate.trim()
+        ? value.plate.trim().toUpperCase()
+        : undefined;
+
+  const plateNormalized = plateRaw ? normalizeDriverPlate(plateRaw) : value.plateNormalized;
+
+  const lifecycleStatus: DriverLifecycleStatus = DRIVER_LIFECYCLE_VALUES.includes(
+    value.lifecycleStatus as DriverLifecycleStatus,
+  )
+    ? (value.lifecycleStatus as DriverLifecycleStatus)
+    : value.deactivated
+      ? "INACTIF"
+      : "ACTIF";
+
+  const status: DriverStatus = DRIVER_STATUS_VALUES.includes(value.status as DriverStatus)
+    ? (value.status as DriverStatus)
+    : "AVAILABLE";
+
+  const active = lifecycleStatus !== "INACTIF" && status !== "PAUSED";
+
+  const createdAt =
+    typeof value.createdAt === "string" && value.createdAt.trim()
+      ? value.createdAt
+      : new Date().toISOString();
+
+  const updatedAt =
+    typeof value.updatedAt === "string" && value.updatedAt.trim() ? value.updatedAt : createdAt;
+
+  return {
+    id,
+    name: nameValue || fullnameValue || (phoneDisplay || "Chauffeur"),
+    fullname: fullnameValue || nameValue || (phoneDisplay || "Chauffeur"),
+    phone: phoneDisplay || phoneNormalized,
+    phoneNormalized,
+    email: typeof value.email === "string" ? value.email.trim() : value.email,
+    vehicle: {
+      type: vehicleType,
+      capacity: `${new Intl.NumberFormat("fr-FR").format(capacityKg)} kg`,
+      capacityKg,
+      registration: plateRaw,
+    },
+    plate: plateNormalized,
+    plateNormalized,
+    status,
+    nextFreeSlot: value.nextFreeSlot ?? "À planifier",
+    active,
+    lifecycleStatus,
+    workflowStatus:
+      value.workflowStatus ?? (status === "ON_TRIP" ? "EN_COURSE" : status === "PAUSED" ? "EN_PAUSE" : "ACTIF"),
+    deactivated: value.deactivated ?? lifecycleStatus === "INACTIF",
+    deactivatedAt: value.deactivatedAt,
+    unavailabilities: sanitizeUnavailabilities(value.unavailabilities),
+    comment: value.comment,
+    createdAt,
+    updatedAt,
+    zone: value.zone,
+    coversAllZones: true,
+  } satisfies Driver;
+};
+
+const convertLegacyDriverRecord = (value: Record<string, unknown>): Driver | null => {
+  const lifecycleStatus: DriverLifecycleStatus =
+    value.lifecycleStatus === "INACTIF" || value.status === "INACTIF" ? "INACTIF" : "ACTIF";
+
+  const phoneRaw =
+    typeof value.phoneRaw === "string" && value.phoneRaw.trim()
+      ? value.phoneRaw.trim()
+      : typeof value.phone === "string" && value.phone.trim()
+        ? value.phone.trim()
+        : "";
+
+  const phoneNormalized = normalizeDriverPhone(
+    typeof value.phone === "string" && value.phone.trim() ? value.phone.trim() : phoneRaw,
+  );
+
+  const capacityKg = Number(value.capacityKg) || 0;
+  const plateRaw =
+    typeof value.plateRaw === "string" && value.plateRaw.trim()
+      ? value.plateRaw.trim().toUpperCase()
+      : typeof value.plate === "string" && value.plate.trim()
+        ? value.plate.trim().toUpperCase()
+        : undefined;
+
+  return sanitizeDriverEntry({
+    id: typeof value.id === "string" ? value.id : undefined,
+    name: typeof value.name === "string" ? value.name : undefined,
+    fullname: typeof value.fullname === "string" ? value.fullname : undefined,
+    phone: phoneRaw,
+    phoneNormalized,
+    email: typeof value.email === "string" ? value.email : undefined,
+    vehicle: {
+      type:
+        typeof value.vehicleType === "string" ? VEHICLE_LABELS[value.vehicleType] ?? value.vehicleType : "Véhicule",
+      capacityKg,
+      capacity: `${new Intl.NumberFormat("fr-FR").format(Math.max(0, capacityKg))} kg`,
+      registration: plateRaw,
+    },
+    plate: plateRaw ? normalizeDriverPlate(plateRaw) : undefined,
+    plateNormalized: plateRaw ? normalizeDriverPlate(plateRaw) : undefined,
+    status: "AVAILABLE",
+    nextFreeSlot: typeof value.nextFreeSlot === "string" ? value.nextFreeSlot : "À planifier",
+    lifecycleStatus,
+    deactivated: value.deactivated === true || lifecycleStatus === "INACTIF",
+    deactivatedAt: typeof value.deactivatedAt === "string" ? value.deactivatedAt : undefined,
+    unavailabilities: sanitizeUnavailabilities(value.unavailabilities),
+    comment: typeof value.comment === "string" ? value.comment : undefined,
+    createdAt: typeof value.createdAt === "string" ? value.createdAt : undefined,
+    updatedAt: typeof value.updatedAt === "string" ? value.updatedAt : undefined,
+  });
+};
+
+const ensureDriverEntry = (value: unknown): Driver | null => {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  if ("vehicleType" in record || "phoneRaw" in record || "capacityKg" in record) {
+    return convertLegacyDriverRecord(record);
+  }
+
+  return sanitizeDriverEntry(record as Partial<Driver>);
+};
+
+const normalizeDriversArray = (input: unknown[], options: { fallbackToDefault: boolean }): Driver[] => {
+  const byId = new Map<string, Driver>();
+
+  input.forEach((item) => {
+    const driver = ensureDriverEntry(item);
+    if (driver) {
+      byId.set(driver.id, driver);
+    }
+  });
+
+  if (byId.size === 0) {
+    if (!options.fallbackToDefault) {
+      return [];
+    }
+    defaultDrivers.forEach((driver) => {
+      byId.set(driver.id, sanitizeDriverEntry(driver)!);
+    });
+  }
+
+  return Array.from(byId.values()).sort((a, b) => {
+    const timeA = a.createdAt ? parseISO(a.createdAt).getTime() : 0;
+    const timeB = b.createdAt ? parseISO(b.createdAt).getTime() : 0;
+    if (timeA !== timeB) {
+      return timeB - timeA;
+    }
+    return a.name.localeCompare(b.name);
+  });
+};
 
 export interface CreateDriverPayload {
   fullname: string;
@@ -558,8 +857,12 @@ export const createDriver = (payload: CreateDriverPayload): CreateDriverResult =
     workflowStatus: payload.status,
     nextFreeSlot: "À planifier",
     active: payload.status !== "EN_PAUSE",
+    lifecycleStatus: "ACTIF",
+    deactivated: false,
+    unavailabilities: [],
     comment: payload.comment?.trim() ? payload.comment.trim() : undefined,
     createdAt,
+    updatedAt: createdAt,
     coversAllZones: true,
   };
 

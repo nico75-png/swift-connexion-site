@@ -30,6 +30,14 @@ const availabilityFilters = [
 
 const blockingScheduledStatuses = new Set<ScheduledAssignmentStatus>(["PENDING", "PROCESSING"]);
 
+const getNextDriverUnavailability = (items: Driver["unavailabilities"] = []) => {
+  const now = Date.now();
+  return (items ?? [])
+    .slice()
+    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+    .find((item) => new Date(item.end).getTime() > now);
+};
+
 const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalProps) => {
   const { toast } = useToast();
   const { orders, assignments, scheduledAssignments, assignDriver, reassignDriver } = useOrdersStore();
@@ -70,6 +78,9 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
 
   const validationError = useMemo(() => {
     if (!selectedDriver) return null;
+    if (selectedDriver.lifecycleStatus === "INACTIF") {
+      return "Ce chauffeur est inactif";
+    }
     if (!selectedDriver.active) {
       return "Ce chauffeur est indisponible sur ce créneau";
     }
@@ -108,7 +119,7 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
         driver.name.toLowerCase().includes(query) ||
         driver.phone.replace(/\s/g, "").includes(query.replace(/\s/g, ""));
       const matchesStatus = availabilityFilter === "all" || driver.status === availabilityFilter;
-      return matchesSearch && matchesStatus;
+      return matchesSearch && matchesStatus && driver.lifecycleStatus !== "INACTIF";
     });
   }, [drivers, search, availabilityFilter]);
 
@@ -167,6 +178,7 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
 
   const renderDriverCard = (driver: typeof drivers[number]) => {
     const isSelected = selectedDriverId === driver.id;
+    const nextUnavailability = getNextDriverUnavailability(driver.unavailabilities);
     const overlappingAssignment = order
       ? assignments.find(
           (assignment) =>
@@ -191,6 +203,8 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
         ? `Conflit horaire détecté avec une planification pour la commande #${overlappingScheduled.orderId}`
         : null;
 
+    const isInactive = driver.lifecycleStatus === "INACTIF";
+
     return (
       <li
         key={driver.id}
@@ -200,25 +214,28 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
           isSelected ? "border-primary ring-2 ring-primary/20" : "border-border",
         )}
       >
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-base font-semibold text-foreground flex items-center gap-2">
-                <UserCheck className="h-4 w-4 text-primary" />
-                {driver.name}
-              </p>
-              <a
-                href={`tel:${driver.phone.replace(/\s/g, "")}`}
-                className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
-              >
-                <Phone className="h-4 w-4" />
-                {driver.phone}
-              </a>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-base font-semibold text-foreground flex items-center gap-2">
+                  <UserCheck className="h-4 w-4 text-primary" />
+                  {driver.name}
+                </p>
+                <a
+                  href={`tel:${driver.phone.replace(/\s/g, "")}`}
+                  className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                >
+                  <Phone className="h-4 w-4" />
+                  {driver.phone}
+                </a>
+                {isInactive && (
+                  <p className="mt-1 text-sm text-amber-600">Ce chauffeur est inactif.</p>
+                )}
+              </div>
+              <Badge variant="outline" className={cn("capitalize", driverStatusBadgeClass[driver.status])}>
+                {driverStatusLabel[driver.status]}
+              </Badge>
             </div>
-            <Badge variant="outline" className={cn("capitalize", driverStatusBadgeClass[driver.status])}>
-              {driverStatusLabel[driver.status]}
-            </Badge>
-          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
@@ -243,12 +260,23 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
             </p>
           )}
 
+          {nextUnavailability && (
+            <Alert variant="secondary" className="border-dashed border border-border bg-muted/40">
+              <AlertDescription className="text-sm text-muted-foreground">
+                Prochaine indisponibilité :
+                {" "}
+                {`${format(new Date(nextUnavailability.start), "dd MMM yyyy · HH'h'mm", { locale: fr })} → ${format(new Date(nextUnavailability.end), "HH'h'mm", { locale: fr })}`}
+                {nextUnavailability.reason ? ` — ${nextUnavailability.reason}` : ""}
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="flex justify-end">
             <Button
               type="button"
               variant={isSelected ? "default" : "outline"}
               onClick={() => setSelectedDriverId(driver.id)}
-              disabled={driver.status === "PAUSED" || !driver.active}
+              disabled={driver.status === "PAUSED" || !driver.active || isInactive}
             >
               {isSelected ? "Sélectionné" : "Sélectionner"}
             </Button>

@@ -15,15 +15,21 @@ interface ChatProps {
   messages: Message[];
   recipientName: string;
   onSendMessage?: (message: string) => void;
+  inputDisabled?: boolean;
+  disabledMessage?: string;
 }
 
 /**
  * Composant de chat pour la messagerie
  */
-const Chat = ({ messages, recipientName, onSendMessage }: ChatProps) => {
+const Chat = ({ messages, recipientName, onSendMessage, inputDisabled = false, disabledMessage }: ChatProps) => {
   const [newMessage, setNewMessage] = useState("");
 
   const handleSend = () => {
+    if (inputDisabled) {
+      return;
+    }
+
     if (newMessage.trim() && onSendMessage) {
       onSendMessage(newMessage);
       setNewMessage("");
@@ -38,7 +44,17 @@ const Chat = ({ messages, recipientName, onSendMessage }: ChatProps) => {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div
+        className="flex-1 overflow-y-auto p-4 space-y-4"
+        role="log"
+        aria-live="polite"
+        aria-label={`Conversation avec ${recipientName}`}
+      >
+        {messages.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center" role="status">
+            Aucun message pour le moment.
+          </p>
+        )}
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -61,19 +77,28 @@ const Chat = ({ messages, recipientName, onSendMessage }: ChatProps) => {
       </div>
 
       {/* Input */}
-      <div className="p-4 border-t flex gap-2">
-        <Button variant="ghost" size="icon">
-          <Paperclip className="h-5 w-5" />
-        </Button>
-        <Input
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          placeholder="Votre message..."
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
-        />
-        <Button onClick={handleSend}>
-          <Send className="h-5 w-5" />
-        </Button>
+      <div className="p-4 border-t flex flex-col gap-3">
+        {disabledMessage && (
+          <p className="text-xs text-muted-foreground" role="status">
+            {disabledMessage}
+          </p>
+        )}
+        <div className="flex gap-2">
+          <Button variant="ghost" size="icon" disabled={inputDisabled} aria-label="Joindre un fichier">
+            <Paperclip className="h-5 w-5" />
+          </Button>
+          <Input
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Votre message..."
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            disabled={inputDisabled}
+            aria-label="Saisir un message"
+          />
+          <Button onClick={handleSend} disabled={inputDisabled} aria-label="Envoyer le message">
+            <Send className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
     </Card>
   );

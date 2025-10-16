@@ -2,10 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-import CreateOrderForm, {
-  type CreateOrderFormValues,
-  parseLocaleNumber,
-} from "@/components/orders/CreateOrderForm";
+import CreateOrderForm, { type CreateOrderFormValues, parseLocaleNumber } from "@/components/orders/CreateOrderForm";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import ClientSidebar from "@/components/dashboard/ClientSidebar";
 import Topbar from "@/components/dashboard/Topbar";
@@ -76,7 +73,6 @@ const CreateOrder = () => {
 
   const initialFormValues = useMemo<CreateOrderFormValues>(
     () => ({
-      transportType: "",
       pickupAddress: customer.defaultPickupAddress ?? "",
       deliveryAddress: customer.defaultDeliveryAddress ?? "",
       date: "",
@@ -108,7 +104,6 @@ const CreateOrder = () => {
       try {
         const response = await quoteOrder({
           customerId: customer.id,
-          transportType: draftValues.transportType,
           pickupAddress: draftValues.pickupAddress,
           deliveryAddress: draftValues.deliveryAddress,
           date: draftValues.date,
@@ -177,7 +172,6 @@ const CreateOrder = () => {
       const response = await createOrder(
         {
           customerId: customer.id,
-          transportType: draftValues.transportType,
           pickupAddress: draftValues.pickupAddress,
           deliveryAddress: draftValues.deliveryAddress,
           date: draftValues.date,
@@ -261,10 +255,12 @@ const CreateOrder = () => {
                           <p className="text-xs uppercase text-muted-foreground">SIRET</p>
                           <p className="font-medium">{customer.siret}</p>
                         </div>
-                        <div>
-                          <p className="text-xs uppercase text-muted-foreground">Type de transport</p>
-                          <p className="font-medium capitalize">{draftValues.transportType || "-"}</p>
-                        </div>
+                        {quoteResult.success && quoteResult.quote?.transportLabel ? (
+                          <div>
+                            <p className="text-xs uppercase text-muted-foreground">Type de transport</p>
+                            <p className="font-medium capitalize">{quoteResult.quote.transportLabel}</p>
+                          </div>
+                        ) : null}
                         <div>
                           <p className="text-xs uppercase text-muted-foreground">Date &amp; heure</p>
                           <p className="font-medium">{formatDate(draftValues.date, draftValues.time)}</p>

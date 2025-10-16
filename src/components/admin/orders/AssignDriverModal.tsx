@@ -49,14 +49,14 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
   const order = useMemo(() => orders.find((item) => item.id === orderId), [orderId, orders]);
   const selectedDriver = useMemo(() => drivers.find((driver) => driver.id === selectedDriverId) || null, [drivers, selectedDriverId]);
   const orderScheduleLabel = useMemo(() => {
-    if (!order) return "";
+    if (!order || !order.schedule) return "";
     const start = format(new Date(order.schedule.start), "dd MMM yyyy · HH'h'mm", { locale: fr });
     const end = format(new Date(order.schedule.end), "HH'h'mm", { locale: fr });
     return `${start} → ${end}`;
   }, [order]);
 
   const assignabilityMap = useMemo(() => {
-    if (!order) {
+    if (!order || !order.schedule) {
       return new Map<string, ReturnType<typeof isDriverAssignable>>();
     }
     const map = new Map<string, ReturnType<typeof isDriverAssignable>>();

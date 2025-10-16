@@ -74,7 +74,7 @@ const AdminOrderDetail = () => {
 
     const baseStatuses = ["En attente", "Enlevé", "En cours", "Livré"];
     const currentIndex = baseStatuses.findIndex((status) => status === order.status);
-    const scheduleStart = formatDateTime(order.schedule.start);
+    const scheduleStart = order.schedule?.start ? formatDateTime(order.schedule.start) : "-";
     const pickupTime = assignment ? formatDateTime(assignment.start) : "";
     const deliveryTime = assignment ? formatDateTime(assignment.end) : "";
 
@@ -105,7 +105,11 @@ const AdminOrderDetail = () => {
     });
 
     if (order.status === "Annulé") {
-      steps.push({ label: "Annulée", time: formatDateTime(order.schedule.end), status: "cancelled" as const });
+      steps.push({ 
+        label: "Annulée", 
+        time: order.schedule?.end ? formatDateTime(order.schedule.end) : "-", 
+        status: "cancelled" as const 
+      });
     }
 
     return steps;
@@ -238,7 +242,9 @@ const AdminOrderDetail = () => {
                 </div>
                 <div>
                   <p className="mb-1 text-sm text-muted-foreground">Date & Heure</p>
-                  <p className="font-semibold">{formatDateTime(order.schedule.start)}</p>
+                  <p className="font-semibold">
+                    {order.schedule?.start ? formatDateTime(order.schedule.start) : "-"}
+                  </p>
                 </div>
                 <div>
                   <p className="mb-1 text-sm text-muted-foreground">Type de transport</p>

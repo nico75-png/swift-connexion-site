@@ -169,7 +169,9 @@ const AdminOrders = () => {
                 return (
                   <TableRow key={order.id} className="hover:bg-muted/30">
                     <TableCell className="font-mono font-semibold">{order.id}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{formatDate(order.schedule.start)}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {order.schedule?.start ? formatDate(order.schedule.start) : "-"}
+                  </TableCell>
                     <TableCell>{order.client}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{order.type}</Badge>

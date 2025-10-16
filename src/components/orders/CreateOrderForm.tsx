@@ -13,7 +13,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { AuthClient } from "@/lib/stores/auth.store";
 
@@ -21,7 +20,6 @@ export const parseLocaleNumber = (value: string) => Number.parseFloat(value.repl
 
 const formSchema = z
   .object({
-    transportType: z.string().trim().min(1, "Sélectionnez un type de transport"),
     pickupAddress: z.string().trim().min(1, "Adresse de départ requise"),
     deliveryAddress: z.string().trim().min(1, "Adresse de livraison requise"),
     date: z.string().trim().min(1, "Date requise"),
@@ -79,7 +77,6 @@ const CreateOrderForm = ({ customer, defaultValues, onSubmit, isSubmitting }: Cr
   const [showInstructions, setShowInstructions] = useState(false);
   const initialValues = useMemo(
     () => ({
-      transportType: defaultValues.transportType ?? "",
       pickupAddress: defaultValues.pickupAddress ?? customer.defaultPickupAddress ?? "",
       deliveryAddress: defaultValues.deliveryAddress ?? customer.defaultDeliveryAddress ?? "",
       date: defaultValues.date ?? "",
@@ -96,7 +93,6 @@ const CreateOrderForm = ({ customer, defaultValues, onSubmit, isSubmitting }: Cr
       defaultValues.driverInstructions,
       defaultValues.pickupAddress,
       defaultValues.time,
-      defaultValues.transportType,
       defaultValues.volume,
       defaultValues.weight,
     ],
@@ -146,35 +142,6 @@ const CreateOrderForm = ({ customer, defaultValues, onSubmit, isSubmitting }: Cr
             </div>
           </div>
         </div>
-
-        <FormField
-          control={form.control}
-          name="transportType"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Type de transport</FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                value={field.value}
-                disabled={form.formState.isSubmitting || isSubmitting}
-              >
-                <FormControl>
-                  <SelectTrigger aria-label="Type de transport">
-                    <SelectValue placeholder="Sélectionnez" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="medical">Médical</SelectItem>
-                  <SelectItem value="juridique">Juridique</SelectItem>
-                  <SelectItem value="optique">Optique</SelectItem>
-                  <SelectItem value="express">Express</SelectItem>
-                  <SelectItem value="standard">Standard</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
 
         <FormField
           control={form.control}

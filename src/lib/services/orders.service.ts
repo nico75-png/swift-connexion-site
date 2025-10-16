@@ -11,7 +11,7 @@ import { getQuoteById } from "@/lib/services/quotes.service";
 
 export interface CreateOrderPayload {
   customerId: string;
-  transportType: string;
+  transportType?: string;
   pickupAddress: string;
   deliveryAddress: string;
   date: string;
@@ -22,6 +22,8 @@ export interface CreateOrderPayload {
   quoteId: string;
   quoteAmount: number;
 }
+
+type CompleteCreateOrderPayload = CreateOrderPayload & { transportType: string };
 
 interface CreateOrderOptions {
   customerDisplayName: string;
@@ -44,7 +46,7 @@ const toIsoString = (date: string, time: string) => {
 };
 
 const buildNewOrder = (
-  payload: CreateOrderPayload,
+  payload: CompleteCreateOrderPayload,
   options: CreateOrderOptions,
   orderId: string,
 ): Order => {
@@ -78,17 +80,25 @@ export const createOrder = async (
   options: CreateOrderOptions,
 ): Promise<CreateOrderResult> => {
   try {
+    const storedQuote = await getQuoteById(payload.quoteId);
+    const candidateType = payload.transportType?.trim().toLowerCase();
+    const resolvedTransportType =
+      (candidateType && candidateType.length > 0 ? candidateType : undefined) ??
+      storedQuote?.transportType ??
+      "standard";
+    const resolvedTransportLabel = storedQuote?.transportLabel ?? resolvedTransportType;
+
     const orderId = generateNextOrderNumber();
-    const newOrder = buildNewOrder(payload, options, orderId);
+    const completePayload: CompleteCreateOrderPayload = { ...payload, transportType: resolvedTransportType };
+    const newOrder = buildNewOrder(completePayload, options, orderId);
 
     const orders = getOrders();
     saveOrders([newOrder, ...orders]);
 
-    const storedQuote = await getQuoteById(payload.quoteId);
     appendClientOrderFromCreate({
       id: orderId,
       customerId: payload.customerId,
-      transportType: payload.transportType,
+      transportType: resolvedTransportType,
       pickupAddress: payload.pickupAddress,
       deliveryAddress: payload.deliveryAddress,
       scheduleStart: newOrder.schedule.start,
@@ -107,7 +117,7 @@ export const createOrder = async (
       orderId,
       by: options.customerDisplayName,
       at: new Date().toISOString(),
-      message: `Commande créée via l'espace client (${payload.transportType})`,
+      message: `Commande créée via l'espace client (${resolvedTransportLabel})`,
       meta: {
         customerId: payload.customerId,
         weight: payload.weight,

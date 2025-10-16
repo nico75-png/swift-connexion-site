@@ -317,7 +317,7 @@ const CreateOrder = () => {
                               "La tarification est temporairement indisponible. Vous pouvez réessayer dans un instant ou contacter notre support."}
                           </p>
                           <div className="flex flex-col gap-3 sm:flex-row">
-                            <Button variant="outline" onClick={handleRetryQuote} disabled={quoteStatus === "loading"}>
+                            <Button variant="outline" onClick={handleRetryQuote} disabled={quoteStatus !== "error"}>
                               Réessayer
                             </Button>
                             <Button asChild variant="ghost">

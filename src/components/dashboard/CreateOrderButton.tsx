@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { Plus, CheckCircle2, AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -49,6 +50,39 @@ const CreateOrderButton = ({ className }: CreateOrderButtonProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { currentClient } = useAuth();
+  const navigate = useNavigate();
+
+  // Calcul du tarif estimé en temps réel
+  const estimatedPrice = useMemo(() => {
+    const weightKg = Number.parseFloat(formValues.weight) || 0;
+    const volumeM3 = Number.parseFloat(formValues.volume) || 0;
+    if (weightKg <= 0 && volumeM3 <= 0) return null;
+    return Number((25 + weightKg * 1.5 + volumeM3 * 4).toFixed(2));
+  }, [formValues.weight, formValues.volume]);
+
+  // Validation des champs en temps réel
+  const fieldValidation = useMemo(() => {
+    const isDateTimeFuture = () => {
+      if (!formValues.date || !formValues.time) return false;
+      const scheduleStart = new Date(`${formValues.date}T${formValues.time}`);
+      return !Number.isNaN(scheduleStart.getTime()) && scheduleStart.getTime() > Date.now();
+    };
+
+    return {
+      type: !!formValues.type,
+      pickup: !!formValues.pickup.trim(),
+      delivery: !!formValues.delivery.trim(),
+      date: !!formValues.date,
+      time: !!formValues.time,
+      dateTimeFuture: isDateTimeFuture(),
+      weight: Number.parseFloat(formValues.weight) > 0,
+      volume: Number.parseFloat(formValues.volume) > 0,
+    };
+  }, [formValues]);
+
+  const isFormValid = Object.entries(fieldValidation).every(([key, valid]) => 
+    key === "dateTimeFuture" ? valid : valid
+  ) && fieldValidation.dateTimeFuture;
 
   useEffect(() => {
     if (!open) {
@@ -174,6 +208,9 @@ const CreateOrderButton = ({ className }: CreateOrderButtonProps) => {
 
       setOpen(false);
       setFormValues(INITIAL_FORM);
+      
+      // Redirection vers la page de détail de la commande
+      navigate(`/espace-client/commandes/${newOrder.id}`);
     } catch (error) {
       console.error("Failed to create order", error);
       toast({
@@ -195,7 +232,7 @@ const CreateOrderButton = ({ className }: CreateOrderButtonProps) => {
           Créer une commande
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Créer une commande</DialogTitle>
           <DialogDescription>
@@ -203,161 +240,270 @@ const CreateOrderButton = ({ className }: CreateOrderButtonProps) => {
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Informations client en lecture seule */}
-          {currentClient && (
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Nom de la société</label>
-                <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm font-medium">
-                  {currentClient.company}
+        <form onSubmit={handleSubmit} className="grid lg:grid-cols-[1.5fr,1fr] gap-6">
+          <div className="space-y-6">
+            {/* Informations client en lecture seule */}
+            {currentClient && (
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Nom de la société</label>
+                  <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm font-medium">
+                    {currentClient.company}
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">N° SIRET</label>
-                <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm font-medium">
-                  {currentClient.siret}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">N° SIRET</label>
+                  <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm font-medium">
+                    {currentClient.siret}
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
-
-
-          {/* Type de transport */}
-          <div>
-            <Label htmlFor="type">Type de transport *</Label>
-            <Select value={formValues.type} onValueChange={handleChange("type")}>
-              <SelectTrigger id="type">
-                <SelectValue placeholder="Sélectionnez" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="medical">Médical</SelectItem>
-                <SelectItem value="juridique">Juridique</SelectItem>
-                <SelectItem value="optique">Optique</SelectItem>
-                <SelectItem value="express">Express</SelectItem>
-                <SelectItem value="standard">Standard</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            {/* Départ */}
-            <div>
-              <Label htmlFor="pickup">Adresse de départ *</Label>
-              <Input
-                id="pickup"
-                placeholder="Adresse complète"
-                value={formValues.pickup}
-                onChange={(event) => handleChange("pickup")(event.target.value)}
-                required
-              />
-            </div>
-
-            {/* Arrivée */}
-            <div>
-              <Label htmlFor="delivery">Adresse de livraison *</Label>
-              <Input
-                id="delivery"
-                placeholder="Adresse complète"
-                value={formValues.delivery}
-                onChange={(event) => handleChange("delivery")(event.target.value)}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            {/* Date */}
-            <div>
-              <Label htmlFor="date">Date *</Label>
-              <Input
-                id="date"
-                type="date"
-                value={formValues.date}
-                onChange={(event) => handleChange("date")(event.target.value)}
-                required
-              />
-            </div>
-
-            {/* Heure */}
-            <div>
-              <Label htmlFor="time">Heure *</Label>
-              <Input
-                id="time"
-                type="time"
-                value={formValues.time}
-                onChange={(event) => handleChange("time")(event.target.value)}
-                required
-              />
-            </div>
-          </div>
-
-          {/* Poids et Volume */}
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="weight">Poids (kg) *</Label>
-              <Input
-                id="weight"
-                type="number"
-                inputMode="decimal"
-                step="0.1"
-                min="0.1"
-                placeholder="0,5"
-                value={formValues.weight}
-                onChange={(event) => handleChange("weight")(event.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="volume">Volume (m³) *</Label>
-              <Input
-                id="volume"
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                min="0.01"
-                placeholder="0,20"
-                value={formValues.volume}
-                onChange={(event) => handleChange("volume")(event.target.value)}
-                required
-              />
-            </div>
-          </div>
-
-          {/* Instructions particulières */}
-          <div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setShowInstructions(!showInstructions)}
-              disabled={isSubmitting}
-            >
-              {showInstructions ? "Masquer" : "Ajouter"} instructions particulières
-            </Button>
-            {showInstructions && (
-              <div className="mt-4">
-                <Label htmlFor="notes">Instructions pour le chauffeur</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Indications d'accès, codes, consignes spécifiques..."
-                  rows={4}
-                  value={formValues.notes}
-                  onChange={(event) => handleChange("notes")(event.target.value)}
-                />
               </div>
             )}
+
+
+            {/* Type de transport */}
+            <div>
+              <Label htmlFor="type" className="flex items-center gap-2">
+                Type de transport *
+                {fieldValidation.type && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+              </Label>
+              <Select value={formValues.type} onValueChange={handleChange("type")}>
+                <SelectTrigger id="type">
+                  <SelectValue placeholder="Sélectionnez" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="medical">Médical</SelectItem>
+                  <SelectItem value="juridique">Juridique</SelectItem>
+                  <SelectItem value="optique">Optique</SelectItem>
+                  <SelectItem value="express">Express</SelectItem>
+                  <SelectItem value="standard">Standard</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* Départ */}
+              <div>
+                <Label htmlFor="pickup" className="flex items-center gap-2">
+                  Adresse de départ *
+                  {fieldValidation.pickup && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+                </Label>
+                <Input
+                  id="pickup"
+                  placeholder="Adresse complète"
+                  value={formValues.pickup}
+                  onChange={(event) => handleChange("pickup")(event.target.value)}
+                  required
+                />
+              </div>
+
+              {/* Arrivée */}
+              <div>
+                <Label htmlFor="delivery" className="flex items-center gap-2">
+                  Adresse de livraison *
+                  {fieldValidation.delivery && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+                </Label>
+                <Input
+                  id="delivery"
+                  placeholder="Adresse complète"
+                  value={formValues.delivery}
+                  onChange={(event) => handleChange("delivery")(event.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                Date & Heure *
+                {fieldValidation.dateTimeFuture ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                ) : (formValues.date && formValues.time && !fieldValidation.dateTimeFuture) ? (
+                  <AlertCircle className="h-4 w-4 text-destructive" />
+                ) : null}
+              </Label>
+              <div className="grid md:grid-cols-2 gap-4">
+                <Input
+                  id="date"
+                  type="date"
+                  value={formValues.date}
+                  onChange={(event) => handleChange("date")(event.target.value)}
+                  required
+                />
+                <Input
+                  id="time"
+                  type="time"
+                  value={formValues.time}
+                  onChange={(event) => handleChange("time")(event.target.value)}
+                  required
+                />
+              </div>
+              {formValues.date && formValues.time && !fieldValidation.dateTimeFuture && (
+                <p className="text-xs text-destructive">La date et l'heure doivent être dans le futur</p>
+              )}
+            </div>
+
+            {/* Poids et Volume */}
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="weight" className="flex items-center gap-2">
+                  Poids (kg) *
+                  {fieldValidation.weight && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+                </Label>
+                <Input
+                  id="weight"
+                  type="number"
+                  inputMode="decimal"
+                  step="0.1"
+                  min="0.1"
+                  placeholder="0,5"
+                  value={formValues.weight}
+                  onChange={(event) => handleChange("weight")(event.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="volume" className="flex items-center gap-2">
+                  Volume (m³) *
+                  {fieldValidation.volume && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+                </Label>
+                <Input
+                  id="volume"
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min="0.01"
+                  placeholder="0,20"
+                  value={formValues.volume}
+                  onChange={(event) => handleChange("volume")(event.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Instructions particulières */}
+            <div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowInstructions(!showInstructions)}
+                disabled={isSubmitting}
+              >
+                {showInstructions ? "Masquer" : "Ajouter"} instructions particulières
+              </Button>
+              {showInstructions && (
+                <div className="mt-4">
+                  <Label htmlFor="notes">Instructions pour le chauffeur</Label>
+                  <Textarea
+                    id="notes"
+                    placeholder="Indications d'accès, codes, consignes spécifiques..."
+                    rows={4}
+                    value={formValues.notes}
+                    onChange={(event) => handleChange("notes")(event.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3 pt-4 border-t lg:col-span-2">
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+                Annuler
+              </Button>
+              <Button type="submit" variant="cta" disabled={isSubmitting || !isFormValid}>
+                Créer la commande
+              </Button>
+            </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-              Annuler
-            </Button>
-            <Button type="submit" variant="cta" disabled={isSubmitting}>
-              Créer la commande
-            </Button>
-          </div>
+          {/* Récapitulatif en temps réel */}
+          <aside className="lg:row-span-2 space-y-4">
+            <div className="sticky top-4 space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold">Récapitulatif</h3>
+                <p className="text-sm text-muted-foreground">Aperçu de votre commande</p>
+              </div>
+
+              <div className="rounded-lg border bg-muted/20 p-4 space-y-4">
+                {/* Statut du formulaire */}
+                <div className="flex items-center gap-2 text-sm">
+                  {isFormValid ? (
+                    <>
+                      <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                      <span className="font-medium text-emerald-600">Formulaire complet</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="h-5 w-5 text-muted-foreground" />
+                      <span className="text-muted-foreground">Remplissez tous les champs</span>
+                    </>
+                  )}
+                </div>
+
+                {/* Détails */}
+                <div className="space-y-3 text-sm">
+                  {currentClient && (
+                    <div>
+                      <p className="text-xs uppercase text-muted-foreground">Société</p>
+                      <p className="font-medium">{currentClient.company}</p>
+                    </div>
+                  )}
+                  
+                  {formValues.type && (
+                    <div>
+                      <p className="text-xs uppercase text-muted-foreground">Type</p>
+                      <p className="font-medium capitalize">{formValues.type}</p>
+                    </div>
+                  )}
+                  
+                  {(formValues.pickup || formValues.delivery) && (
+                    <div>
+                      <p className="text-xs uppercase text-muted-foreground">Trajet</p>
+                      <p className="text-xs">
+                        {formValues.pickup || "..."} 
+                        <span className="mx-1">→</span>
+                        {formValues.delivery || "..."}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {(formValues.date || formValues.time) && (
+                    <div>
+                      <p className="text-xs uppercase text-muted-foreground">Date & Heure</p>
+                      <p className="text-xs">{formValues.date || "..."} à {formValues.time || "..."}</p>
+                    </div>
+                  )}
+                  
+                  {(formValues.weight || formValues.volume) && (
+                    <div className="flex gap-4">
+                      {formValues.weight && (
+                        <div>
+                          <p className="text-xs uppercase text-muted-foreground">Poids</p>
+                          <p className="text-xs font-medium">{formValues.weight} kg</p>
+                        </div>
+                      )}
+                      {formValues.volume && (
+                        <div>
+                          <p className="text-xs uppercase text-muted-foreground">Volume</p>
+                          <p className="text-xs font-medium">{formValues.volume} m³</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Tarif estimé */}
+                {estimatedPrice !== null && (
+                  <div className="pt-4 border-t">
+                    <p className="text-xs uppercase text-muted-foreground mb-1">Tarif estimé</p>
+                    <p className="text-2xl font-semibold text-primary">{estimatedPrice.toFixed(2)} €</p>
+                    <p className="text-xs text-muted-foreground mt-1">Calcul indicatif - Tarif final confirmé après validation</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </aside>
         </form>
       </DialogContent>
     </Dialog>

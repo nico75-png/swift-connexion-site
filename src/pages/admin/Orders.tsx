@@ -198,7 +198,9 @@ const AdminOrders = () => {
                         <span className="text-muted-foreground">Non assigné</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right font-semibold">{order.amount.toFixed(2)}€</TableCell>
+                    <TableCell className="text-right font-semibold">
+                      {order.amount ? `${order.amount.toFixed(2)}€` : "-"}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Link to={`/admin/commandes/${order.id}`}>

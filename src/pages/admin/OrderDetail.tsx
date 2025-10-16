@@ -252,7 +252,9 @@ const AdminOrderDetail = () => {
                 </div>
                 <div>
                   <p className="mb-1 text-sm text-muted-foreground">Montant</p>
-                  <p className="text-2xl font-bold text-primary">{order.amount.toFixed(2)}€</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {order.amount ? `${order.amount.toFixed(2)}€` : "-"}
+                  </p>
                 </div>
               </div>
 

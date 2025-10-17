@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Phone, Search, Truck, UserCheck, CalendarClock, Info } from "lucide-react";
+import { Phone, Search, Truck, UserCheck, CalendarClock, Info, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useDriversStore, useOrdersStore } from "@/providers/AdminDataProvider";
 import { isDriverAssignable, type Driver } from "@/lib/stores/driversOrders.store";
@@ -14,11 +15,16 @@ import { useToast } from "@/hooks/use-toast";
 import { driverStatusBadgeClass, driverStatusLabel } from "./driverUtils";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { assignDriver as assignDriverService } from "@/lib/services/orders.service";
+import { formatError } from "@/lib/errors";
+import { resolveOrderStatus } from "@/lib/orders/status";
 
 interface AssignDriverModalProps {
   orderId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  excludedDriverIds?: string[];
+  isImmediateAssign?: boolean;
 }
 
 const availabilityFilters = [
@@ -36,18 +42,32 @@ const getNextDriverUnavailability = (items: Driver["unavailabilities"] = []) => 
     .find((item) => new Date(item.end).getTime() > now);
 };
 
-const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalProps) => {
+const AssignDriverModal = ({
+  orderId,
+  open,
+  onOpenChange,
+  excludedDriverIds: excludedDriverIdsProp,
+  isImmediateAssign = false,
+}: AssignDriverModalProps) => {
   const { toast } = useToast();
-  const { orders, assignments, scheduledAssignments, assignDriver, reassignDriver } = useOrdersStore();
+  const { orders, assignments, scheduledAssignments, refetchOrder } = useOrdersStore();
   const { drivers } = useDriversStore();
   const [search, setSearch] = useState("");
   const [availabilityFilter, setAvailabilityFilter] = useState<typeof availabilityFilters[number]["value"]>("AVAILABLE");
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const searchRef = useRef<HTMLInputElement | null>(null);
 
-  const order = useMemo(() => orders.find((item) => item.id === orderId), [orderId, orders]);
-  const selectedDriver = useMemo(() => drivers.find((driver) => driver.id === selectedDriverId) || null, [drivers, selectedDriverId]);
+  const order = useMemo(() => orders.find((item) => item.id === orderId) ?? null, [orderId, orders]);
+  const selectedDriver = useMemo(
+    () => drivers.find((driver) => driver.id === selectedDriverId) ?? null,
+    [drivers, selectedDriverId],
+  );
+  const excludedDriverIds = useMemo(() => excludedDriverIdsProp ?? [], [excludedDriverIdsProp]);
+
+  const normalizedStatus = useMemo(() => (order ? resolveOrderStatus(order.status) : ""), [order]);
+
   const orderScheduleLabel = useMemo(() => {
     if (!order || !order.schedule) return "";
     const start = format(new Date(order.schedule.start), "dd MMM yyyy · HH'h'mm", { locale: fr });
@@ -73,28 +93,38 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
 
   const validationError = useMemo(() => {
     if (!order || !selectedDriver) return null;
+    if (excludedDriverIds.includes(selectedDriver.id)) {
+      return "Ce chauffeur est indisponible pour cette commande";
+    }
     const result = assignabilityMap.get(selectedDriver.id);
     if (!result) {
       return "Ce chauffeur est introuvable";
     }
     return result.assignable ? null : result.reason ?? null;
-  }, [assignabilityMap, order, selectedDriver]);
+  }, [assignabilityMap, order, selectedDriver, excludedDriverIds]);
 
   useEffect(() => {
     if (open) {
       setSearch("");
       setAvailabilityFilter("AVAILABLE");
       setFormError(null);
-      setSelectedDriverId(order?.driverId ?? null);
+      setIsSubmitting(false);
+      setSelectedDriverId(isImmediateAssign ? null : order?.driverId ?? null);
       setTimeout(() => searchRef.current?.focus(), 100);
     }
-  }, [open, order?.driverId]);
+  }, [open, order?.driverId, isImmediateAssign]);
 
   useEffect(() => {
     if (selectedDriver) {
       setFormError(null);
     }
   }, [selectedDriver]);
+
+  useEffect(() => {
+    if (selectedDriverId && excludedDriverIds.includes(selectedDriverId)) {
+      setSelectedDriverId(null);
+    }
+  }, [selectedDriverId, excludedDriverIds]);
 
   const filteredDrivers = useMemo(() => {
     const query = search.toLowerCase();
@@ -103,12 +133,27 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
         driver.name.toLowerCase().includes(query) ||
         driver.phone.replace(/\s/g, "").includes(query.replace(/\s/g, ""));
       const matchesStatus = availabilityFilter === "all" || driver.status === availabilityFilter;
-      return matchesSearch && matchesStatus && driver.lifecycleStatus !== "INACTIF";
+      const isExcluded = excludedDriverIds.includes(driver.id);
+      return matchesSearch && matchesStatus && driver.lifecycleStatus !== "INACTIF" && !isExcluded;
     });
-  }, [drivers, search, availabilityFilter]);
+  }, [drivers, search, availabilityFilter, excludedDriverIds]);
 
-  const canConfirm = Boolean(selectedDriver && !validationError);
   const isReassign = Boolean(order?.driverId && selectedDriverId && order.driverId !== selectedDriverId);
+  const isStatusAssignable = normalizedStatus === "EN_ATTENTE_AFFECTATION";
+
+  const statusTooltip = useMemo(() => {
+    if (!order) return null;
+    if (normalizedStatus === "LIVREE") {
+      return "Commande livrée : affectation impossible.";
+    }
+    if (normalizedStatus === "ANNULEE") {
+      return "Commande annulée : affectation interdite.";
+    }
+    if (!isStatusAssignable) {
+      return "Cette commande n'est pas en attente d'affectation.";
+    }
+    return null;
+  }, [order, normalizedStatus, isStatusAssignable]);
 
   const handleClose = () => {
     setFormError(null);
@@ -120,44 +165,57 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
     if (!nextOpen) {
       setFormError(null);
       setSelectedDriverId(null);
+      setIsSubmitting(false);
     }
     onOpenChange(nextOpen);
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    void onAssign();
+  };
+
+  const onAssign = async () => {
     if (!order) {
       setFormError("Commande introuvable");
       return;
     }
+
     if (!selectedDriverId) {
       setFormError("Sélectionnez un chauffeur");
       return;
     }
+
+    if (!isStatusAssignable) {
+      setFormError(statusTooltip ?? "Cette commande ne peut pas être affectée.");
+      return;
+    }
+
     if (validationError) {
       setFormError(validationError);
       return;
     }
 
-    const result = isReassign
-      ? reassignDriver(order.id, selectedDriverId)
-      : assignDriver(order.id, selectedDriverId);
-
-    if (!result.success) {
-      setFormError(result.error ?? "Une erreur est survenue");
+    try {
+      setIsSubmitting(true);
+      await assignDriverService(order.id, selectedDriverId);
+      await Promise.resolve(refetchOrder(order.id));
+      toast({
+        title: "✅ Chauffeur affecté",
+        description: `${selectedDriver?.name ?? "Chauffeur"} assigné à la commande ${order.id}.`,
+      });
+      handleClose();
+    } catch (error) {
+      const message = formatError(error);
+      setFormError(message);
       toast({
         title: "Affectation impossible",
-        description: result.error ?? "Veuillez réessayer.",
+        description: message,
         variant: "destructive",
       });
-      return;
+    } finally {
+      setIsSubmitting(false);
     }
-
-    toast({
-      title: "✅ Chauffeur affecté",
-      description: `${selectedDriver?.name ?? "Chauffeur"} assigné à la commande ${order.id}.`,
-    });
-    handleClose();
   };
 
   const renderDriverCard = (driver: typeof drivers[number]) => {
@@ -167,6 +225,8 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
     const conflictMessage = assignability?.assignable ? null : assignability?.reason ?? null;
 
     const isInactive = driver.lifecycleStatus === "INACTIF";
+    const isExcluded = excludedDriverIds.includes(driver.id);
+    const isSelectable = !isExcluded && driver.status !== "PAUSED" && driver.active && !isInactive;
 
     return (
       <li
@@ -175,30 +235,43 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
           "border rounded-lg p-4 transition-all",
           "hover:border-primary/70 hover:shadow-sm",
           isSelected ? "border-primary ring-2 ring-primary/20" : "border-border",
+          isSelectable ? "cursor-pointer" : "opacity-60",
         )}
+        role={isSelectable ? "button" : undefined}
+        tabIndex={isSelectable ? 0 : -1}
+        onClick={() => {
+          if (isSelectable) {
+            setSelectedDriverId(driver.id);
+          }
+        }}
+        onKeyDown={(event) => {
+          if (!isSelectable) return;
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            setSelectedDriverId(driver.id);
+          }
+        }}
       >
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-base font-semibold text-foreground flex items-center gap-2">
-                  <UserCheck className="h-4 w-4 text-primary" />
-                  {driver.name}
-                </p>
-                <a
-                  href={`tel:${driver.phone.replace(/\s/g, "")}`}
-                  className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
-                >
-                  <Phone className="h-4 w-4" />
-                  {driver.phone}
-                </a>
-                {isInactive && (
-                  <p className="mt-1 text-sm text-amber-600">Ce chauffeur est inactif.</p>
-                )}
-              </div>
-              <Badge variant="outline" className={cn("capitalize", driverStatusBadgeClass[driver.status])}>
-                {driverStatusLabel[driver.status]}
-              </Badge>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-base font-semibold text-foreground flex items-center gap-2">
+                <UserCheck className="h-4 w-4 text-primary" />
+                {driver.name}
+              </p>
+              <a
+                href={`tel:${driver.phone.replace(/\s/g, "")}`}
+                className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+              >
+                <Phone className="h-4 w-4" />
+                {driver.phone}
+              </a>
+              {isInactive && <p className="mt-1 text-sm text-amber-600">Ce chauffeur est inactif.</p>}
             </div>
+            <Badge variant="outline" className={cn("capitalize", driverStatusBadgeClass[driver.status])}>
+              {driverStatusLabel[driver.status]}
+            </Badge>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
@@ -223,11 +296,16 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
             </p>
           )}
 
+          {isExcluded && (
+            <p className="text-sm text-amber-600" role="alert">
+              Chauffeur exclu pour cette commande.
+            </p>
+          )}
+
           {nextUnavailability && (
             <Alert className="border-dashed border border-border bg-muted/40">
               <AlertDescription className="text-sm text-muted-foreground">
-                Prochaine indisponibilité :
-                {" "}
+                Prochaine indisponibilité : {" "}
                 {`${format(new Date(nextUnavailability.start), "dd MMM yyyy · HH'h'mm", { locale: fr })} → ${format(new Date(nextUnavailability.end), "HH'h'mm", { locale: fr })}`}
                 {nextUnavailability.reason ? ` — ${nextUnavailability.reason}` : ""}
               </AlertDescription>
@@ -238,8 +316,13 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
             <Button
               type="button"
               variant={isSelected ? "default" : "outline"}
-              onClick={() => setSelectedDriverId(driver.id)}
-              disabled={driver.status === "PAUSED" || !driver.active || isInactive}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (isSelectable) {
+                  setSelectedDriverId(driver.id);
+                }
+              }}
+              disabled={!isSelectable}
             >
               {isSelected ? "Sélectionné" : "Sélectionner"}
             </Button>
@@ -248,6 +331,21 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
       </li>
     );
   };
+
+  const confirmButton = (
+    <Button
+      type="submit"
+      disabled={
+        !selectedDriverId ||
+        Boolean(validationError) ||
+        isSubmitting ||
+        !isStatusAssignable
+      }
+    >
+      {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+      {isReassign ? "Confirmer le remplacement" : "Confirmer l'affectation"}
+    </Button>
+  );
 
   return (
     <Dialog open={open} onOpenChange={handleOpenStateChange}>
@@ -332,9 +430,14 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
             <Button type="button" variant="outline" onClick={handleClose}>
               Annuler
             </Button>
-            <Button type="submit" disabled={!canConfirm}>
-              {isReassign ? "Confirmer le remplacement" : "Confirmer l'affectation"}
-            </Button>
+            {statusTooltip ? (
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>{confirmButton}</TooltipTrigger>
+                <TooltipContent>{statusTooltip}</TooltipContent>
+              </Tooltip>
+            ) : (
+              confirmButton
+            )}
           </DialogFooter>
         </form>
       </DialogContent>

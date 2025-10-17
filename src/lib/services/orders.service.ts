@@ -1,13 +1,148 @@
 import { generateNextOrderNumber } from "@/lib/orderSequence";
 import {
+  Assignment,
+  Driver,
+  NotificationEntry,
   Order,
   appendActivity,
+  appendNotifications,
   generateId,
+  getDrivers,
   getOrders,
+  isDriverAssignable,
   saveOrders,
+  updateOrder,
+  upsertAssignment,
 } from "@/lib/stores/driversOrders.store";
 import { appendClientOrderFromCreate } from "@/lib/stores/clientOrders.store";
 import { getQuoteById } from "@/lib/services/quotes.service";
+import { resolveOrderStatus } from "@/lib/orders/status";
+
+const nowIso = () => new Date().toISOString();
+
+const buildNotification = (
+  channel: NotificationEntry["channel"],
+  message: string,
+  orderId: string,
+  driverId?: string,
+): NotificationEntry => ({
+  id: generateId(),
+  channel,
+  orderId,
+  driverId,
+  read: false,
+  message,
+  createdAt: nowIso(),
+});
+
+const simulateNetworkLatency = async (min = 320, max = 620) => {
+  const delay = Math.floor(Math.random() * (max - min + 1)) + min;
+  await new Promise((resolve) => setTimeout(resolve, delay));
+};
+
+const ensureOrderIsAssignable = (order: Order) => {
+  const normalized = resolveOrderStatus(order.status);
+
+  if (normalized === "LIVREE" || normalized === "ANNULEE") {
+    const label = normalized === "LIVREE" ? "livrée" : "annulée";
+    throw new Error(`Impossible d'affecter un chauffeur : la commande est ${label}.`);
+  }
+
+  if (normalized !== "EN_ATTENTE_AFFECTATION") {
+    throw new Error("Cette commande n'est pas en attente d'affectation.");
+  }
+};
+
+const ensureDriverIsEligible = (driver: Driver | undefined, order: Order) => {
+  if (!driver) {
+    throw new Error("Chauffeur introuvable");
+  }
+
+  if (!driver.active || driver.lifecycleStatus === "INACTIF") {
+    throw new Error("Ce chauffeur n'est pas actif");
+  }
+
+  const excludedIds = new Set(order.excludedDriverIds ?? []);
+  if (excludedIds.has(driver.id)) {
+    throw new Error("Ce chauffeur est indisponible pour cette commande");
+  }
+};
+
+export interface AssignDriverResponse {
+  order: Order;
+  assignment: Assignment;
+}
+
+export const assignDriver = async (orderId: string, driverId: string): Promise<AssignDriverResponse> => {
+  await simulateNetworkLatency();
+
+  const orders = getOrders();
+  const order = orders.find((item) => item.id === orderId);
+  if (!order) {
+    throw new Error("Commande introuvable");
+  }
+
+  ensureOrderIsAssignable(order);
+
+  const drivers = getDrivers();
+  const driver = drivers.find((item) => item.id === driverId);
+  ensureDriverIsEligible(driver, order);
+
+  const assignability = isDriverAssignable(driver, order.schedule.start, order.schedule.end, {
+    currentOrderId: order.id,
+  });
+
+  if (!assignability.assignable) {
+    throw new Error(assignability.reason ?? "Ce chauffeur n'est pas disponible");
+  }
+
+  const assignment: Assignment = {
+    id: generateId(),
+    orderId: order.id,
+    driverId: driver!.id,
+    start: order.schedule.start,
+    end: order.schedule.end,
+    endedAt: null,
+  };
+
+  const assignedAt = nowIso();
+  const updatedOrder = updateOrder(order.id, {
+    status: "EN_ATTENTE_ENLEVEMENT",
+    driverId: driver!.id,
+    driverAssignedAt: assignedAt,
+  });
+
+  if (!updatedOrder) {
+    throw new Error("Impossible de mettre à jour la commande");
+  }
+
+  upsertAssignment(assignment);
+
+  appendActivity({
+    id: generateId(),
+    type: "ASSIGN",
+    orderId: order.id,
+    driverId: driver!.id,
+    by: "admin",
+    at: assignedAt,
+    message: `Chauffeur ${driver!.name} affecté`,
+  });
+
+  const notifications: NotificationEntry[] = [
+    buildNotification("CLIENT", `Un chauffeur a été affecté à votre commande #${order.id}`, order.id, driver!.id),
+    buildNotification("ADMIN", `Chauffeur ${driver!.name} affecté à #${order.id}`, order.id, driver!.id),
+    buildNotification(
+      "DRIVER",
+      `Nouvelle mission : #${order.id} — ${order.pickupAddress} → ${order.dropoffAddress}`,
+      order.id,
+      driver!.id,
+    ),
+  ];
+
+  appendNotifications(notifications);
+
+  return { order: updatedOrder, assignment };
+};
 
 export interface CreateOrderPayload {
   customerId: string;

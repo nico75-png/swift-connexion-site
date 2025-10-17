@@ -85,6 +85,7 @@ export interface Order {
   instructions?: string;
   driverId?: string | null;
   driverAssignedAt?: string | null;
+  excludedDriverIds?: string[];
 }
 
 export type ScheduledAssignmentStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "CANCELLED" | "FAILED";
@@ -485,6 +486,25 @@ export const saveOrders = (list: Order[]) => {
   writeStore(STORAGE_KEYS.orders, list);
 };
 
+export const updateOrder = (orderId: string, patch: Partial<Order>): Order | null => {
+  const current = getOrders();
+  const index = current.findIndex((item) => item.id === orderId);
+  if (index === -1) {
+    return null;
+  }
+
+  const updated: Order = {
+    ...current[index],
+    ...patch,
+  };
+
+  const next = [...current];
+  next.splice(index, 1, updated);
+  saveOrders(next);
+
+  return updated;
+};
+
 export const getDrivers = (): Driver[] => {
   const raw = readStore<unknown[]>(STORAGE_KEYS.drivers, defaultDrivers as unknown as unknown[]);
   return normalizeDriversArray(raw, { fallbackToDefault: true });
@@ -499,6 +519,21 @@ export const getAssignments = (): Assignment[] => readStore(STORAGE_KEYS.assignm
 
 export const saveAssignments = (list: Assignment[]) => {
   writeStore(STORAGE_KEYS.assignments, list);
+};
+
+export const upsertAssignment = (assignment: Assignment): Assignment => {
+  const current = getAssignments();
+  const existingIndex = current.findIndex((item) => item.orderId === assignment.orderId);
+  const next = [...current];
+
+  if (existingIndex === -1) {
+    next.unshift(assignment);
+  } else {
+    next.splice(existingIndex, 1, assignment);
+  }
+
+  saveAssignments(next);
+  return assignment;
 };
 
 export const getScheduledAssignments = (): ScheduledAssignment[] =>

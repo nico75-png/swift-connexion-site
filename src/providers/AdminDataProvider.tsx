@@ -35,6 +35,7 @@ interface AdminDataContextValue {
   activityLog: ActivityEntry[];
   notifications: NotificationEntry[];
   refreshAll: () => void;
+  refetchOrder: (orderId: string) => Order | null;
   assignDriver: typeof assignDriverService;
   reassignDriver: typeof reassignDriverService;
   unassignDriver: typeof unassignDriverService;
@@ -103,6 +104,23 @@ export const AdminDataProvider = ({ children }: { children: React.ReactNode }) =
     hydrate();
   }, [hydrate]);
 
+  const refetchOrder = useCallback<AdminDataContextValue["refetchOrder"]>((orderId) => {
+    const nextOrders = getOrders();
+    const nextAssignments = getAssignments();
+    const nextScheduledAssignments = getScheduledAssignments();
+    const nextActivity = getActivityLog();
+    const nextNotifications = getNotifications();
+
+    setOrders(nextOrders);
+    setDrivers(getDrivers());
+    setAssignments(nextAssignments);
+    setScheduledAssignments(nextScheduledAssignments);
+    setActivityLog(nextActivity);
+    setNotifications(nextNotifications);
+
+    return nextOrders.find((item) => item.id === orderId) ?? null;
+  }, []);
+
   const assignDriver = useCallback<AdminDataContextValue["assignDriver"]>((orderId, driverId) => {
     const result = assignDriverService(orderId, driverId);
     refreshAll();
@@ -168,6 +186,7 @@ export const AdminDataProvider = ({ children }: { children: React.ReactNode }) =
     activityLog,
     notifications,
     refreshAll,
+    refetchOrder,
     assignDriver,
     reassignDriver,
     unassignDriver,
@@ -185,6 +204,7 @@ export const AdminDataProvider = ({ children }: { children: React.ReactNode }) =
     activityLog,
     notifications,
     refreshAll,
+    refetchOrder,
     assignDriver,
     reassignDriver,
     unassignDriver,
@@ -216,6 +236,7 @@ export const useOrdersStore = () => {
     orders,
     assignments,
     scheduledAssignments,
+    refetchOrder,
     assignDriver,
     reassignDriver,
     unassignDriver,
@@ -228,6 +249,7 @@ export const useOrdersStore = () => {
     orders,
     assignments,
     scheduledAssignments,
+    refetchOrder,
     assignDriver,
     reassignDriver,
     unassignDriver,

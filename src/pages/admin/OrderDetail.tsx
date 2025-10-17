@@ -22,6 +22,7 @@ import { driverStatusBadgeClass, driverStatusLabel } from "@/components/admin/or
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { getOrderStatusDisplayLabel, resolveOrderStatus } from "@/lib/orders/status";
 
 const formatDateTime = (iso: string) => format(new Date(iso), "dd MMM yyyy · HH'h'mm", { locale: fr });
 
@@ -36,6 +37,9 @@ const AdminOrderDetail = () => {
   const order = useMemo(() => orders.find((item) => item.id === id) ?? null, [orders, id]);
   const driver = useMemo(() => (order?.driverId ? drivers.find((item) => item.id === order.driverId) ?? null : null), [drivers, order]);
   const assignment = useMemo(() => (order ? assignments.find((item) => item.orderId === order.id) ?? null : null), [assignments, order]);
+
+  const normalizedStatus = useMemo(() => (order ? resolveOrderStatus(order.status) : ""), [order]);
+  const statusDisplay = useMemo(() => getOrderStatusDisplayLabel(order?.status ?? currentStatus), [order?.status, currentStatus]);
 
   const [currentStatus, setCurrentStatus] = useState(order?.status ?? "En attente");
   const [notes, setNotes] = useState(order?.instructions ?? "");
@@ -66,21 +70,28 @@ const AdminOrderDetail = () => {
     if (!order) {
       return [
         { label: "En attente", time: "", status: "pending" as const },
-        { label: "Enlevé", time: "", status: "pending" as const },
+        { label: "En attente d’enlèvement", time: "", status: "pending" as const },
         { label: "En cours", time: "", status: "pending" as const },
         { label: "Livré", time: "", status: "pending" as const },
       ];
     }
 
-    const baseStatuses = ["En attente", "Enlevé", "En cours", "Livré"];
-    const currentIndex = baseStatuses.findIndex((status) => status === order.status);
+    const stepsConfig = [
+      { code: "EN_ATTENTE_AFFECTATION", label: "En attente" },
+      { code: "EN_ATTENTE_ENLEVEMENT", label: "En attente d’enlèvement" },
+      { code: "EN_COURS", label: "En cours" },
+      { code: "LIVREE", label: "Livré" },
+    ] as const;
+
+    const normalized = resolveOrderStatus(order.status);
+    const currentIndex = stepsConfig.findIndex((step) => step.code === normalized);
     const scheduleStart = order.schedule?.start ? formatDateTime(order.schedule.start) : "-";
     const pickupTime = assignment ? formatDateTime(assignment.start) : "";
     const deliveryTime = assignment ? formatDateTime(assignment.end) : "";
 
-    const steps = baseStatuses.map((label, index) => {
+    const steps = stepsConfig.map((step, index) => {
       let status: "done" | "current" | "pending" | "cancelled" = "pending";
-      if (order.status === "Annulé") {
+      if (normalized === "ANNULEE") {
         status = index === 0 ? "done" : "cancelled";
       } else if (currentIndex === -1) {
         status = "pending";
@@ -90,25 +101,32 @@ const AdminOrderDetail = () => {
         status = "current";
       }
 
-      const time =
-        index === 0
-          ? scheduleStart
-          : index === 1
-            ? pickupTime
-            : index === 2
-              ? pickupTime || scheduleStart
-              : index === 3
-                ? deliveryTime
-                : "";
+      let time = "";
+      switch (step.code) {
+        case "EN_ATTENTE_AFFECTATION":
+          time = scheduleStart;
+          break;
+        case "EN_ATTENTE_ENLEVEMENT":
+          time = pickupTime || scheduleStart;
+          break;
+        case "EN_COURS":
+          time = pickupTime || scheduleStart;
+          break;
+        case "LIVREE":
+          time = deliveryTime;
+          break;
+        default:
+          time = "";
+      }
 
-      return { label, time, status };
+      return { label: step.label, time, status };
     });
 
-    if (order.status === "Annulé") {
-      steps.push({ 
-        label: "Annulée", 
-        time: order.schedule?.end ? formatDateTime(order.schedule.end) : "-", 
-        status: "cancelled" as const 
+    if (normalized === "ANNULEE") {
+      steps.push({
+        label: "Annulée",
+        time: order.schedule?.end ? formatDateTime(order.schedule.end) : "-",
+        status: "cancelled" as const,
       });
     }
 
@@ -230,7 +248,7 @@ const AdminOrderDetail = () => {
               <div className="flex items-center justify-between">
                 <CardTitle>Détails de la commande</CardTitle>
                 <Badge variant="outline" className="px-4 py-1 text-base">
-                  {currentStatus}
+                  {statusDisplay}
                 </Badge>
               </div>
             </CardHeader>
@@ -467,7 +485,13 @@ const AdminOrderDetail = () => {
         </div>
       </div>
 
-      <AssignDriverModal orderId={order.id} open={isModalOpen} onOpenChange={setIsModalOpen} />
+      <AssignDriverModal
+        orderId={order.id}
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        excludedDriverIds={order.excludedDriverIds}
+        isImmediateAssign={normalizedStatus === "EN_ATTENTE_AFFECTATION" && !order.driverId}
+      />
     </DashboardLayout>
   );
 };

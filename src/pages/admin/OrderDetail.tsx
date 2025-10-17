@@ -12,6 +12,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import AssignDriverModal from "@/components/admin/orders/AssignDriverModal";
+import QuickActions from "@/components/admin/orders/QuickActions";
+import OrderDuplicateModal from "@/components/admin/orders/OrderDuplicateModal";
+import MessageComposerModal from "@/components/messages/MessageComposerModal";
+import OrderCancelModal from "@/components/orders/OrderCancelModal";
 import {
   canUnassignDriver,
   getAssignButtonLabel,
@@ -28,7 +32,7 @@ const formatDateTime = (iso: string) => format(new Date(iso), "dd MMM yyyy · HH
 const AdminOrderDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
-  const { ready, orders, assignments, unassignDriver } = useOrdersStore();
+  const { ready, orders, assignments, unassignDriver, refreshAll } = useOrdersStore();
   const { drivers } = useDriversStore();
   const { activityLog } = useActivityLogStore();
   const { notifications } = useNotificationsStore();
@@ -40,6 +44,9 @@ const AdminOrderDetail = () => {
   const [currentStatus, setCurrentStatus] = useState(order?.status ?? "En attente");
   const [notes, setNotes] = useState(order?.instructions ?? "");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 
   useEffect(() => {
     if (order?.status) {
@@ -452,22 +459,36 @@ const AdminOrderDetail = () => {
             <CardHeader>
               <CardTitle>Actions rapides</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-start">
-                Dupliquer la commande
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                Contacter le client
-              </Button>
-              <Button variant="outline" className="w-full justify-start text-destructive hover:text-destructive">
-                Annuler la commande
-              </Button>
+            <CardContent>
+              <QuickActions
+                order={order}
+                onDuplicate={() => setIsDuplicateModalOpen(true)}
+                onContactClient={() => setIsComposerOpen(true)}
+                onCancelOrder={() => setIsCancelModalOpen(true)}
+              />
             </CardContent>
           </Card>
         </div>
       </div>
 
       <AssignDriverModal orderId={order.id} open={isModalOpen} onOpenChange={setIsModalOpen} />
+      <OrderDuplicateModal
+        sourceOrder={order}
+        open={isDuplicateModalOpen}
+        onOpenChange={setIsDuplicateModalOpen}
+        onCreated={() => {
+          refreshAll();
+        }}
+      />
+      <MessageComposerModal order={order} open={isComposerOpen} onOpenChange={setIsComposerOpen} />
+      <OrderCancelModal
+        orderId={order.id}
+        open={isCancelModalOpen}
+        onClose={() => setIsCancelModalOpen(false)}
+        onSuccess={() => {
+          refreshAll();
+        }}
+      />
     </DashboardLayout>
   );
 };

@@ -8,21 +8,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { MapPin, Bell, Settings as SettingsIcon, Trash2, Plus, Moon } from "lucide-react";
+import { MapPin, Bell, Settings as SettingsIcon, Trash2, Plus, Moon, Briefcase } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth, updateCurrentClient } from "@/lib/stores/auth.store";
+import { SECTOR_LABELS, type Sector } from "@/lib/packageTaxonomy";
 
 /**
  * Page des préférences utilisateur
  * Adresses favorites, notifications, paramètres d'affichage
  */
 const ClientPreferences = () => {
+  const { currentClient } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
+  const [sector, setSector] = useState<Sector | "">(currentClient?.sector as Sector || "");
   const [addresses, setAddresses] = useState([
     { id: "1", name: "Siège social", address: "123 Avenue de Paris, 75001 Paris" },
     { id: "2", name: "Entrepôt", address: "45 Rue du Commerce, 92100 Boulogne" },
   ]);
 
   const handleSave = () => {
+    if (sector && currentClient) {
+      updateCurrentClient({ sector });
+    }
     toast.success("Préférences enregistrées");
   };
 
@@ -52,6 +59,36 @@ const ClientPreferences = () => {
           <h1 className="text-3xl font-bold mb-2">Préférences</h1>
           <p className="text-muted-foreground">Personnalisez votre expérience</p>
         </div>
+
+        {/* Secteur d'activité */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Briefcase className="h-5 w-5" />
+              Secteur d'activité
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div>
+              <Label>Votre secteur</Label>
+              <p className="text-sm text-muted-foreground mb-3">
+                Définit les types de colis disponibles lors de la création de commandes
+              </p>
+              <Select value={sector} onValueChange={(value) => setSector(value as Sector)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionnez votre secteur" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(SECTOR_LABELS).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Adresses favorites */}
         <Card>

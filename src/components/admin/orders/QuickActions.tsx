@@ -1,10 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { isOrderCancelableStatus, isOrderCancellationForbiddenStatus } from "@/lib/orders/status";
-import type { Order } from "@/lib/stores/driversOrders.store";
+import type { AdminOrderDetail } from "@/services/orders.service";
 
 interface QuickActionsProps {
-  order: Order;
+  order: AdminOrderDetail;
   onDuplicate: () => void;
   onContactClient: () => void;
   onCancelOrder: () => void;
@@ -18,15 +17,15 @@ const QuickActions = ({
   onCancelOrder,
   isCancelDisabled = false,
 }: QuickActionsProps) => {
-  const cancelable = isOrderCancelableStatus(order.status);
-  const forbidden = isOrderCancellationForbiddenStatus(order.status);
+  const cancelable = !isCancelDisabled;
+  const forbidden = order.status === "LIVRE" || order.status === "ANNULEE";
 
   const cancelButton = (
     <Button
       variant="outline"
       className="w-full justify-start text-destructive hover:text-destructive"
       onClick={onCancelOrder}
-      disabled={isCancelDisabled || !cancelable}
+      disabled={!cancelable}
     >
       Annuler la commande
     </Button>

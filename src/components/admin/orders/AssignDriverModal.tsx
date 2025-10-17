@@ -8,9 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
-import { useDriversStore, useOrdersStore } from "@/providers/AdminDataProvider";
-import { isDriverAssignable, type Driver } from "@/lib/stores/driversOrders.store";
-import { useToast } from "@/hooks/use-toast";
+import { useDriversStore } from "@/providers/AdminDataProvider";
+import { type Driver } from "@/lib/stores/driversOrders.store";
 import { driverStatusBadgeClass, driverStatusLabel } from "./driverUtils";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -19,6 +18,9 @@ interface AssignDriverModalProps {
   orderId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onAssigned?: (driverId: string) => void;
+  currentDriverId?: string | null;
+  allowAssignment?: boolean;
 }
 
 const availabilityFilters = [
@@ -36,9 +38,14 @@ const getNextDriverUnavailability = (items: Driver["unavailabilities"] = []) => 
     .find((item) => new Date(item.end).getTime() > now);
 };
 
-const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalProps) => {
-  const { toast } = useToast();
-  const { orders, assignments, scheduledAssignments, assignDriver, reassignDriver } = useOrdersStore();
+const AssignDriverModal = ({
+  orderId,
+  open,
+  onOpenChange,
+  onAssigned,
+  currentDriverId = null,
+  allowAssignment = true,
+}: AssignDriverModalProps) => {
   const { drivers } = useDriversStore();
   const [search, setSearch] = useState("");
   const [availabilityFilter, setAvailabilityFilter] = useState<typeof availabilityFilters[number]["value"]>("AVAILABLE");
@@ -46,55 +53,26 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
   const [formError, setFormError] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
 
-  const order = useMemo(() => orders.find((item) => item.id === orderId), [orderId, orders]);
-  const selectedDriver = useMemo(() => drivers.find((driver) => driver.id === selectedDriverId) || null, [drivers, selectedDriverId]);
-  const orderScheduleLabel = useMemo(() => {
-    if (!order || !order.schedule) return "";
-    const start = format(new Date(order.schedule.start), "dd MMM yyyy · HH'h'mm", { locale: fr });
-    const end = format(new Date(order.schedule.end), "HH'h'mm", { locale: fr });
-    return `${start} → ${end}`;
-  }, [order]);
-
-  const assignabilityMap = useMemo(() => {
-    if (!order || !order.schedule) {
-      return new Map<string, ReturnType<typeof isDriverAssignable>>();
-    }
-    const map = new Map<string, ReturnType<typeof isDriverAssignable>>();
-    drivers.forEach((driver) => {
-      map.set(
-        driver.id,
-        isDriverAssignable(driver, order.schedule.start, order.schedule.end, {
-          currentOrderId: order.id,
-        }),
-      );
-    });
-    return map;
-  }, [drivers, order, assignments, scheduledAssignments]);
-
-  const validationError = useMemo(() => {
-    if (!order || !selectedDriver) return null;
-    const result = assignabilityMap.get(selectedDriver.id);
-    if (!result) {
-      return "Ce chauffeur est introuvable";
-    }
-    return result.assignable ? null : result.reason ?? null;
-  }, [assignabilityMap, order, selectedDriver]);
+  const selectedDriver = useMemo(
+    () => drivers.find((driver) => driver.id === selectedDriverId) || null,
+    [drivers, selectedDriverId],
+  );
 
   useEffect(() => {
     if (open) {
       setSearch("");
       setAvailabilityFilter("AVAILABLE");
       setFormError(null);
-      setSelectedDriverId(order?.driverId ?? null);
+      setSelectedDriverId(currentDriverId);
       setTimeout(() => searchRef.current?.focus(), 100);
     }
-  }, [open, order?.driverId]);
+  }, [open, currentDriverId]);
 
   useEffect(() => {
-    if (selectedDriver) {
+    if (selectedDriverId) {
       setFormError(null);
     }
-  }, [selectedDriver]);
+  }, [selectedDriverId]);
 
   const filteredDrivers = useMemo(() => {
     const query = search.toLowerCase();
@@ -107,14 +85,7 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
     });
   }, [drivers, search, availabilityFilter]);
 
-  const canConfirm = Boolean(selectedDriver && !validationError);
-  const isReassign = Boolean(order?.driverId && selectedDriverId && order.driverId !== selectedDriverId);
-
-  const handleClose = () => {
-    setFormError(null);
-    setSelectedDriverId(null);
-    onOpenChange(false);
-  };
+  const canConfirm = Boolean(selectedDriverId && allowAssignment);
 
   const handleOpenStateChange = (nextOpen: boolean) => {
     if (!nextOpen) {
@@ -126,46 +97,21 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!order) {
-      setFormError("Commande introuvable");
-      return;
-    }
     if (!selectedDriverId) {
       setFormError("Sélectionnez un chauffeur");
       return;
     }
-    if (validationError) {
-      setFormError(validationError);
+    if (!allowAssignment) {
+      setFormError("L'affectation n'est pas autorisée pour ce statut");
       return;
     }
 
-    const result = isReassign
-      ? reassignDriver(order.id, selectedDriverId)
-      : assignDriver(order.id, selectedDriverId);
-
-    if (!result.success) {
-      setFormError(result.error ?? "Une erreur est survenue");
-      toast({
-        title: "Affectation impossible",
-        description: result.error ?? "Veuillez réessayer.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    toast({
-      title: "✅ Chauffeur affecté",
-      description: `${selectedDriver?.name ?? "Chauffeur"} assigné à la commande ${order.id}.`,
-    });
-    handleClose();
+    onAssigned?.(selectedDriverId);
   };
 
   const renderDriverCard = (driver: typeof drivers[number]) => {
     const isSelected = selectedDriverId === driver.id;
     const nextUnavailability = getNextDriverUnavailability(driver.unavailabilities);
-    const assignability = order ? assignabilityMap.get(driver.id) : undefined;
-    const conflictMessage = assignability?.assignable ? null : assignability?.reason ?? null;
-
     const isInactive = driver.lifecycleStatus === "INACTIF";
 
     return (
@@ -217,12 +163,6 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
             </div>
           </div>
 
-          {isSelected && conflictMessage && (
-            <p className="text-sm text-destructive" role="alert">
-              {conflictMessage}
-            </p>
-          )}
-
           {nextUnavailability && (
             <Alert className="border-dashed border border-border bg-muted/40">
               <AlertDescription className="text-sm text-muted-foreground">
@@ -254,18 +194,15 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
       <DialogContent
         id="modal-assign-driver"
         aria-labelledby="assignDriverTitle"
-        aria-describedby={formError || validationError ? "assign-driver-error" : undefined}
+        aria-describedby={formError ? "assign-driver-error" : undefined}
         className="max-w-3xl w-[95vw] p-0 sm:p-0 overflow-hidden sm:rounded-2xl"
       >
         <form id="form-assign-driver" className="flex h-full max-h-[90vh] flex-col" onSubmit={handleSubmit}>
           <DialogHeader className="px-6 pt-6 pb-4">
             <DialogTitle id="assignDriverTitle">Affecter un chauffeur</DialogTitle>
-            {order && (
-              <div className="space-y-1 text-sm text-muted-foreground">
-                <p>{order.client} · {order.type}</p>
-                <p>{orderScheduleLabel}</p>
-              </div>
-            )}
+            <p className="text-sm text-muted-foreground">
+              Sélectionnez un chauffeur disponible pour la commande {orderId ?? ""}.
+            </p>
           </DialogHeader>
 
           <div className="px-6 pb-4 space-y-4">
@@ -321,19 +258,19 @@ const AssignDriverModal = ({ orderId, open, onOpenChange }: AssignDriverModalPro
           </ScrollArea>
 
           <div className="px-6 pb-2" aria-live="polite" aria-atomic="true">
-            {(formError || validationError) && (
+            {formError && (
               <p className="text-sm text-destructive" id="assign-driver-error">
-                {formError || validationError}
+                {formError}
               </p>
             )}
           </div>
 
           <DialogFooter className="px-6 pb-6 pt-2 gap-2 sm:gap-3">
-            <Button type="button" variant="outline" onClick={handleClose}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Annuler
             </Button>
             <Button type="submit" disabled={!canConfirm}>
-              {isReassign ? "Confirmer le remplacement" : "Confirmer l'affectation"}
+              Confirmer l'affectation
             </Button>
           </DialogFooter>
         </form>

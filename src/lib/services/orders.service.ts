@@ -11,7 +11,6 @@ import { getQuoteById } from "@/lib/services/quotes.service";
 
 export interface CreateOrderPayload {
   customerId: string;
-  transportType?: string;
   pickupAddress: string;
   deliveryAddress: string;
   date: string;
@@ -81,11 +80,7 @@ export const createOrder = async (
 ): Promise<CreateOrderResult> => {
   try {
     const storedQuote = await getQuoteById(payload.quoteId);
-    const candidateType = payload.transportType?.trim().toLowerCase();
-    const resolvedTransportType =
-      (candidateType && candidateType.length > 0 ? candidateType : undefined) ??
-      storedQuote?.transportType ??
-      "standard";
+    const resolvedTransportType = storedQuote?.transportType ?? "standard";
     const resolvedTransportLabel = storedQuote?.transportLabel ?? resolvedTransportType;
 
     const orderId = generateNextOrderNumber();

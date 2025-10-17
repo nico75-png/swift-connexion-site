@@ -3,6 +3,9 @@ import { getFromStorage, saveToStorage } from "@/lib/reorder";
 
 export interface QuoteOrderPayload {
   customerId: string;
+  sector?: string;
+  packageType?: string;
+  packageNote?: string;
   transportType?: string;
   pickupAddress: string;
   deliveryAddress: string;

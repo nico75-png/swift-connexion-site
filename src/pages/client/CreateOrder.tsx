@@ -73,6 +73,8 @@ const CreateOrder = () => {
 
   const initialFormValues = useMemo<CreateOrderFormValues>(
     () => ({
+      packageType: "",
+      packageNote: "",
       pickupAddress: customer.defaultPickupAddress ?? "",
       deliveryAddress: customer.defaultDeliveryAddress ?? "",
       date: "",
@@ -104,6 +106,9 @@ const CreateOrder = () => {
       try {
         const response = await quoteOrder({
           customerId: customer.id,
+          sector: customer.sector,
+          packageType: draftValues.packageType,
+          packageNote: draftValues.packageNote?.trim() || undefined,
           pickupAddress: draftValues.pickupAddress,
           deliveryAddress: draftValues.deliveryAddress,
           date: draftValues.date,
@@ -172,6 +177,9 @@ const CreateOrder = () => {
       const response = await createOrder(
         {
           customerId: customer.id,
+          sector: customer.sector || "B2B",
+          packageType: draftValues.packageType,
+          packageNote: draftValues.packageNote?.trim() || undefined,
           pickupAddress: draftValues.pickupAddress,
           deliveryAddress: draftValues.deliveryAddress,
           date: draftValues.date,
@@ -255,6 +263,10 @@ const CreateOrder = () => {
                           <p className="text-xs uppercase text-muted-foreground">SIRET</p>
                           <p className="font-medium">{customer.siret}</p>
                         </div>
+                        <div>
+                          <p className="text-xs uppercase text-muted-foreground">Type de colis</p>
+                          <p className="font-medium">{draftValues.packageType || "-"}</p>
+                        </div>
                         {quoteResult.success && quoteResult.quote?.transportLabel ? (
                           <div>
                             <p className="text-xs uppercase text-muted-foreground">Type de transport</p>
@@ -282,6 +294,12 @@ const CreateOrder = () => {
                           <p className="font-medium">{draftValues.volume ? `${draftValues.volume} m³` : "-"}</p>
                         </div>
                       </div>
+                      {draftValues.packageNote?.trim() ? (
+                        <div className="mt-6 rounded-md border bg-background/60 p-4">
+                          <p className="text-xs uppercase text-muted-foreground">Précision sur le colis</p>
+                          <p className="mt-1 text-sm">{draftValues.packageNote}</p>
+                        </div>
+                      ) : null}
                       {draftValues.driverInstructions?.trim() ? (
                         <div className="mt-6 rounded-md border bg-background/60 p-4">
                           <p className="text-xs uppercase text-muted-foreground">Instructions particulières</p>

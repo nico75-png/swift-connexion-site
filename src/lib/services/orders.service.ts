@@ -11,6 +11,9 @@ import { getQuoteById } from "@/lib/services/quotes.service";
 
 export interface CreateOrderPayload {
   customerId: string;
+  sector: string;
+  packageType: string;
+  packageNote?: string;
   pickupAddress: string;
   deliveryAddress: string;
   date: string;

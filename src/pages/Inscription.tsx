@@ -5,10 +5,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, X } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { toast } from "sonner";
+import { SECTORS, SECTOR_LABELS, type Sector } from "@/lib/packageTaxonomy";
 
 const Inscription = () => {
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
+  const [sector, setSector] = useState<Sector | "">("");
   const [acceptedCGU, setAcceptedCGU] = useState(false);
 
   const passwordRequirements = [
@@ -21,6 +23,11 @@ const Inscription = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!sector) {
+      toast.error("Veuillez sélectionner votre secteur d'activité");
+      return;
+    }
     
     if (!acceptedCGU) {
       toast.error("Veuillez accepter les CGU pour continuer");
@@ -103,14 +110,18 @@ const Inscription = () => {
                         </div>
                         <div>
                           <label className="text-sm font-medium mb-2 block">Secteur d'activité *</label>
-                          <select required className="w-full h-11 px-4 rounded-lg border border-input bg-background">
-                            <option value="">Sélectionnez</option>
-                            <option>Santé / Médical</option>
-                            <option>Optique</option>
-                            <option>Juridique</option>
-                            <option>B2B / Industrie</option>
-                            <option>Événementiel</option>
-                            <option>Autre</option>
+                          <select 
+                            required 
+                            value={sector}
+                            onChange={(e) => setSector(e.target.value as Sector | "")}
+                            className="w-full h-11 px-4 rounded-lg border border-input bg-background"
+                          >
+                            <option value="">Sélectionnez votre secteur</option>
+                            {Object.entries(SECTOR_LABELS).map(([key, label]) => (
+                              <option key={key} value={key}>
+                                {label}
+                              </option>
+                            ))}
                           </select>
                         </div>
                       </div>

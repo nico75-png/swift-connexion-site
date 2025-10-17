@@ -14,12 +14,23 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { AuthClient } from "@/lib/stores/auth.store";
+import { usePackageTypes } from "@/hooks/usePackageTypes";
+import type { Sector } from "@/lib/packageTaxonomy";
 
 export const parseLocaleNumber = (value: string) => Number.parseFloat(value.replace(",", "."));
 
 const formSchema = z
   .object({
+    packageType: z.string().trim().min(1, "Type de colis requis"),
+    packageNote: z.string().optional().or(z.literal("")),
     pickupAddress: z.string().trim().min(1, "Adresse de départ requise"),
     deliveryAddress: z.string().trim().min(1, "Adresse de livraison requise"),
     date: z.string().trim().min(1, "Date requise"),
@@ -42,6 +53,18 @@ const formSchema = z
       .optional()
       .or(z.literal("")),
   })
+  .refine(
+    (data) => {
+      if (data.packageType === "AUTRE") {
+        return data.packageNote && data.packageNote.trim().length >= 5;
+      }
+      return true;
+    },
+    {
+      message: "Veuillez préciser le contenu du colis (minimum 5 caractères)",
+      path: ["packageNote"],
+    }
+  )
   .superRefine((values, ctx) => {
     if (!values.date || !values.time) {
       return;
@@ -75,8 +98,12 @@ interface CreateOrderFormProps {
 
 const CreateOrderForm = ({ customer, defaultValues, onSubmit, isSubmitting }: CreateOrderFormProps) => {
   const [showInstructions, setShowInstructions] = useState(false);
+  const packageTypes = usePackageTypes(customer.sector as Sector | undefined);
+  
   const initialValues = useMemo(
     () => ({
+      packageType: defaultValues.packageType ?? "",
+      packageNote: defaultValues.packageNote ?? "",
       pickupAddress: defaultValues.pickupAddress ?? customer.defaultPickupAddress ?? "",
       deliveryAddress: defaultValues.deliveryAddress ?? customer.defaultDeliveryAddress ?? "",
       date: defaultValues.date ?? "",
@@ -91,6 +118,8 @@ const CreateOrderForm = ({ customer, defaultValues, onSubmit, isSubmitting }: Cr
       defaultValues.date,
       defaultValues.deliveryAddress,
       defaultValues.driverInstructions,
+      defaultValues.packageNote,
+      defaultValues.packageType,
       defaultValues.pickupAddress,
       defaultValues.time,
       defaultValues.volume,
@@ -110,9 +139,12 @@ const CreateOrderForm = ({ customer, defaultValues, onSubmit, isSubmitting }: Cr
   const handleSubmit = async (values: FormValues) => {
     await onSubmit({
       ...values,
+      packageNote: values.packageNote?.trim() ?? "",
       driverInstructions: values.driverInstructions?.trim() ?? "",
     });
   };
+
+  const selectedPackageType = form.watch("packageType");
 
   useEffect(() => {
     if (initialValues.driverInstructions) {
@@ -142,6 +174,56 @@ const CreateOrderForm = ({ customer, defaultValues, onSubmit, isSubmitting }: Cr
             </div>
           </div>
         </div>
+
+        <FormField
+          control={form.control}
+          name="packageType"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Type de colis *</FormLabel>
+              <Select 
+                onValueChange={field.onChange} 
+                defaultValue={field.value}
+                disabled={form.formState.isSubmitting || isSubmitting}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionnez le type de colis" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {packageTypes.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {selectedPackageType === "AUTRE" && (
+          <FormField
+            control={form.control}
+            name="packageNote"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Précisez le contenu *</FormLabel>
+                <FormControl>
+                  <Textarea
+                    {...field}
+                    placeholder="Décrivez précisément le contenu du colis..."
+                    rows={3}
+                    disabled={form.formState.isSubmitting || isSubmitting}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         <FormField
           control={form.control}

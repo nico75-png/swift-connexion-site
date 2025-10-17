@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { MessageCircle, Plus } from "lucide-react";
@@ -40,6 +41,8 @@ const buildParticipantsMap = (participants: Participant[]) =>
 
 const AdminMessages = () => {
   const { participants, getConversationsFor, getParticipant, getRecipientsFor } = useMessagesStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const focusedThreadId = searchParams.get("thread");
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [isStartingNewConversation, setIsStartingNewConversation] = useState(false);
 
@@ -56,12 +59,26 @@ const AdminMessages = () => {
   }, [getConversationsFor, getParticipant]);
 
   useEffect(() => {
+    if (focusedThreadId) {
+      const exists = adminConversations.some((item) => item.conversation.id === focusedThreadId);
+      if (exists) {
+        if (selectedConversationId !== focusedThreadId || isStartingNewConversation) {
+          setIsStartingNewConversation(false);
+          setSelectedConversationId(focusedThreadId);
+        }
+        return;
+      }
+      setSearchParams({}, { replace: true });
+    }
+
     if (isStartingNewConversation) {
       return;
     }
 
     if (!selectedConversationId && adminConversations.length > 0) {
-      setSelectedConversationId(adminConversations[0].conversation.id);
+      const firstConversationId = adminConversations[0].conversation.id;
+      setSelectedConversationId(firstConversationId);
+      setSearchParams({ thread: firstConversationId }, { replace: true });
       return;
     }
 
@@ -69,9 +86,21 @@ const AdminMessages = () => {
       selectedConversationId &&
       !adminConversations.some((item) => item.conversation.id === selectedConversationId)
     ) {
-      setSelectedConversationId(adminConversations[0]?.conversation.id ?? null);
+      const fallbackId = adminConversations[0]?.conversation.id ?? null;
+      setSelectedConversationId(fallbackId);
+      if (fallbackId) {
+        setSearchParams({ thread: fallbackId }, { replace: true });
+      } else {
+        setSearchParams({}, { replace: true });
+      }
     }
-  }, [adminConversations, selectedConversationId, isStartingNewConversation]);
+  }, [
+    adminConversations,
+    focusedThreadId,
+    isStartingNewConversation,
+    selectedConversationId,
+    setSearchParams,
+  ]);
 
   const selectedConversation: Conversation | null = useMemo(() => {
     if (isStartingNewConversation) {
@@ -92,16 +121,19 @@ const AdminMessages = () => {
   const handleSelectConversation = (conversationId: string) => {
     setIsStartingNewConversation(false);
     setSelectedConversationId(conversationId);
+    setSearchParams({ thread: conversationId }, { replace: true });
   };
 
   const handleStartNewConversation = () => {
     setSelectedConversationId(null);
     setIsStartingNewConversation(true);
+    setSearchParams({}, { replace: true });
   };
 
   const handleMessageSent = (conversationId: string) => {
     setIsStartingNewConversation(false);
     setSelectedConversationId(conversationId);
+    setSearchParams({ thread: conversationId }, { replace: true });
   };
 
   return (

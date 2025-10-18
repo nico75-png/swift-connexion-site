@@ -11,9 +11,9 @@ export interface AuthUser {
 
 export interface AuthClient {
   id: string;
-  contactName: string;
-  company: string;
-  siret: string;
+  contactName?: string;
+  company?: string;
+  siret?: string;
   sector?: string;
   defaultPickupAddress?: string;
   defaultDeliveryAddress?: string;
@@ -25,21 +25,8 @@ interface AuthState {
 }
 
 const defaultState: AuthState = {
-  currentUser: {
-    id: "CLI-2001",
-    name: "Jean Dupont",
-    role: "client",
-    email: "jean.dupont@one-optique.test",
-  },
-  currentClient: {
-    id: "CLI-2001",
-    contactName: "Jean Dupont",
-    company: "One Optique",
-    siret: "123 456 789 00012",
-    sector: "OPTIQUE",
-    defaultPickupAddress: "123 Avenue de Paris, 75001 Paris",
-    defaultDeliveryAddress: "45 Rue du Commerce, 92100 Boulogne",
-  },
+  currentUser: null,
+  currentClient: null,
 };
 
 let state: AuthState = defaultState;
@@ -61,6 +48,11 @@ export const getAuthState = (): AuthState => state;
 
 export const setAuthState = (patch: Partial<AuthState>) => {
   state = { ...state, ...patch };
+  notify();
+};
+
+export const resetAuthState = () => {
+  state = { ...defaultState };
   notify();
 };
 

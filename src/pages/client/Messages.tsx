@@ -134,10 +134,11 @@ const ClientMessages = () => {
   };
 
   return (
-    <DashboardLayout
-      sidebar={<ClientSidebar />}
-      topbar={<Topbar userName={participantsMap[CLIENT_ID]?.displayName ?? "Client"} />}
-    >
+      <DashboardLayout
+        sidebar={<ClientSidebar />}
+        topbar={<Topbar userName={participantsMap[CLIENT_ID]?.displayName} />}
+        showProfileReminder
+      >
       <div className="flex flex-col gap-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>

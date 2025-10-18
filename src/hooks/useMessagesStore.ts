@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 
 import { messagingService } from "@/lib/services/messaging.service";
+import { getAuthState } from "@/lib/stores/auth.store";
 
 type UserRole = "ADMIN" | "CLIENT" | "DRIVER";
 
@@ -85,12 +86,31 @@ type Listener = () => void;
 
 const listeners = new Set<Listener>();
 
+const CLIENT_PARTICIPANT_ID = "client-1";
+
 const createId = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2, 11);
 
 const nowIso = () => new Date().toISOString();
+
+const deriveClientIdentity = () => {
+  const { currentUser } = getAuthState();
+  const displayName = (currentUser?.name || currentUser?.email || "Compte client").trim();
+  const initials = displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(segment => segment.charAt(0).toUpperCase())
+    .join("")
+    .slice(0, 2) || "CC";
+
+  return {
+    displayName,
+    initials,
+    email: currentUser?.email,
+  };
+};
 
 const buildParticipant = (
   id: string,
@@ -106,17 +126,18 @@ const buildParticipant = (
   ...extras,
 });
 
+const createClientParticipant = (identity: ReturnType<typeof deriveClientIdentity>) =>
+  buildParticipant(CLIENT_PARTICIPANT_ID, "CLIENT", identity.displayName, identity.initials, {
+    email: identity.email,
+    metadata: { orders: ["CMD-010", "CMD-011"], incidents: ["INC-204"], activeOrderId: "CMD-010" },
+  });
+
 const participants: Participant[] = [
   buildParticipant("admin-1", "ADMIN", "Support One Connexion", "SC", {
     email: "support@one-connexion.fr",
     phone: "+33123456789",
   }),
-  buildParticipant("client-1", "CLIENT", "Jean Dupont", "JD", {
-    company: "Cabinet Dupont",
-    email: "jean.dupont@client.test",
-    phone: "+33611112222",
-    metadata: { orders: ["CMD-010", "CMD-011"], incidents: ["INC-204"], activeOrderId: "CMD-010" },
-  }),
+  createClientParticipant(deriveClientIdentity()),
   buildParticipant("driver-1", "DRIVER", "Marc Bernard", "MB", {
     phone: "+33655554444",
     metadata: { orders: ["CMD-010"] },
@@ -152,7 +173,7 @@ const initialConversations: Conversation[] = [
         conversationId: "conv-admin-client-1",
         subject: "RE: Question sur la facturation",
         content:
-          "Bonjour Jean, la facture #2025-01 est exigible le 31 janvier. Souhaitez-vous un rappel automatique ?",
+          "Bonjour, la facture #2025-01 est exigible le 31 janvier. Souhaitez-vous un rappel automatique ?",
         senderId: "admin-1",
         senderRole: "ADMIN",
         recipientId: "client-1",
@@ -261,6 +282,32 @@ const getState = () => state;
 const subscribe = (listener: Listener) => {
   listeners.add(listener);
   return () => listeners.delete(listener);
+};
+
+export const syncClientParticipantIdentity = () => {
+  const identity = deriveClientIdentity();
+  let found = false;
+
+  const nextParticipants = state.participants.map((participant) => {
+    if (participant.id !== CLIENT_PARTICIPANT_ID || participant.role !== "CLIENT") {
+      return participant;
+    }
+
+    found = true;
+    return {
+      ...participant,
+      displayName: identity.displayName,
+      avatarFallback: identity.initials,
+      email: identity.email ?? participant.email,
+    };
+  });
+
+  if (!found) {
+    nextParticipants.push(createClientParticipant(identity));
+  }
+
+  state = { ...state, participants: nextParticipants };
+  notify();
 };
 
 const sortConversations = (items: Conversation[]) =>

@@ -33,11 +33,13 @@ import {
   resolveOrderStatus,
 } from "@/lib/orders/status";
 import { ORDER_CANCELLATION_REASON_LABELS } from "@/lib/orders/cancellation";
+import { useAuth } from "@/lib/stores/auth.store";
 
 const ClientOrderDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [order, setOrder] = useState<ClientOrder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { currentUser } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 
@@ -217,7 +219,8 @@ const ClientOrderDetail = () => {
   return (
     <DashboardLayout
       sidebar={<ClientSidebar />}
-      topbar={<Topbar userName="Jean Dupont" />}
+      topbar={<Topbar userName={currentUser?.name ?? undefined} />}
+      showProfileReminder
     >
       {showLoader ? (
         <div className="flex h-full min-h-[400px] items-center justify-center">

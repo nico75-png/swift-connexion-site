@@ -8,6 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuthProfile } from "@/providers/AuthProvider";
 
 interface TopbarProps {
   userName?: string;
@@ -26,6 +27,8 @@ interface TopbarProps {
 const Topbar = ({ userName, title, notifications = [] }: TopbarProps) => {
   const [darkMode, setDarkMode] = useState(false);
   const unreadCount = notifications.filter(n => !n.read).length;
+  const { resolvedDisplayName, fallbackEmail } = useAuthProfile();
+  const finalName = userName ?? resolvedDisplayName ?? fallbackEmail ?? "Utilisateur";
 
   const toggleTheme = () => {
     setDarkMode(!darkMode);
@@ -36,7 +39,7 @@ const Topbar = ({ userName, title, notifications = [] }: TopbarProps) => {
     <header className="h-16 border-b border-border bg-card flex items-center justify-between px-6">
       {/* Titre de page ou breadcrumb */}
       <div>
-        <h2 className="text-lg font-semibold">{title || `Bienvenue, ${userName || 'Admin'}`}</h2>
+        <h2 className="text-lg font-semibold">{title || `Bienvenue, ${finalName}`}</h2>
       </div>
 
       {/* Actions */}

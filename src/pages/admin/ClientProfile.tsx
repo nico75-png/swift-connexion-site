@@ -114,12 +114,12 @@ const AdminClientProfile = () => {
   const { toast } = useToast();
   const [client, setClient] = useState(() => ({
     id: id || "1",
-    company: "Cabinet Dupont",
-    contact: "Jean Dupont",
+    company: "Cabinet client",
+    contact: "Contact client",
     sector: "Juridique",
     siret: "123 456 789 00012",
     address: "12 rue de la Paix, 75002 Paris",
-    email: "j.dupont@cabinet.fr",
+    email: "contact@cabinet.fr",
     phone: "01 23 45 67 89",
     status: "Actif",
     signupDate: "2024-03-15",

@@ -4,30 +4,68 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Layout from "@/components/layout/Layout";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuthProfile } from "@/providers/AuthProvider";
 
 const Connexion = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSendingReset, setIsSendingReset] = useState(false);
+  const { refreshProfile } = useAuthProfile();
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Simulation: admin si email contient "admin", sinon client
-    if (email.toLowerCase().includes("admin")) {
-      toast.success("Connexion réussie ! Redirection vers l'espace admin...");
-      setTimeout(() => navigate("/admin"), 1000);
-    } else {
+  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        throw error;
+      }
+
+      await refreshProfile();
       toast.success("Connexion réussie ! Redirection vers votre espace...");
-      setTimeout(() => navigate("/espace-client"), 1000);
+      navigate("/espace-client");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "La connexion a échoué.";
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleForgotPassword = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast.success("Un email de réinitialisation a été envoyé !");
-    setShowForgotPassword(false);
+  const handleForgotPassword = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const targetEmail = String(formData.get("reset_email") ?? "").trim();
+
+    if (!targetEmail) {
+      toast.error("Veuillez saisir votre email");
+      return;
+    }
+
+    setIsSendingReset(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(targetEmail, {
+        redirectTo: `${window.location.origin}/connexion`,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success("Un email de réinitialisation a été envoyé !");
+      setShowForgotPassword(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Impossible d'envoyer l'email de réinitialisation.";
+      toast.error(message);
+    } finally {
+      setIsSendingReset(false);
+    }
   };
 
   return (
@@ -58,12 +96,19 @@ const Connexion = () => {
                         <input
                           type="email"
                           required
+                          name="reset_email"
                           className="w-full h-11 px-4 rounded-lg border border-input bg-background"
                           placeholder="email@entreprise.fr"
                         />
                       </div>
-                      <Button type="submit" variant="cta" size="lg" className="w-full">
-                        Envoyer le lien
+                      <Button
+                        type="submit"
+                        variant="cta"
+                        size="lg"
+                        className="w-full"
+                        disabled={isSendingReset}
+                      >
+                        {isSendingReset ? "Envoi en cours…" : "Envoyer le lien"}
                       </Button>
                       <Button
                         type="button"
@@ -111,8 +156,14 @@ const Connexion = () => {
                       />
                     </div>
 
-                    <Button type="submit" variant="cta" size="lg" className="w-full">
-                      Se connecter
+                    <Button
+                      type="submit"
+                      variant="cta"
+                      size="lg"
+                      className="w-full"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? "Connexion en cours…" : "Se connecter"}
                     </Button>
 
                     <div className="relative">
@@ -142,8 +193,7 @@ const Connexion = () => {
 
             <div className="mt-6 p-4 bg-info/10 rounded-lg border border-info/20">
               <p className="text-sm text-center text-muted-foreground">
-                <strong>Démo :</strong> Utilisez "admin@test.fr" pour accéder à l'espace admin, 
-                ou tout autre email pour l'espace client
+                <strong>Démo :</strong> Créez un compte via la page d'inscription pour accéder à l'espace client.
               </p>
             </div>
           </div>

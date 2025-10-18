@@ -340,7 +340,13 @@ const ClientOrders = () => {
     },
     [closeModal, fetchOrders, toast],
   );
-  return <DashboardLayout sidebar={<ClientSidebar />} topbar={<Topbar userName={currentUser?.name ?? "Client"} />}> 
+  return (
+    <DashboardLayout
+      sidebar={<ClientSidebar />}
+      topbar={<Topbar userName={currentUser?.name ?? undefined} />}
+      showProfileReminder
+    >
+      
       <div className="space-y-6">
         {/* En-tête */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -522,6 +528,8 @@ const ClientOrders = () => {
         </Card>
         <ReorderModal draft={reorderDraft} open={isModalOpen} onCancel={closeModal} onConfirm={handleConfirm} />
       </div>
-    </DashboardLayout>;
+    </DashboardLayout>
+  );
 };
+
 export default ClientOrders;

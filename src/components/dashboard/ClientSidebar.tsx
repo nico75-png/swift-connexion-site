@@ -13,6 +13,7 @@ import {
   X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuthProfile } from "@/providers/AuthProvider";
 
 /**
  * Sidebar pour l'espace client
@@ -20,6 +21,8 @@ import { cn } from "@/lib/utils";
  */
 const ClientSidebar = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const { resolvedDisplayName, fallbackEmail } = useAuthProfile();
+  const sidebarName = resolvedDisplayName ?? fallbackEmail ?? "Profil client";
 
   const toggleMobileSidebar = () => {
     setIsMobileOpen((prev) => !prev);
@@ -69,6 +72,12 @@ const ClientSidebar = () => {
           <div>
             <h1 className="font-sans text-xl font-semibold text-white">One Connexion</h1>
             <p className="mt-1 text-xs text-white/70">Espace Client</p>
+            <div className="mt-3">
+              <p className="text-sm font-medium text-white truncate">{sidebarName}</p>
+              {fallbackEmail && (
+                <p className="text-xs text-white/70 truncate">{fallbackEmail}</p>
+              )}
+            </div>
           </div>
           <button
             type="button"

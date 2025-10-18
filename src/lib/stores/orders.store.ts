@@ -330,19 +330,27 @@ export const assignDriverToOrder = (orderId: string, payload: AssignDriverPayloa
     throw new Error("Commande introuvable");
   }
 
-  if (existing.status !== "EN_ATTENTE_AFFECTATION" && existing.status !== "EN_ATTENTE_ENLEVEMENT") {
+  const now = formatISO(new Date());
+  const alreadyAssigned = existing.assignedDriver?.id === payload.driver.id;
+  const nextStatus: OrderStatus =
+    existing.status === "EN_ATTENTE_AFFECTATION"
+      ? "EN_ATTENTE_ENLEVEMENT"
+      : existing.status;
+
+  if (
+    existing.status !== "EN_ATTENTE_AFFECTATION" &&
+    existing.status !== "EN_ATTENTE_ENLEVEMENT" &&
+    existing.status !== "ENLEVE" &&
+    existing.status !== "EN_COURS"
+  ) {
     throw new Error("Cette commande ne peut pas être affectée");
   }
 
-  const now = formatISO(new Date());
-  const alreadyAssigned = existing.assignedDriver?.id === payload.driver.id;
-  const status: OrderStatus = "EN_ATTENTE_ENLEVEMENT";
-
   const updatedHistory = [...existing.statusHistory];
-  if (!updatedHistory.some((entry) => entry.status === status)) {
+  if (existing.status !== nextStatus && !updatedHistory.some((entry) => entry.status === nextStatus)) {
     updatedHistory.push({
       id: `ST-${orderId}-${Date.now()}`,
-      status,
+      status: nextStatus,
       occurredAt: now,
       author: payload.author,
       note: "Chauffeur affecté",
@@ -363,7 +371,7 @@ export const assignDriverToOrder = (orderId: string, payload: AssignDriverPayloa
 
   const updated: OrderDetailRecord = {
     ...existing,
-    status,
+    status: nextStatus,
     assignedDriver: clone(payload.driver),
     statusHistory: updatedHistory
       .slice()

@@ -13,11 +13,19 @@ import {
   type OrderStatus,
 } from "@/lib/stores/orders.store";
 import {
+  appendNotifications,
+  generateId,
   getDrivers,
   getOrders as getLegacyOrders,
   saveOrders as saveLegacyOrders,
+  type Driver,
+  type NotificationEntry,
   type Order as LegacyOrder,
 } from "@/lib/stores/driversOrders.store";
+import {
+  type AssignmentRequirements,
+  evaluateDriverCompatibility,
+} from "@/lib/utils/driver-compatibility";
 
 export interface OrderActivityEntry {
   id: string;
@@ -54,6 +62,13 @@ const LEGACY_STATUS: Record<OrderStatus, LegacyOrder["status"]> = {
   ANNULEE: "Annulé",
   INCIDENT: "En cours",
 };
+
+const ASSIGNABLE_STATUSES: OrderStatus[] = [
+  "EN_ATTENTE_AFFECTATION",
+  "EN_ATTENTE_ENLEVEMENT",
+  "ENLEVE",
+  "EN_COURS",
+];
 
 const availabilityLabel = (status: string): OrderAssignedDriver["availability"] => {
   switch (status) {
@@ -160,6 +175,26 @@ const syncLegacyOrder = (record: OrderDetailRecord) => {
   saveLegacyOrders(nextOrders);
 };
 
+const buildAssignmentRequirements = (record: OrderDetailRecord): AssignmentRequirements => ({
+  weight: record.weight,
+  volume: record.volume,
+  excludedDriverIds: record.excludedDriverIds ?? [],
+});
+
+const notifyDriverAssignment = (order: OrderDetailRecord, driver: Driver) => {
+  const message = `Nouvelle mission : ${order.orderNumber} — ${order.pickupAddress} → ${order.deliveryAddress}`;
+  const notification: NotificationEntry = {
+    id: generateId(),
+    channel: "DRIVER",
+    orderId: order.id,
+    driverId: driver.id,
+    read: false,
+    message,
+    createdAt: new Date().toISOString(),
+  };
+  appendNotifications(notification);
+};
+
 const toAdminOrderDetail = (record: OrderDetailRecord): AdminOrderDetail => ({
   ...record,
   statusLabel: STATUS_LABELS[record.status],
@@ -186,10 +221,23 @@ export const assignDriver = async (
   driverId: string,
   options: { actor?: string } = {},
 ): Promise<AdminOrderDetail> => {
+  const currentRecord = getOrderDetailRecord(orderId);
+  if (!currentRecord) {
+    throw new Error("Commande introuvable");
+  }
+  if (!ASSIGNABLE_STATUSES.includes(currentRecord.status)) {
+    throw new Error("Cette commande ne peut plus être modifiée à ce stade");
+  }
+
   const drivers = getDrivers();
   const driver = drivers.find((item) => item.id === driverId);
   if (!driver) {
     throw new Error("Chauffeur introuvable");
+  }
+
+  const compatibility = evaluateDriverCompatibility(driver, buildAssignmentRequirements(currentRecord));
+  if (!compatibility.assignable) {
+    throw new Error(compatibility.reasons[0] ?? "Ce chauffeur ne peut pas être affecté");
   }
 
   const payload: OrderAssignedDriver = {
@@ -205,6 +253,9 @@ export const assignDriver = async (
     author: options.actor ?? "admin",
   });
 
+  if (currentRecord.assignedDriver?.id !== driver.id) {
+    notifyDriverAssignment(record, driver);
+  }
   syncLegacyOrder(record);
   return toAdminOrderDetail(record);
 };
@@ -241,7 +292,7 @@ export const downloadDocument = async (url: string) => {
 
 export const resolveStatusLabel = (status: OrderStatus): string => STATUS_LABELS[status];
 
-export const isAssignmentAllowed = (status: OrderStatus) => status === "EN_ATTENTE_AFFECTATION";
+export const isAssignmentAllowed = (status: OrderStatus) => ASSIGNABLE_STATUSES.includes(status);
 
 export const canCancelOrder = (status: OrderStatus) =>
   status === "EN_ATTENTE_AFFECTATION" || status === "EN_ATTENTE_ENLEVEMENT";

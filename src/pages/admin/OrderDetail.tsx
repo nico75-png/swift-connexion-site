@@ -43,6 +43,7 @@ import { useNotificationsStore } from "@/providers/AdminDataProvider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { Order as LegacyOrder } from "@/lib/stores/driversOrders.store";
+import { useAuth } from "@/lib/stores/auth.store";
 
 const statusBadgeClass: Record<AdminOrderDetail["status"], string> = {
   EN_ATTENTE_AFFECTATION: "border-warning/60 text-warning bg-warning/10",
@@ -97,6 +98,7 @@ const AdminOrderDetailPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { notifications } = useNotificationsStore();
+  const { currentUser } = useAuth();
 
   const [order, setOrder] = useState<AdminOrderDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -151,6 +153,9 @@ const AdminOrderDetailPage = () => {
 
   const legacyOrder = useMemo(() => (order ? toLegacyOrder(order) : null), [order]);
 
+  const adminName = currentUser?.name ?? "Administrateur";
+  const canManageAssignment = currentUser?.role === "admin" || currentUser?.role === "dispatch";
+
   const registerAction = useCallback(
     async (label: string, meta?: Record<string, unknown>) => {
       if (!order) {
@@ -164,12 +169,44 @@ const AdminOrderDetailPage = () => {
 
   const handleAssignDriver = async (driverId: string) => {
     if (!order) return;
+    const previousDriver = order.assignedDriver;
     try {
-      const detail = await assignDriver(order.id, driverId, { actor: "admin" });
-      setOrder(detail);
+      const assignedDetail = await assignDriver(order.id, driverId, { actor: adminName });
+      const timestamp = new Date();
+      let finalDetail = assignedDetail;
+
+      try {
+        finalDetail = await logAdministrativeAction(assignedDetail.id, {
+          label: `Chauffeur changé par ${adminName} le ${timestamp.toLocaleString("fr-FR")}`,
+          author: adminName,
+          meta: {
+            action: previousDriver ? "driver-reassigned" : "driver-assigned",
+            previousDriverId: previousDriver?.id ?? null,
+            previousDriverName: previousDriver?.name ?? null,
+            newDriverId: assignedDetail.assignedDriver?.id ?? driverId,
+            newDriverName: assignedDetail.assignedDriver?.name ?? null,
+            actorId: currentUser?.id ?? null,
+            occurredAt: timestamp.toISOString(),
+          },
+        });
+      } catch (loggingError) {
+        const loggingMessage =
+          loggingError instanceof Error
+            ? loggingError.message
+            : "Impossible d'enregistrer le changement dans le journal.";
+        toast({
+          title: "Journal d'activité indisponible",
+          description: loggingMessage,
+          variant: "destructive",
+        });
+      }
+
+      setOrder(finalDetail);
       toast({
-        title: "Chauffeur affecté",
-        description: `${detail.assignedDriver?.name ?? "Chauffeur"} assigné à ${detail.orderNumber}.`,
+        title: "✅ Chauffeur affecté avec succès à cette commande.",
+        description: finalDetail.assignedDriver
+          ? `${finalDetail.assignedDriver.name} est désormais affecté(e) à ${finalDetail.orderNumber}.`
+          : `${finalDetail.orderNumber} a été mis à jour.`,
       });
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : "Impossible d'affecter le chauffeur.";
@@ -291,6 +328,29 @@ const AdminOrderDetailPage = () => {
   }
 
   const isAssignmentEnabled = isAssignmentAllowed(order.status);
+  const assignmentRequirements = useMemo(
+    () => ({
+      weight: order.weight,
+      volume: order.volume,
+      excludedDriverIds: order.excludedDriverIds ?? [],
+    }),
+    [order.weight, order.volume, order.excludedDriverIds],
+  );
+  const assignmentDisabledMessage = useMemo(() => {
+    if (isAssignmentEnabled) {
+      return null;
+    }
+    switch (order.status) {
+      case "LIVRE":
+        return "La commande est livrée : le changement de chauffeur n'est plus possible.";
+      case "ANNULEE":
+        return "La commande est annulée : l'affectation ne peut plus être modifiée.";
+      case "INCIDENT":
+        return "Commande en incident : utilisez le suivi incident pour mettre à jour le chauffeur.";
+      default:
+        return "Ce statut ne permet plus de modifier le chauffeur.";
+    }
+  }, [isAssignmentEnabled, order.status]);
   const canDownloadProof = Boolean(order.documents?.proofOfDeliveryUrl && order.status === "LIVRE");
   const canDownloadPurchase = Boolean(order.documents?.purchaseOrderUrl);
 
@@ -487,23 +547,44 @@ const AdminOrderDetailPage = () => {
                     <p className="font-medium">{order.assignedDriver.vehicle}</p>
                   </div>
                   <Badge variant="outline">{order.assignedDriver.availability}</Badge>
-                  <Button
-                    className="w-full"
-                    onClick={() => setIsAssignModalOpen(true)}
-                    disabled={!isAssignmentEnabled}
-                  >
-                    <UserPlus className="mr-2 h-4 w-4" /> Changer de chauffeur
-                  </Button>
+                  {canManageAssignment ? (
+                    <div className="space-y-2">
+                      <Button
+                        className="w-full"
+                        onClick={() => setIsAssignModalOpen(true)}
+                        disabled={!isAssignmentEnabled}
+                      >
+                        <UserPlus className="mr-2 h-4 w-4" /> Changer de chauffeur
+                      </Button>
+                      {!isAssignmentEnabled && assignmentDisabledMessage && (
+                        <p className="text-xs text-muted-foreground">{assignmentDisabledMessage}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs italic text-muted-foreground">
+                      Contactez un administrateur pour modifier le chauffeur.
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-3">
                   <p className="text-sm text-muted-foreground">Aucun chauffeur n'est encore affecté.</p>
-                  <Button className="w-full" onClick={() => setIsAssignModalOpen(true)} disabled={!isAssignmentEnabled}>
-                    <UserPlus className="mr-2 h-4 w-4" /> Affecter un chauffeur
-                  </Button>
-                  {!isAssignmentEnabled && (
-                    <p className="text-xs text-muted-foreground">
-                      L'affectation est disponible uniquement lorsque la commande est en attente d'affectation.
+                  {canManageAssignment ? (
+                    <div className="space-y-2">
+                      <Button
+                        className="w-full"
+                        onClick={() => setIsAssignModalOpen(true)}
+                        disabled={!isAssignmentEnabled}
+                      >
+                        <UserPlus className="mr-2 h-4 w-4" /> Affecter un chauffeur
+                      </Button>
+                      {!isAssignmentEnabled && assignmentDisabledMessage && (
+                        <p className="text-xs text-muted-foreground">{assignmentDisabledMessage}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs italic text-muted-foreground">
+                      Vous n'avez pas les droits pour affecter un chauffeur.
                     </p>
                   )}
                 </div>
@@ -551,6 +632,7 @@ const AdminOrderDetailPage = () => {
           }}
           currentDriverId={order.assignedDriver?.id ?? null}
           allowAssignment={isAssignmentEnabled}
+          requirements={assignmentRequirements}
         />
       )}
 

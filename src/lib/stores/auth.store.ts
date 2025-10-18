@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-export type UserRole = "admin" | "client" | "driver";
+export type UserRole = "admin" | "client" | "driver" | "dispatch";
 
 export interface AuthUser {
   id: string;

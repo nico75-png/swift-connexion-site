@@ -23,6 +23,7 @@ import ClientOrders from "./pages/client/Orders";
 import ClientOrderDetail from "./pages/client/OrderDetail";
 import CreateOrder from "./pages/client/CreateOrder";
 import ClientInvoices from "./pages/client/Invoices";
+import ClientInvoicePayment from "./pages/client/InvoicePayment";
 import ClientExpenses from "./pages/client/Expenses";
 import ClientMessages from "./pages/client/Messages";
 import ClientProfile from "./pages/client/Profile";
@@ -60,6 +61,7 @@ const App = () => (
           <Route path="/espace-client/commandes/:id" element={<ClientOrderDetail />} />
           <Route path="/espace-client/creer-commande" element={<CreateOrder />} />
           <Route path="/espace-client/factures" element={<ClientInvoices />} />
+          <Route path="/espace-client/factures/:invoiceId/paiement" element={<ClientInvoicePayment />} />
           <Route path="/espace-client/depenses" element={<ClientExpenses />} />
           <Route path="/espace-client/messages" element={<ClientMessages />} />
           <Route path="/espace-client/messages/:threadId" element={<ClientMessages />} />

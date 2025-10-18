@@ -24,6 +24,8 @@ const ClientPreferences = () => {
     { id: "1", name: "Siège social", address: "123 Avenue de Paris, 75001 Paris" },
     { id: "2", name: "Entrepôt", address: "45 Rue du Commerce, 92100 Boulogne" },
   ]);
+  const [newAddressName, setNewAddressName] = useState("");
+  const [newAddressLine, setNewAddressLine] = useState("");
 
   const sector = useMemo(() => currentClient?.sector as Sector | undefined, [currentClient?.sector]);
   const sectorLabel = sector ? SECTOR_LABELS[sector] ?? sector : "Non défini";
@@ -33,6 +35,25 @@ const ClientPreferences = () => {
   };
 
   const handleAddAddress = () => {
+    if (!newAddressName.trim() || !newAddressLine.trim()) {
+      toast.error("Veuillez renseigner un libellé et une adresse");
+      return;
+    }
+
+    const id = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `addr-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+    setAddresses((prev) => [
+      ...prev,
+      {
+        id,
+        name: newAddressName.trim(),
+        address: newAddressLine.trim(),
+      },
+    ]);
+    setNewAddressName("");
+    setNewAddressLine("");
     toast.success("Adresse ajoutée");
   };
 
@@ -50,7 +71,7 @@ const ClientPreferences = () => {
   return (
     <DashboardLayout
       sidebar={<ClientSidebar />}
-      topbar={<Topbar userName="Jean Dupont" />}
+      topbar={<Topbar userName={currentClient?.contactName ?? "Client"} />}
     >
       <div className="max-w-3xl space-y-6">
         {/* En-tête */}
@@ -107,10 +128,24 @@ const ClientPreferences = () => {
                 </Button>
               </div>
             ))}
-            <Button variant="outline" className="w-full" onClick={handleAddAddress}>
-              <Plus className="h-4 w-4 mr-2" />
-              Ajouter une adresse
-            </Button>
+            <div className="grid gap-3 rounded-lg border border-dashed border-muted-foreground/40 p-4">
+              <div className="grid gap-2">
+                <Label>Libellé</Label>
+                <Input value={newAddressName} onChange={(event) => setNewAddressName(event.target.value)} placeholder="Ex : Cabinet secondaire" />
+              </div>
+              <div className="grid gap-2">
+                <Label>Adresse complète</Label>
+                <Input
+                  value={newAddressLine}
+                  onChange={(event) => setNewAddressLine(event.target.value)}
+                  placeholder="Ex : 12 Rue de Lyon, 75012 Paris"
+                />
+              </div>
+              <Button variant="outline" className="w-full" onClick={handleAddAddress}>
+                <Plus className="h-4 w-4 mr-2" />
+                Ajouter une adresse
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

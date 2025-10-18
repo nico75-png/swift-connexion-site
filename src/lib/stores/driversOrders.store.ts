@@ -204,6 +204,22 @@ const STORAGE_KEYS = {
   notifications: "oc_notifications",
 } as const;
 
+const isBrowser = typeof window !== "undefined";
+
+const purgeStoredDrivers = () => {
+  if (!isBrowser) {
+    return;
+  }
+
+  try {
+    window.localStorage.removeItem(STORAGE_KEYS.drivers);
+  } catch (error) {
+    console.warn("Unable to purge drivers store", error);
+  }
+};
+
+purgeStoredDrivers();
+
 export const generateId = () => {
   const globalScope = globalThis as { crypto?: Crypto };
   if (globalScope.crypto?.randomUUID) {
@@ -254,8 +270,6 @@ const safeParse = <T,>(value: string | null, fallback: T): T => {
     return fallback;
   }
 };
-
-const isBrowser = typeof window !== "undefined";
 
 const initStore = <T,>(key: string, defaultValue: T) => {
   if (!isBrowser) {

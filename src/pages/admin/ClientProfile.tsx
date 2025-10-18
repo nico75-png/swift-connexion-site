@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Download, Edit, Mail, Phone, MapPin } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -43,11 +43,72 @@ import {
   disableCustomerAccount,
   sendEmailToCustomer,
 } from "@/lib/services/customer.service";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 /**
  * Page admin - Profil détaillé d'un client
  * Données générales, historique commandes, dépenses, factures
  */
+const ADMIN_ID = "admin-1";
+
+const SECTOR_OPTIONS = [
+  "Santé & Médical",
+  "Juridique",
+  "Optique",
+  "Logistique",
+  "Retail",
+  "Technologie",
+  "Autre",
+];
+
+const extractContactNames = (fullName: string) => {
+  if (!fullName.trim()) {
+    return { firstName: "", lastName: "" };
+  }
+
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) {
+    return { firstName: parts[0], lastName: "" };
+  }
+
+  return {
+    firstName: parts[0],
+    lastName: parts.slice(1).join(" "),
+  };
+};
+
+const formatSiret = (value: string) => {
+  const digits = value.replace(/\D/g, "");
+  if (!digits) {
+    return "";
+  }
+
+  const first = digits.slice(0, 3);
+  const second = digits.slice(3, 6);
+  const third = digits.slice(6, 9);
+  const rest = digits.slice(9);
+
+  return [first, second, third, rest].filter(Boolean).join(" ").trim();
+};
+
 const AdminClientProfile = () => {
   const { id } = useParams();
   const { toast } = useToast();
@@ -74,6 +135,23 @@ const AdminClientProfile = () => {
   const [isEmailSending, setIsEmailSending] = useState(false);
   const [isCalling, setIsCalling] = useState(false);
   const [isDisabling, setIsDisabling] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [formValues, setFormValues] = useState(() => {
+    const contact = extractContactNames(client.contact);
+
+    return {
+      company: client.company,
+      contactFirstName: contact.firstName,
+      contactLastName: contact.lastName,
+      email: client.email,
+      phone: client.phone,
+      address: client.address,
+      siret: client.siret.replace(/\D/g, ""),
+      sector: client.sector,
+      isActive: client.status === "Actif",
+    };
+  });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const clientRecord = useMemo<ClientRecord>(
     () => ({
@@ -100,6 +178,27 @@ const AdminClientProfile = () => {
 
   const handleOrderDialogChange = (open: boolean) => {
     setIsOrderDialogOpen(open);
+  };
+
+  const handleEditOpenChange = (open: boolean) => {
+    setIsEditOpen(open);
+    if (open) {
+      const contact = extractContactNames(client.contact);
+      setFormValues({
+        company: client.company,
+        contactFirstName: contact.firstName,
+        contactLastName: contact.lastName,
+        email: client.email,
+        phone: client.phone,
+        address: client.address,
+        siret: client.siret.replace(/\D/g, ""),
+        sector: client.sector,
+        isActive: client.status === "Actif",
+      });
+      setFormErrors({});
+    } else {
+      setFormErrors({});
+    }
   };
 
   const handleOrderCreated = (updatedClient: ClientRecord) => {
@@ -242,6 +341,106 @@ const AdminClientProfile = () => {
     });
   };
 
+  const handleFormChange = (field: string, value: string | boolean) => {
+    setFormValues((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+  };
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phoneDigits = formValues.phone.replace(/\D/g, "");
+    const siretDigits = formValues.siret.replace(/\D/g, "");
+
+    if (!formValues.company.trim()) {
+      errors.company = "Le nom de l'entreprise est requis";
+    }
+    if (!formValues.contactFirstName.trim()) {
+      errors.contactFirstName = "Le prénom est requis";
+    }
+    if (!formValues.contactLastName.trim()) {
+      errors.contactLastName = "Le nom est requis";
+    }
+    if (!formValues.email.trim() || !emailRegex.test(formValues.email)) {
+      errors.email = "Email invalide";
+    }
+    if (!formValues.phone.trim() || phoneDigits.length < 10) {
+      errors.phone = "Téléphone invalide";
+    }
+    if (!formValues.address.trim()) {
+      errors.address = "L'adresse postale est requise";
+    }
+    if (!siretDigits) {
+      errors.siret = "Le SIRET est requis";
+    } else if (!/^[0-9]+$/.test(siretDigits) || siretDigits.length !== 14) {
+      errors.siret = "Le SIRET doit contenir 14 chiffres";
+    }
+    if (!formValues.sector.trim()) {
+      errors.sector = "Le secteur est requis";
+    }
+
+    return errors;
+  };
+
+  const handleSubmitForm = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const errors = validateForm();
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
+    const formattedSiret = formatSiret(formValues.siret);
+    const updatedClient = {
+      ...client,
+      company: formValues.company.trim(),
+      contact: `${formValues.contactFirstName.trim()} ${formValues.contactLastName.trim()}`.trim(),
+      email: formValues.email.trim(),
+      phone: formValues.phone.trim(),
+      address: formValues.address.trim(),
+      siret: formattedSiret,
+      sector: formValues.sector,
+      status: formValues.isActive ? "Actif" : "Inactif",
+    };
+
+    const changes = Object.entries(updatedClient).reduce<Record<string, { before: unknown; after: unknown }>>(
+      (acc, [key, value]) => {
+        const previousValue = (client as Record<string, unknown>)[key];
+        if (previousValue !== value) {
+          acc[key] = { before: previousValue, after: value };
+        }
+        return acc;
+      },
+      {},
+    );
+
+    setClient(updatedClient);
+    setIsEditOpen(false);
+    setFormErrors({});
+    toast({
+      title: "Modification enregistrée",
+      description: "✅ Les informations du client ont été mises à jour avec succès.",
+    });
+
+    if (Object.keys(changes).length > 0) {
+      const auditLog = {
+        adminId: ADMIN_ID,
+        timestamp: new Date().toISOString(),
+        clientId: client.id,
+        changes,
+      };
+      console.info("[AUDIT] Client update", auditLog);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditOpen(false);
+    setFormErrors({});
+  };
+
   return (
     <>
       <DashboardLayout
@@ -257,10 +456,155 @@ const AdminClientProfile = () => {
             </Button>
           </Link>
           <div className="flex gap-2">
-            <Button variant="outline">
-              <Edit className="h-4 w-4 mr-2" />
-              Modifier
-            </Button>
+            <Sheet open={isEditOpen} onOpenChange={handleEditOpenChange}>
+              <SheetTrigger asChild>
+                <Button variant="outline">
+                  <Edit className="h-4 w-4 mr-2" />
+                  Modifier
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
+                <form onSubmit={handleSubmitForm} className="space-y-6">
+                  <SheetHeader>
+                    <SheetTitle>Modifier les informations du client</SheetTitle>
+                    <SheetDescription>
+                      Cette interface est réservée aux administrateurs et permet de mettre à jour les
+                      données du client sans quitter la page.
+                    </SheetDescription>
+                  </SheetHeader>
+
+                  <div className="grid gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="company">Nom de l'entreprise</Label>
+                      <Input
+                        id="company"
+                        value={formValues.company}
+                        onChange={(event) => handleFormChange("company", event.target.value)}
+                      />
+                      {formErrors.company && (
+                        <p className="text-sm text-destructive">{formErrors.company}</p>
+                      )}
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="contact-first">Prénom</Label>
+                        <Input
+                          id="contact-first"
+                          value={formValues.contactFirstName}
+                          onChange={(event) => handleFormChange("contactFirstName", event.target.value)}
+                        />
+                        {formErrors.contactFirstName && (
+                          <p className="text-sm text-destructive">{formErrors.contactFirstName}</p>
+                        )}
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="contact-last">Nom</Label>
+                        <Input
+                          id="contact-last"
+                          value={formValues.contactLastName}
+                          onChange={(event) => handleFormChange("contactLastName", event.target.value)}
+                        />
+                        {formErrors.contactLastName && (
+                          <p className="text-sm text-destructive">{formErrors.contactLastName}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formValues.email}
+                        onChange={(event) => handleFormChange("email", event.target.value)}
+                      />
+                      {formErrors.email && <p className="text-sm text-destructive">{formErrors.email}</p>}
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="phone">Téléphone</Label>
+                      <Input
+                        id="phone"
+                        value={formValues.phone}
+                        onChange={(event) => handleFormChange("phone", event.target.value)}
+                      />
+                      {formErrors.phone && <p className="text-sm text-destructive">{formErrors.phone}</p>}
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="address">Adresse postale</Label>
+                      <Textarea
+                        id="address"
+                        value={formValues.address}
+                        onChange={(event) => handleFormChange("address", event.target.value)}
+                        rows={3}
+                      />
+                      {formErrors.address && <p className="text-sm text-destructive">{formErrors.address}</p>}
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="siret">SIRET</Label>
+                      <Input
+                        id="siret"
+                        value={formValues.siret}
+                        onChange={(event) =>
+                          handleFormChange("siret", event.target.value.replace(/\D/g, ""))
+                        }
+                        inputMode="numeric"
+                        maxLength={14}
+                      />
+                      {formErrors.siret && <p className="text-sm text-destructive">{formErrors.siret}</p>}
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="sector">Secteur</Label>
+                      <Select
+                        value={formValues.sector}
+                        onValueChange={(value) => handleFormChange("sector", value)}
+                      >
+                        <SelectTrigger id="sector">
+                          <SelectValue placeholder="Sélectionner un secteur" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SECTOR_OPTIONS.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {formErrors.sector && <p className="text-sm text-destructive">{formErrors.sector}</p>}
+                    </div>
+
+                    <div className="flex items-center justify-between rounded-md border p-4">
+                      <div>
+                        <p className="font-medium">Statut du compte</p>
+                        <p className="text-sm text-muted-foreground">
+                          Accessible uniquement aux administrateurs : Actif / Désactivé
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Désactivé</span>
+                        <Switch
+                          checked={formValues.isActive}
+                          onCheckedChange={(checked) => handleFormChange("isActive", checked)}
+                          aria-label="Statut du compte"
+                        />
+                        <span className="text-sm font-medium">Actif</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <SheetFooter className="flex sm:flex-row sm:justify-end gap-2">
+                    <Button type="button" variant="ghost" onClick={handleCancelEdit}>
+                      Annuler
+                    </Button>
+                    <Button type="submit">Enregistrer les modifications</Button>
+                  </SheetFooter>
+                </form>
+              </SheetContent>
+            </Sheet>
             <Button variant="outline" onClick={handleDownloadSummary}>
               <Download className="h-4 w-4 mr-2" />
               Synthèse PDF

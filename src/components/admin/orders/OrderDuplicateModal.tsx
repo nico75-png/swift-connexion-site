@@ -64,6 +64,7 @@ const OrderDuplicateModal = ({ sourceOrder, open, onOpenChange, onCreated }: Ord
       const newOrder = await createOrderFromDuplicateDraft({
         client: formValues.client,
         type: formValues.type,
+        sector: sourceOrder.sector,
         pickupAddress: formValues.pickupAddress,
         dropoffAddress: formValues.dropoffAddress,
         date: formValues.date,

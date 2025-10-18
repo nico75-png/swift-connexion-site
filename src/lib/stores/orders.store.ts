@@ -1,4 +1,6 @@
 import { formatISO } from "date-fns";
+import { ADMIN_ORDER_SEEDS, CLIENT_DIRECTORY, type AdminOrderSeed } from "./data/adminOrderSeeds";
+import { defaultDrivers, type DriverStatus } from "./driversOrders.store";
 
 export type OrderStatus =
   | "EN_ATTENTE_AFFECTATION"
@@ -84,203 +86,176 @@ export interface OrderDetailRecord {
 
 const STORAGE_KEY = "oc_admin_order_details";
 
-const defaultOrders: OrderDetailRecord[] = [
-  {
-    id: "010",
-    orderNumber: "CMD-010",
-    status: "EN_ATTENTE_AFFECTATION",
-    amountTtc: 198.5,
+const DRIVER_AVAILABILITY_LABEL: Record<DriverStatus, OrderAssignedDriver["availability"]> = {
+  AVAILABLE: "Disponible",
+  ON_TRIP: "En course",
+  PAUSED: "Indisponible",
+};
+
+const STATUS_SEQUENCE: Record<AdminOrderSeed["status"], OrderStatus[]> = {
+  "En attente": ["EN_ATTENTE_AFFECTATION"],
+  "Enlevé": ["EN_ATTENTE_AFFECTATION", "EN_ATTENTE_ENLEVEMENT", "ENLEVE"],
+  "En cours": ["EN_ATTENTE_AFFECTATION", "EN_ATTENTE_ENLEVEMENT", "ENLEVE", "EN_COURS"],
+  "Livré": [
+    "EN_ATTENTE_AFFECTATION",
+    "EN_ATTENTE_ENLEVEMENT",
+    "ENLEVE",
+    "EN_COURS",
+    "LIVRE",
+  ],
+  "Annulé": ["EN_ATTENTE_AFFECTATION", "ANNULEE"],
+};
+
+const STATUS_TIMINGS: Record<OrderStatus, number> = {
+  EN_ATTENTE_AFFECTATION: -180,
+  EN_ATTENTE_ENLEVEMENT: -60,
+  ENLEVE: -5,
+  EN_COURS: 30,
+  LIVRE: 90,
+  ANNULEE: -45,
+  INCIDENT: 0,
+};
+
+const toIsoDateTime = (date: string, time: string) => new Date(`${date}T${time}:00+02:00`).toISOString();
+
+const addMinutes = (isoDate: string, minutes: number) =>
+  new Date(new Date(isoDate).getTime() + minutes * 60 * 1000).toISOString();
+
+const resolveStatusAuthor = (status: OrderStatus, seed: AdminOrderSeed): string => {
+  if (status === "ENLEVE" || status === "EN_COURS" || status === "LIVRE") {
+    return seed.driverId ?? "system";
+  }
+  return "admin.centrale";
+};
+
+const findDriver = (driverId: string | null | undefined) =>
+  driverId ? defaultDrivers.find((driver) => driver.id === driverId) ?? null : null;
+
+const buildAssignedDriver = (seed: AdminOrderSeed): OrderAssignedDriver | undefined => {
+  const driver = findDriver(seed.driverId);
+  if (!driver) {
+    return undefined;
+  }
+  const vehicleLabel = driver.vehicle?.type
+    ? `${driver.vehicle.type} · ${driver.vehicle.capacity ?? ""}`.trim()
+    : "Véhicule";
+  return {
+    id: driver.id,
+    name: driver.name,
+    phone: driver.phone,
+    vehicle: vehicleLabel,
+    availability: DRIVER_AVAILABILITY_LABEL[driver.status],
+  };
+};
+
+const buildStatusHistory = (seed: AdminOrderSeed, pickupAt: string): OrderStatusHistoryEntry[] => {
+  const sequence = STATUS_SEQUENCE[seed.status] ?? ["EN_ATTENTE_AFFECTATION"];
+  return sequence
+    .map((status, index) => {
+      const offset = STATUS_TIMINGS[status] ?? index * 15;
+      const occurredAt = addMinutes(pickupAt, offset);
+      const note =
+        status === "ANNULEE"
+          ? "Annulation confirmée suite à la demande du client"
+          : undefined;
+      return {
+        id: `ST-${seed.number}-${status}`,
+        status,
+        occurredAt,
+        author: resolveStatusAuthor(status, seed),
+        note,
+      } satisfies OrderStatusHistoryEntry;
+    })
+    .sort((a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime());
+};
+
+const buildAssignmentEvents = (seed: AdminOrderSeed, pickupAt: string): OrderAssignmentEvent[] => {
+  if (!seed.driverId) {
+    return [];
+  }
+  const driver = findDriver(seed.driverId);
+  return [
+    {
+      id: `AS-${seed.number}-ASSIGN`,
+      type: "ASSIGNED",
+      driverId: seed.driverId,
+      driverName: driver?.name ?? seed.driverId,
+      occurredAt: addMinutes(pickupAt, -45),
+      author: "admin.centrale",
+      note: seed.status === "Annulé" ? "Assignation initiale (commande annulée)" : "Assignation confirmée",
+    },
+  ];
+};
+
+const buildDocuments = (seed: AdminOrderSeed): OrderDocuments => {
+  const baseUrl = "https://files.one-connexion.test";
+  const documents: OrderDocuments = {
+    purchaseOrderUrl: `${baseUrl}/purchase-orders/${seed.number}.pdf`,
+  };
+  if (seed.status === "Livré") {
+    documents.proofOfDeliveryUrl = `${baseUrl}/pods/${seed.number}.pdf`;
+  }
+  return documents;
+};
+
+const buildDetailRecord = (seed: AdminOrderSeed): OrderDetailRecord => {
+  const pickupAt = toIsoDateTime(seed.date, seed.time);
+  const customerInfo = CLIENT_DIRECTORY[seed.client];
+  const statusHistory = buildStatusHistory(seed, pickupAt);
+  const assignmentEvents = buildAssignmentEvents(seed, pickupAt);
+  const assignedDriver = buildAssignedDriver(seed);
+  const createdAt = addMinutes(pickupAt, -200);
+  const updatedAt = statusHistory[statusHistory.length - 1]?.occurredAt ?? pickupAt;
+
+  const administrativeEvents: OrderAdministrativeEvent[] =
+    seed.status === "Annulé"
+      ? [
+          {
+            id: `ADM-${seed.number}-CANCEL`,
+            label: "Commande annulée",
+            occurredAt: updatedAt,
+            author: "admin.centrale",
+            meta: { origin: "client" },
+          },
+        ]
+      : [];
+
+  const status = statusHistory[statusHistory.length - 1]?.status ?? "EN_ATTENTE_AFFECTATION";
+
+  return {
+    id: seed.number,
+    orderNumber: seed.number,
+    status,
+    amountTtc: seed.amount,
     currency: "EUR",
-    pickupAt: "2025-02-02T08:30:00+01:00",
-    transportType: "Express",
+    pickupAt,
+    transportType: seed.transportType,
     customer: {
-      companyName: "One Logistics",
-      siret: "81234567800024",
+      companyName: seed.client,
+      siret: customerInfo?.siret ?? "00000000000000",
       contact: {
-        name: "Sophie Martin",
-        email: "sophie.martin@onelogistics.test",
-        phone: "+33102030405",
+        name: customerInfo?.contact.name ?? "Contact principal",
+        email: customerInfo?.contact.email ?? "contact@client.test",
+        phone: customerInfo?.contact.phone ?? "+33100000000",
       },
     },
-    pickupAddress: "17 Rue des Entrepreneurs, 75015 Paris",
-    deliveryAddress: "2 Avenue de la République, 75011 Paris",
-    weight: 320,
-    volume: 6.5,
-    driverInstructions: "Contactez le client 15 minutes avant l'arrivée.",
-    documents: {
-      purchaseOrderUrl: "https://files.one-connexion.test/purchase-orders/CMD-010.pdf",
-    },
-    statusHistory: [
-      {
-        id: "ST-010-1",
-        status: "EN_ATTENTE_AFFECTATION",
-        occurredAt: "2025-01-31T09:12:00+01:00",
-        author: "admin.julie",
-        note: "Commande créée depuis l'espace client",
-      },
-    ],
-    assignmentEvents: [],
-    administrativeEvents: [],
-    createdAt: "2025-01-31T09:12:00+01:00",
-    updatedAt: "2025-01-31T09:12:00+01:00",
+    pickupAddress: seed.pickupAddress,
+    deliveryAddress: seed.deliveryAddress,
+    weight: Number(seed.weight.toFixed(1)),
+    volume: Number(seed.volume.toFixed(1)),
+    driverInstructions: seed.instructions,
+    assignedDriver,
+    documents: buildDocuments(seed),
+    statusHistory,
+    assignmentEvents,
+    administrativeEvents,
+    createdAt,
+    updatedAt,
     excludedDriverIds: [],
-  },
-  {
-    id: "011",
-    orderNumber: "CMD-011",
-    status: "EN_COURS",
-    amountTtc: 142.0,
-    currency: "EUR",
-    pickupAt: "2025-02-01T14:00:00+01:00",
-    transportType: "Standard",
-    customer: {
-      companyName: "Café de la Gare",
-      siret: "90234567800011",
-      contact: {
-        name: "Paul Hernandez",
-        email: "paul.hernandez@cafedelagare.test",
-        phone: "+33106070809",
-      },
-    },
-    pickupAddress: "5 Place du 8 Mai 1945, 75010 Paris",
-    deliveryAddress: "12 Rue Oberkampf, 75011 Paris",
-    weight: 120,
-    volume: 2.4,
-    driverInstructions: "Livraison avant ouverture",
-    documents: {
-      purchaseOrderUrl: "https://files.one-connexion.test/purchase-orders/CMD-011.pdf",
-      proofOfDeliveryUrl: "https://files.one-connexion.test/pods/CMD-011.pdf",
-    },
-    assignedDriver: {
-      id: "DRV-101",
-      name: "Marc Dubois",
-      phone: "+33612345678",
-      vehicle: "Fourgon · 12 m³",
-      availability: "En course",
-    },
-    statusHistory: [
-      {
-        id: "ST-011-1",
-        status: "EN_ATTENTE_AFFECTATION",
-        occurredAt: "2025-01-30T11:20:00+01:00",
-        author: "admin.julie",
-      },
-      {
-        id: "ST-011-2",
-        status: "EN_ATTENTE_ENLEVEMENT",
-        occurredAt: "2025-01-31T09:45:00+01:00",
-        author: "admin.julie",
-      },
-      {
-        id: "ST-011-3",
-        status: "ENLEVE",
-        occurredAt: "2025-02-01T14:25:00+01:00",
-        author: "DRV-101",
-      },
-      {
-        id: "ST-011-4",
-        status: "EN_COURS",
-        occurredAt: "2025-02-01T14:40:00+01:00",
-        author: "DRV-101",
-      },
-    ],
-    assignmentEvents: [
-      {
-        id: "AS-011-1",
-        type: "ASSIGNED",
-        driverId: "DRV-101",
-        driverName: "Marc Dubois",
-        occurredAt: "2025-01-31T09:45:00+01:00",
-        author: "admin.julie",
-        note: "Affectation confirmée",
-      },
-    ],
-    administrativeEvents: [],
-    createdAt: "2025-01-30T11:20:00+01:00",
-    updatedAt: "2025-02-01T14:40:00+01:00",
-    excludedDriverIds: [],
-  },
-  {
-    id: "012",
-    orderNumber: "CMD-012",
-    status: "LIVRE",
-    amountTtc: 298.9,
-    currency: "EUR",
-    pickupAt: "2025-01-20T07:45:00+01:00",
-    transportType: "Température dirigée",
-    customer: {
-      companyName: "Pharmacie Centrale",
-      siret: "80345678900017",
-      contact: {
-        name: "Claire Nguyen",
-        email: "claire.nguyen@pharmaciecentrale.test",
-        phone: "+33107080910",
-      },
-    },
-    pickupAddress: "3 Rue de la Paix, 75002 Paris",
-    deliveryAddress: "88 Avenue Victor Hugo, 75116 Paris",
-    weight: 80,
-    volume: 1.6,
-    driverInstructions: "Confidentiel - signature obligatoire",
-    documents: {
-      purchaseOrderUrl: "https://files.one-connexion.test/purchase-orders/CMD-012.pdf",
-      proofOfDeliveryUrl: "https://files.one-connexion.test/pods/CMD-012.pdf",
-    },
-    assignedDriver: {
-      id: "DRV-104",
-      name: "Nadia Benali",
-      phone: "+33699887766",
-      vehicle: "Utilitaire · 8 m³",
-      availability: "Disponible",
-    },
-    statusHistory: [
-      {
-        id: "ST-012-1",
-        status: "EN_ATTENTE_AFFECTATION",
-        occurredAt: "2025-01-18T10:05:00+01:00",
-        author: "admin.adrien",
-      },
-      {
-        id: "ST-012-2",
-        status: "EN_ATTENTE_ENLEVEMENT",
-        occurredAt: "2025-01-18T11:15:00+01:00",
-        author: "admin.adrien",
-      },
-      {
-        id: "ST-012-3",
-        status: "ENLEVE",
-        occurredAt: "2025-01-20T08:10:00+01:00",
-        author: "DRV-104",
-      },
-      {
-        id: "ST-012-4",
-        status: "EN_COURS",
-        occurredAt: "2025-01-20T08:35:00+01:00",
-        author: "DRV-104",
-      },
-      {
-        id: "ST-012-5",
-        status: "LIVRE",
-        occurredAt: "2025-01-20T09:05:00+01:00",
-        author: "DRV-104",
-      },
-    ],
-    assignmentEvents: [
-      {
-        id: "AS-012-1",
-        type: "ASSIGNED",
-        driverId: "DRV-104",
-        driverName: "Nadia Benali",
-        occurredAt: "2025-01-18T11:15:00+01:00",
-        author: "admin.adrien",
-      },
-    ],
-    administrativeEvents: [],
-    createdAt: "2025-01-18T10:05:00+01:00",
-    updatedAt: "2025-01-20T09:05:00+01:00",
-    excludedDriverIds: [],
-  },
-];
+  };
+};
+
+const defaultOrders: OrderDetailRecord[] = ADMIN_ORDER_SEEDS.map(buildDetailRecord);
 
 let memoryOrders = [...defaultOrders];
 

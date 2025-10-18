@@ -1,5 +1,6 @@
 import { differenceInMinutes, parseISO } from "date-fns";
 import { initGlobalOrderSeq, reconcileGlobalOrderSeq } from "@/lib/orderSequence";
+import { ADMIN_ORDER_SEEDS, type AdminOrderSeed } from "./data/adminOrderSeeds";
 
 export type DriverStatus = "AVAILABLE" | "ON_TRIP" | "PAUSED";
 
@@ -73,6 +74,7 @@ export interface OrderSchedule {
 export interface Order {
   id: string;
   client: string;
+  sector: string;
   type: string;
   status: string;
   amount: number;
@@ -110,6 +112,48 @@ const BLOCKING_SCHEDULED_STATUSES: ScheduledAssignmentStatus[] = ["PENDING", "PR
 
 export const isBlockingScheduledStatus = (status: ScheduledAssignmentStatus) =>
   BLOCKING_SCHEDULED_STATUSES.includes(status);
+
+const toIsoDateTime = (date: string, time: string) => new Date(`${date}T${time}:00+02:00`).toISOString();
+
+const addMinutes = (isoDate: string, minutes: number) =>
+  new Date(new Date(isoDate).getTime() + minutes * 60 * 1000).toISOString();
+
+const buildOrderFromSeed = (seed: AdminOrderSeed): Order => {
+  const scheduleStart = toIsoDateTime(seed.date, seed.time);
+  const scheduleEnd = addMinutes(scheduleStart, 75);
+  const assignedAt = seed.driverId ? addMinutes(scheduleStart, -30) : null;
+
+  const options =
+    seed.express || seed.fragile || seed.temperatureControlled
+      ? {
+          express: seed.express,
+          fragile: seed.fragile,
+          temperatureControlled: seed.temperatureControlled,
+        }
+      : undefined;
+
+  return {
+    id: seed.number,
+    client: seed.client,
+    sector: seed.sector,
+    type: seed.transportType,
+    status: seed.status,
+    amount: seed.amount,
+    schedule: {
+      start: scheduleStart,
+      end: scheduleEnd,
+    },
+    pickupAddress: seed.pickupAddress,
+    dropoffAddress: seed.deliveryAddress,
+    zoneRequirement: seed.zone,
+    volumeRequirement: `${seed.volume.toFixed(1)} m³`,
+    weight: `${seed.weight.toFixed(1)} kg`,
+    instructions: seed.instructions,
+    options,
+    driverId: seed.driverId ?? null,
+    driverAssignedAt: seed.driverId ? assignedAt : null,
+  };
+};
 
 export interface Assignment {
   id: string;
@@ -168,7 +212,7 @@ export const generateId = () => {
   return `id-${Math.random().toString(36).slice(2, 11)}`;
 };
 
-const defaultDrivers: Driver[] = [
+export const defaultDrivers: Driver[] = [
   {
     id: "DRV-101",
     name: "Marc Dubois",
@@ -248,147 +292,34 @@ const defaultDrivers: Driver[] = [
   },
 ];
 
-const defaultOrders: Order[] = [
-  {
-    id: "010",
-    client: "Cabinet Dupont",
-    type: "Express",
-    status: "En cours",
-    amount: 45.5,
-    schedule: {
-      start: "2025-01-15T13:45:00+01:00",
-      end: "2025-01-15T14:45:00+01:00",
-    },
-    pickupAddress: "12 rue de la Paix, 75002 Paris",
-    dropoffAddress: "45 avenue des Champs-Élysées, 75008 Paris",
-    zoneRequirement: "INTRA_PARIS",
-    volumeRequirement: "3 m³",
-    weight: "2.5 kg",
-    instructions: "Sonnez à l'interphone, code 1234",
-    driverId: "DRV-101",
-    driverAssignedAt: "2025-01-15T12:30:00+01:00",
-  },
-  {
-    id: "009",
-    client: "Optique Vision",
-    type: "Standard",
-    status: "Livré",
-    amount: 38,
-    schedule: {
-      start: "2025-01-15T12:30:00+01:00",
-      end: "2025-01-15T13:15:00+01:00",
-    },
-    pickupAddress: "115 rue Saint-Lazare, 75009 Paris",
-    dropoffAddress: "8 boulevard Saint-Germain, 75005 Paris",
-    zoneRequirement: "INTRA_PARIS",
-    volumeRequirement: "1 m³",
-    weight: "1.2 kg",
-    driverId: "DRV-102",
-    driverAssignedAt: "2025-01-15T11:15:00+01:00",
-  },
-  {
-    id: "1000",
-    client: "Lab Médical",
-    type: "Fragile",
-    status: "En attente",
-    amount: 52,
-    schedule: {
-      start: "2025-01-15T16:00:00+01:00",
-      end: "2025-01-15T17:30:00+01:00",
-    },
-    pickupAddress: "9 rue des Écoles, 75005 Paris",
-    dropoffAddress: "16 avenue Foch, 75116 Paris",
-    zoneRequirement: "PETITE_COURONNE",
-    volumeRequirement: "2 m³",
-    weight: "3.8 kg",
-    driverId: null,
-    driverAssignedAt: null,
-  },
-  {
-    id: "1001",
-    client: "Avocat & Associés",
-    type: "Express",
-    status: "Enlevé",
-    amount: 41,
-    schedule: {
-      start: "2025-01-15T09:45:00+01:00",
-      end: "2025-01-15T10:45:00+01:00",
-    },
-    pickupAddress: "34 rue Vivienne, 75002 Paris",
-    dropoffAddress: "1 place Vendôme, 75001 Paris",
-    zoneRequirement: "INTRA_PARIS",
-    volumeRequirement: "1 m³",
-    weight: "1.8 kg",
-    driverId: "DRV-104",
-    driverAssignedAt: "2025-01-15T09:00:00+01:00",
-  },
-  {
-    id: "1002",
-    client: "Pharmacie Centrale",
-    type: "Standard",
-    status: "Livré",
-    amount: 35,
-    schedule: {
-      start: "2025-01-15T08:30:00+01:00",
-      end: "2025-01-15T09:15:00+01:00",
-    },
-    pickupAddress: "72 rue de Rennes, 75006 Paris",
-    dropoffAddress: "10 rue Oberkampf, 75011 Paris",
-    zoneRequirement: "INTRA_PARIS",
-    volumeRequirement: "0.8 m³",
-    weight: "1.1 kg",
-    driverId: "DRV-103",
-    driverAssignedAt: "2025-01-15T07:30:00+01:00",
-  },
-  {
-    id: "1003",
-    client: "Cabinet Martin",
-    type: "Express",
-    status: "Annulé",
-    amount: 48,
-    schedule: {
-      start: "2025-01-14T17:00:00+01:00",
-      end: "2025-01-14T17:30:00+01:00",
-    },
-    pickupAddress: "18 rue du Bac, 75007 Paris",
-    dropoffAddress: "98 rue de Rivoli, 75001 Paris",
-    zoneRequirement: "INTRA_PARIS",
-    volumeRequirement: "1.5 m³",
-    weight: "2.1 kg",
-    driverId: null,
-    driverAssignedAt: null,
-  },
-];
+const defaultOrders: Order[] = ADMIN_ORDER_SEEDS.map(buildOrderFromSeed);
+
+const getOrderSchedule = (orderId: string) => {
+  const match = defaultOrders.find((order) => order.id === orderId);
+  if (!match) {
+    const fallback = new Date().toISOString();
+    return { start: fallback, end: fallback };
+  }
+  return match.schedule;
+};
+
+const buildAssignment = (id: string, orderId: string, driverId: string): Assignment => {
+  const schedule = getOrderSchedule(orderId);
+  return {
+    id,
+    orderId,
+    driverId,
+    start: schedule.start,
+    end: schedule.end,
+  };
+};
 
 const defaultAssignments: Assignment[] = [
-  {
-    id: "ASN-1",
-    orderId: "010",
-    driverId: "DRV-101",
-    start: "2025-01-15T13:45:00+01:00",
-    end: "2025-01-15T14:45:00+01:00",
-  },
-  {
-    id: "ASN-2",
-    orderId: "009",
-    driverId: "DRV-102",
-    start: "2025-01-15T12:30:00+01:00",
-    end: "2025-01-15T13:15:00+01:00",
-  },
-  {
-    id: "ASN-3",
-    orderId: "1001",
-    driverId: "DRV-104",
-    start: "2025-01-15T09:45:00+01:00",
-    end: "2025-01-15T10:45:00+01:00",
-  },
-  {
-    id: "ASN-4",
-    orderId: "1002",
-    driverId: "DRV-103",
-    start: "2025-01-15T08:30:00+01:00",
-    end: "2025-01-15T09:15:00+01:00",
-  },
+  buildAssignment("ASN-001", "CMD-002", "DRV-103"),
+  buildAssignment("ASN-002", "CMD-003", "DRV-104"),
+  buildAssignment("ASN-003", "CMD-004", "DRV-101"),
+  buildAssignment("ASN-004", "CMD-007", "DRV-104"),
+  buildAssignment("ASN-005", "CMD-009", "DRV-102"),
 ];
 
 const defaultScheduledAssignments: ScheduledAssignment[] = [];
@@ -397,27 +328,37 @@ const defaultActivity: ActivityEntry[] = [
   {
     id: "ACT-1",
     type: "CREATE",
-    orderId: "010",
-    at: "2025-01-15T12:00:00+01:00",
+    orderId: "CMD-002",
+    at: addMinutes(getOrderSchedule("CMD-002").start, -120),
     by: "system",
-    message: "Commande créée",
+    message: "Commande importée depuis l'espace client",
   },
   {
     id: "ACT-2",
     type: "ASSIGN",
-    orderId: "010",
-    driverId: "DRV-101",
-    at: "2025-01-15T12:30:00+01:00",
-    by: "admin.sophie",
-    message: "Chauffeur Marc Dubois affecté",
+    orderId: "CMD-002",
+    driverId: "DRV-103",
+    at: addMinutes(getOrderSchedule("CMD-002").start, -45),
+    by: "admin.ines",
+    message: "Chauffeur Sophie Renard affecté à la tournée",
   },
   {
     id: "ACT-3",
     type: "STATUS_UPDATE",
-    orderId: "010",
-    at: "2025-01-15T13:00:00+01:00",
-    by: "DRV-101",
+    orderId: "CMD-002",
+    driverId: "DRV-103",
+    at: getOrderSchedule("CMD-002").start,
+    by: "DRV-103",
     message: "Statut mis à jour : Enlevé",
+  },
+  {
+    id: "ACT-4",
+    type: "STATUS_UPDATE",
+    orderId: "CMD-028",
+    driverId: "DRV-101",
+    at: addMinutes(getOrderSchedule("CMD-028").start, 45),
+    by: "DRV-101",
+    message: "Statut mis à jour : En cours de livraison",
   },
 ];
 
@@ -425,11 +366,29 @@ const defaultNotifications: NotificationEntry[] = [
   {
     id: "NOTIF-1",
     channel: "ADMIN",
-    orderId: "010",
+    orderId: "CMD-003",
+    driverId: "DRV-104",
+    read: false,
+    message: "Pierre Martin a confirmé la prise en charge de CMD-003",
+    createdAt: addMinutes(getOrderSchedule("CMD-003").start, -30),
+  },
+  {
+    id: "NOTIF-2",
+    channel: "ADMIN",
+    orderId: "CMD-028",
     driverId: "DRV-101",
+    read: false,
+    message: "Mise à jour statut CMD-028 : en cours de livraison",
+    createdAt: addMinutes(getOrderSchedule("CMD-028").start, 30),
+  },
+  {
+    id: "NOTIF-3",
+    channel: "ADMIN",
+    orderId: "CMD-009",
+    driverId: "DRV-102",
     read: true,
-    message: "Chauffeur Marc Dubois affecté à #010",
-    createdAt: "2025-01-15T12:30:00+01:00",
+    message: "Preuve de livraison importée pour CMD-009",
+    createdAt: addMinutes(getOrderSchedule("CMD-009").end, 20),
   },
 ];
 

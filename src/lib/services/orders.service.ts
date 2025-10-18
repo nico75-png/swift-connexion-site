@@ -8,6 +8,7 @@ import {
 } from "@/lib/stores/driversOrders.store";
 import { appendClientOrderFromCreate } from "@/lib/stores/clientOrders.store";
 import { getQuoteById } from "@/lib/services/quotes.service";
+import { SECTOR_DISPLAY_MAP } from "@/lib/stores/data/adminOrderSeeds";
 
 export interface CreateOrderPayload {
   customerId: string;
@@ -59,9 +60,13 @@ const buildNewOrder = (
   const scheduleStart = new Date(scheduleStartIso);
   const scheduleEnd = new Date(scheduleStart.getTime() + 60 * 60 * 1000);
 
+  const sectorLabel =
+    SECTOR_DISPLAY_MAP[payload.sector?.toUpperCase?.() ?? ""] ?? payload.sector ?? "B2B Express";
+
   return {
     id: orderId,
     client: options.customerCompany,
+    sector: sectorLabel,
     type: payload.transportType,
     status: "En attente",
     amount: payload.quoteAmount,

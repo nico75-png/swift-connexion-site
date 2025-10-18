@@ -7,10 +7,12 @@ import {
   type Order,
   type ZoneCode,
 } from "@/lib/stores/driversOrders.store";
+import { SECTOR_DISPLAY_MAP } from "@/lib/stores/data/adminOrderSeeds";
 
 export interface CreateOrderFromDraftPayload {
   client: string;
   type: string;
+  sector: string;
   pickupAddress: string;
   dropoffAddress: string;
   date: string;
@@ -61,6 +63,9 @@ export const createOrderFromDuplicateDraft = async (
   const scheduleStart = new Date(scheduleStartIso);
   const scheduleEnd = new Date(scheduleStart.getTime() + 60 * 60 * 1000);
 
+  const sectorLabel =
+    SECTOR_DISPLAY_MAP[payload.sector?.toUpperCase?.() ?? ""] ?? payload.sector ?? "B2B Express";
+
   const weightValue = parseNumber(payload.weight, "poids");
   const volumeValue = parseNumber(payload.volume, "volume");
 
@@ -68,6 +73,7 @@ export const createOrderFromDuplicateDraft = async (
   const newOrder: Order = {
     id: newOrderId,
     client: payload.client.trim(),
+    sector: sectorLabel,
     type: payload.type.trim() || "Standard",
     status: "En attente",
     amount: payload.amount,

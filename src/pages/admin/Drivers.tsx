@@ -832,7 +832,11 @@ const AdminDrivers = () => {
           </div>
           {filteredDrivers.length === 0 && (
             <div className="bg-white py-12 text-center">
-              <p className="text-muted-foreground">Aucun chauffeur trouvé</p>
+              <p className="text-muted-foreground">
+                {drivers.length === 0
+                  ? "Aucun chauffeur actif pour le moment."
+                  : "Aucun chauffeur ne correspond à vos filtres."}
+              </p>
             </div>
           )}
         </div>

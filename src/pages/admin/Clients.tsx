@@ -613,7 +613,11 @@ const AdminClients = () => {
 
           {filteredClients.length === 0 && (
             <div className="text-center py-12" role="status">
-              <p className="text-muted-foreground">Aucun client trouvé</p>
+              <p className="text-muted-foreground">
+                {clients.length === 0
+                  ? "Aucun client enregistré pour le moment."
+                  : "Aucun client ne correspond à votre recherche."}
+              </p>
             </div>
           )}
         </div>

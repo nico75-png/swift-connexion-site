@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, CheckCircle2, Loader2, Pencil, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Info, Loader2, Pencil, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import {
   ClientOrder,
@@ -380,6 +382,17 @@ export const ReorderModal = ({ draft, open, onCancel, onConfirm }: ReorderModalP
                   <p className="text-xs text-muted-foreground">Aucune option complémentaire</p>
                 )}
               </div>
+              <div className="sm:col-span-2">
+                <Alert className="border-primary/40 bg-primary/5">
+                  <AlertDescription className="flex items-start gap-2 text-xs text-primary sm:text-sm">
+                    <Info className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                    <span>
+                      💡 Le tarif est calculé uniquement sur la distance parcourue. Poids et volume sont conservés pour organiser
+                      la logistique et n&apos;influent pas sur le prix.
+                    </span>
+                  </AlertDescription>
+                </Alert>
+              </div>
             </section>
 
             <section className="rounded-xl border border-border bg-background p-4">
@@ -399,6 +412,15 @@ export const ReorderModal = ({ draft, open, onCancel, onConfirm }: ReorderModalP
 
               {isEditing ? (
                 <div className="mt-4 grid gap-4">
+                  <Alert className="border-primary/40 bg-primary/5">
+                    <AlertDescription className="flex items-start gap-2 text-xs text-primary sm:text-sm">
+                      <Info className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                      <span>
+                        💡 Le tarif final reste basé sur la distance. Mettez à jour le poids et le volume uniquement pour assurer
+                        une logistique adaptée.
+                      </span>
+                    </AlertDescription>
+                  </Alert>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <Label htmlFor="reorder-pickup">Date et heure d'enlèvement *</Label>
@@ -437,7 +459,24 @@ export const ReorderModal = ({ draft, open, onCancel, onConfirm }: ReorderModalP
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <Label htmlFor="reorder-weight">Poids total (kg) *</Label>
+                      <Label htmlFor="reorder-weight" className="flex items-center gap-2">
+                        Poids total (kg) *
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className="text-muted-foreground transition hover:text-primary"
+                              aria-label="À quoi sert l'information de poids"
+                            >
+                              <Info className="h-4 w-4" aria-hidden="true" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs text-sm">
+                            Le poids nous aide à affecter le bon chauffeur et à planifier le véhicule adéquat. Il ne modifie pas le
+                            prix.
+                          </TooltipContent>
+                        </Tooltip>
+                      </Label>
                       <Input
                         id="reorder-weight"
                         inputMode="decimal"
@@ -447,6 +486,9 @@ export const ReorderModal = ({ draft, open, onCancel, onConfirm }: ReorderModalP
                         aria-describedby={errors.weightKg ? "reorder-weight-error" : undefined}
                         required
                       />
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Information logistique uniquement : elle n&apos;a aucun impact sur le tarif.
+                      </p>
                       {errors.weightKg && (
                         <p id="reorder-weight-error" className="mt-1 text-sm text-destructive">
                           {errors.weightKg}
@@ -454,7 +496,24 @@ export const ReorderModal = ({ draft, open, onCancel, onConfirm }: ReorderModalP
                       )}
                     </div>
                     <div>
-                      <Label htmlFor="reorder-volume">Volume total (m³) *</Label>
+                      <Label htmlFor="reorder-volume" className="flex items-center gap-2">
+                        Volume total (m³) *
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className="text-muted-foreground transition hover:text-primary"
+                              aria-label="À quoi sert l'information de volume"
+                            >
+                              <Info className="h-4 w-4" aria-hidden="true" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs text-sm">
+                            Le volume est noté pour vérifier la capacité disponible et anticiper un éventuel matériel adapté. Il n&apos;influe
+                            pas sur le tarif.
+                          </TooltipContent>
+                        </Tooltip>
+                      </Label>
                       <Input
                         id="reorder-volume"
                         inputMode="decimal"
@@ -464,6 +523,9 @@ export const ReorderModal = ({ draft, open, onCancel, onConfirm }: ReorderModalP
                         aria-describedby={errors.volumeM3 ? "reorder-volume-error" : undefined}
                         required
                       />
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Donnée logistique : elle sert à dimensionner le véhicule, sans changer le prix.
+                      </p>
                       {errors.volumeM3 && (
                         <p id="reorder-volume-error" className="mt-1 text-sm text-destructive">
                           {errors.volumeM3}
@@ -524,6 +586,15 @@ export const ReorderModal = ({ draft, open, onCancel, onConfirm }: ReorderModalP
 
             <section className="grid gap-3 rounded-xl border border-border bg-muted/10 p-4">
               <h3 className="text-sm font-semibold text-foreground">Estimation tarifaire</h3>
+              <Alert className="border-primary/40 bg-primary/5">
+                <AlertDescription className="flex items-start gap-2 text-xs text-primary sm:text-sm">
+                  <Info className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                  <span>
+                    Le montant est calculé automatiquement selon les kilomètres à parcourir. Poids et volume sont suivis pour
+                    faciliter l&apos;organisation opérationnelle uniquement.
+                  </span>
+                </AlertDescription>
+              </Alert>
               <div className="grid gap-2 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Base</span>

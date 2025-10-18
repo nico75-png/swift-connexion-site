@@ -46,14 +46,14 @@ const ClientInvoices = () => {
     () =>
       notifications.map((notif) => ({
         id: notif.id,
-        message: notif.content,
+        message: notif.message,
         time: new Intl.DateTimeFormat("fr-FR", {
           day: "2-digit",
           month: "long",
           hour: "2-digit",
           minute: "2-digit",
         }).format(new Date(notif.createdAt)),
-        read: notif.readAt != null,
+        read: notif.read,
       })),
     [notifications],
   );

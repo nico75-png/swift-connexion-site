@@ -23,6 +23,7 @@ import {
 import { getOrders, saveOrders, type Order } from "@/lib/stores/driversOrders.store";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/stores/auth.store";
+import { SECTOR_DISPLAY_MAP } from "@/lib/stores/data/adminOrderSeeds";
 
 interface CreateOrderButtonProps {
   className?: string;
@@ -178,9 +179,14 @@ const CreateOrderButton = ({ className }: CreateOrderButtonProps) => {
       const scheduleEnd = new Date(scheduleStart.getTime() + 60 * 60 * 1000);
       const amount = Number((25 + weightKg * 1.5 + volumeM3 * 4).toFixed(2));
 
+      const sectorLabel = currentClient?.sector
+        ? SECTOR_DISPLAY_MAP[currentClient.sector.toUpperCase()] ?? "B2B Express"
+        : "B2B Express";
+
       const newOrder: Order = {
         id,
         client: currentClient.company,
+        sector: sectorLabel,
         type: formValues.type,
         status: "En attente",
         amount,

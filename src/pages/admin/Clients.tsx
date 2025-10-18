@@ -73,6 +73,7 @@ import {
   type Order,
   type ZoneCode,
 } from "@/lib/stores/driversOrders.store";
+import { SECTOR_DISPLAY_MAP } from "@/lib/stores/data/adminOrderSeeds";
 
 const SECTOR_OPTIONS = [
   "Médical",
@@ -903,9 +904,13 @@ const CreateOrderForClientDialog = ({
         .filter(Boolean)
         .join(" · ");
 
+      const sectorLabel =
+        SECTOR_DISPLAY_MAP[client.sector?.toUpperCase?.() ?? ""] ?? client.sector ?? "B2B Express";
+
       const newOrder: Order = {
         id: orderId,
         client: client.company,
+        sector: sectorLabel,
         type: formValues.type,
         status: "En attente",
         amount: price.total,

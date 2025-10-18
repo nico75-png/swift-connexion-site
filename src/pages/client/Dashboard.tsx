@@ -3,7 +3,7 @@ import ClientSidebar from "@/components/dashboard/ClientSidebar";
 import Topbar from "@/components/dashboard/Topbar";
 import CreateOrderButton from "@/components/dashboard/CreateOrderButton";
 import StatsCard from "@/components/dashboard/StatsCard";
-import { Package, CheckCircle2, Clock, XCircle } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,24 +14,17 @@ import { Link } from "react-router-dom";
  * Vue d'ensemble avec stats, graphique et dernières commandes
  */
 const ClientDashboard = () => {
-  const notifications = [
-    { id: "1", message: "Votre commande 009 est en cours de livraison", time: "Il y a 5 min", read: false },
-    { id: "2", message: "Nouveau message du chauffeur", time: "Il y a 1h", read: false },
-    { id: "3", message: "Facture FACT-2025-01 disponible", time: "Il y a 2h", read: true },
-  ];
+  const notifications: Array<{ id: string; message: string; time: string; read: boolean }> = [];
 
-  const stats = [
-    { label: "En cours", value: 3, icon: Clock, color: "text-info", trend: { value: 15, isPositive: true } },
-    { label: "Livrées", value: 47, icon: CheckCircle2, color: "text-success", trend: { value: 8, isPositive: true } },
-    { label: "Urgentes", value: 1, icon: Package, color: "text-warning", trend: { value: -20, isPositive: false } },
-    { label: "Annulées", value: 2, icon: XCircle, color: "text-destructive", trend: { value: 0, isPositive: true } },
-  ];
+  const stats: Array<{
+    label: string;
+    value: string | number;
+    icon: LucideIcon;
+    color?: string;
+    trend?: { value: number; isPositive: boolean };
+  }> = [];
 
-  const recentOrders = [
-    { id: "009", date: "15/01/2025", type: "Document juridique", status: "En cours", color: "info" },
-    { id: "010", date: "14/01/2025", type: "Colis médical", status: "Livré", color: "success" },
-    { id: "1000", date: "14/01/2025", type: "Monture optique", status: "Livré", color: "success" },
-  ];
+  const recentOrders: Array<{ id: string; date: string; type: string; status: string; color: string }> = [];
 
   const getStatusColor = (color: string) => {
     const colors: Record<string, string> = {
@@ -59,9 +52,13 @@ const ClientDashboard = () => {
 
         {/* Stats KPI */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat, i) => (
-            <StatsCard key={i} {...stat} />
-          ))}
+          {stats.length > 0 ? (
+            stats.map((stat, i) => <StatsCard key={i} {...stat} />)
+          ) : (
+            <div className="col-span-full rounded-lg border border-dashed border-muted-foreground/40 p-6 text-center text-sm text-muted-foreground">
+              Aucune statistique disponible pour le moment.
+            </div>
+          )}
         </div>
 
         {/* Graphique activité (placeholder) */}
@@ -85,17 +82,23 @@ const ClientDashboard = () => {
             </Button>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {recentOrders.map((order) => (
-                <div key={order.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-                  <div>
-                    <p className="font-medium">{order.id}</p>
-                    <p className="text-sm text-muted-foreground">{order.type} • {order.date}</p>
+            {recentOrders.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-muted-foreground/40 p-6 text-center text-sm text-muted-foreground">
+                Aucune commande récente à afficher.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {recentOrders.map((order) => (
+                  <div key={order.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                    <div>
+                      <p className="font-medium">{order.id}</p>
+                      <p className="text-sm text-muted-foreground">{order.type} • {order.date}</p>
+                    </div>
+                    <Badge className={getStatusColor(order.color)}>{order.status}</Badge>
                   </div>
-                  <Badge className={getStatusColor(order.color)}>{order.status}</Badge>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -105,14 +108,20 @@ const ClientDashboard = () => {
             <CardTitle>Notifications récentes</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {notifications.slice(0, 3).map((notif) => (
-                <div key={notif.id} className={`p-3 rounded-lg ${!notif.read ? "bg-primary/5" : "bg-muted/30"}`}>
-                  <p className="text-sm">{notif.message}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{notif.time}</p>
-                </div>
-              ))}
-            </div>
+            {notifications.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-muted-foreground/40 p-4 text-center text-sm text-muted-foreground">
+                Aucune notification récente.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {notifications.slice(0, 3).map((notif) => (
+                  <div key={notif.id} className={`p-3 rounded-lg ${!notif.read ? "bg-primary/5" : "bg-muted/30"}`}>
+                    <p className="text-sm">{notif.message}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{notif.time}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

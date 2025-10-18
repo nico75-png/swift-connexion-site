@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Package, Users, Truck } from "lucide-react";
+import { CalendarCheck, Loader2, Users, Zap } from "lucide-react";
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import AdminSidebar from "@/components/dashboard/AdminSidebar";
@@ -8,11 +9,10 @@ import Topbar from "@/components/dashboard/Topbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getClients, type ClientRecord } from "@/lib/clientStorage";
-import { useDriversStore, useOrdersStore } from "@/providers/AdminDataProvider";
+import { useOrdersStore } from "@/providers/AdminDataProvider";
 
 const Admin = () => {
   const { orders, ready } = useOrdersStore();
-  const { drivers } = useDriversStore();
   const [clients, setClients] = useState<ClientRecord[]>([]);
 
   useEffect(() => {
@@ -39,10 +39,51 @@ const Admin = () => {
     };
   }, []);
 
-  const activeDriverCount = useMemo(
-    () => drivers.filter((driver) => driver.active && driver.lifecycleStatus !== "INACTIF").length,
-    [drivers],
+  const currentMonth = useMemo(() => {
+    const now = new Date();
+    return { month: now.getMonth(), year: now.getFullYear() };
+  }, []);
+
+  const monthlyOrdersCount = useMemo(() => {
+    return orders.filter((order) => {
+      const start = new Date(order.schedule?.start ?? "");
+      return (
+        !Number.isNaN(start.getTime()) &&
+        start.getMonth() === currentMonth.month &&
+        start.getFullYear() === currentMonth.year
+      );
+    }).length;
+  }, [currentMonth, orders]);
+
+  const urgentOrdersCount = useMemo(
+    () => orders.filter((order) => order.options?.express).length,
+    [orders],
   );
+
+  const inProgressOrdersCount = useMemo(
+    () => orders.filter((order) => order.status === "En cours").length,
+    [orders],
+  );
+
+  const weeklyOrdersData = useMemo(() => {
+    const labels = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"] as const;
+    const counts = labels.map(() => 0);
+
+    orders.forEach((order) => {
+      const start = new Date(order.schedule?.start ?? "");
+      if (Number.isNaN(start.getTime())) {
+        return;
+      }
+      const day = start.getDay();
+      const index = day === 0 ? 6 : day - 1;
+      counts[index] += 1;
+    });
+
+    return labels.map((label, index) => ({
+      day: label,
+      commandes: counts[index],
+    }));
+  }, [orders]);
 
   const recentOrders = useMemo(
     () =>
@@ -105,59 +146,113 @@ const Admin = () => {
         </div>
       )}
 
-      <div className="mb-8 grid gap-6 md:grid-cols-3">
+      <div className="mb-8 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
         <Card className="border-none shadow-soft">
-          <CardHeader className="flex flex-row items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Package className="h-5 w-5" />
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-muted-foreground">Commandes ce mois</p>
+              <p className="text-3xl font-bold">{monthlyOrdersCount}</p>
             </div>
-            <CardTitle className="text-base">Commandes</CardTitle>
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <CalendarCheck className="h-5 w-5" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{orders.length}</p>
-            <p className="text-sm text-muted-foreground">
-              {orders.length === 0 ? "Aucune commande pour le moment" : "Commandes enregistrées"}
-            </p>
+          <CardContent className="text-sm text-muted-foreground">
+            {orders.length === 0 ? "Aucune commande planifiée" : "Total des demandes confirmées"}
           </CardContent>
         </Card>
 
         <Card className="border-none shadow-soft">
-          <CardHeader className="flex flex-row items-center gap-3">
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-muted-foreground">Urgentes</p>
+              <p className="text-3xl font-bold">{urgentOrdersCount}</p>
+            </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+              <Zap className="h-5 w-5" />
+            </div>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            {urgentOrdersCount === 0
+              ? "Aucune livraison express en attente"
+              : "Commandes avec prise en charge express"}
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-soft">
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-muted-foreground">En cours</p>
+              <p className="text-3xl font-bold">{inProgressOrdersCount}</p>
+            </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-warning/10 text-warning">
+              <Loader2 className="h-5 w-5" />
+            </div>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            {inProgressOrdersCount === 0
+              ? "Aucune mission en cours actuellement"
+              : "Courses suivies en temps réel"}
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-soft">
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-muted-foreground">Clients actifs</p>
+              <p className="text-3xl font-bold">{clients.length}</p>
+            </div>
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-success/10 text-success">
               <Users className="h-5 w-5" />
             </div>
-            <CardTitle className="text-base">Clients</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{clients.length}</p>
-            <p className="text-sm text-muted-foreground">
-              {clients.length === 0 ? "Aucun client enregistré" : "Clients actifs"}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-none shadow-soft">
-          <CardHeader className="flex flex-row items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
-              <Truck className="h-5 w-5" />
-            </div>
-            <CardTitle className="text-base">Chauffeurs</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{activeDriverCount}</p>
-            <p className="text-sm text-muted-foreground">
-              {activeDriverCount === 0 ? "Aucun chauffeur actif" : "Chauffeurs prêts à intervenir"}
-            </p>
+          <CardContent className="text-sm text-muted-foreground">
+            {clients.length === 0 ? "Aucun client enregistré" : "Contacts prêts à commander"}
           </CardContent>
         </Card>
       </div>
 
+      <Card className="mb-8 border-none shadow-soft">
+        <CardHeader className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle>Évolution hebdomadaire des commandes</CardTitle>
+        </CardHeader>
+        <CardContent className="h-[260px]">
+          {orders.length === 0 ? (
+            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+              Aucune donnée disponible pour le moment.
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={weeklyOrdersData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="day" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  cursor={{ stroke: "hsl(var(--primary))", strokeWidth: 1 }}
+                  contentStyle={{
+                    borderRadius: "0.75rem",
+                    border: "1px solid hsl(var(--border))",
+                    boxShadow: "var(--shadow-soft)",
+                  }}
+                />
+                <Line type="monotone" dataKey="commandes" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid gap-8 lg:grid-cols-2">
         <Card className="border-none shadow-soft">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Commandes</CardTitle>
+            <CardTitle>Dernières commandes</CardTitle>
             <Link to="/admin/commandes">
-              <Button variant="ghost" size="sm">Accéder</Button>
+              <Button variant="ghost" size="sm">Voir tout</Button>
             </Link>
           </CardHeader>
           <CardContent>
@@ -173,10 +268,11 @@ const Admin = () => {
                       className="flex items-center justify-between rounded-md border border-border bg-card p-3"
                     >
                       <div>
-                        <p className="font-semibold">{order.id}</p>
-                        <p className="text-sm text-muted-foreground">{order.client}</p>
+                        <p className="font-semibold">{order.client}</p>
+                        <p className="text-sm text-muted-foreground">{order.id}</p>
                       </div>
                       <div className="text-right text-sm text-muted-foreground">
+                        <p className="font-semibold text-foreground">{order.amount.toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}</p>
                         <p>{order.status}</p>
                         {formattedSchedule && <p>{formattedSchedule}</p>}
                       </div>
@@ -190,9 +286,9 @@ const Admin = () => {
 
         <Card className="border-none shadow-soft">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Clients</CardTitle>
+            <CardTitle>Nouveaux clients</CardTitle>
             <Link to="/admin/clients">
-              <Button variant="ghost" size="sm">Gérer</Button>
+              <Button variant="ghost" size="sm">Voir tout</Button>
             </Link>
           </CardHeader>
           <CardContent>
@@ -223,30 +319,6 @@ const Admin = () => {
           </CardContent>
         </Card>
       </div>
-
-      <Card className="mt-8 border-none shadow-soft">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Chauffeurs</CardTitle>
-          <Link to="/admin/chauffeurs">
-            <Button variant="ghost" size="sm">Voir</Button>
-          </Link>
-        </CardHeader>
-        <CardContent>
-          {drivers.length === 0 ? (
-            <p className="text-muted-foreground">Aucun chauffeur disponible pour le moment.</p>
-          ) : (
-            <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-              <span>
-                Chauffeurs actifs : <span className="font-semibold text-foreground">{activeDriverCount}</span>
-              </span>
-              <span>
-                Chauffeurs inactifs :
-                <span className="font-semibold text-foreground"> {drivers.length - activeDriverCount}</span>
-              </span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </DashboardLayout>
   );
 };

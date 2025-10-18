@@ -83,6 +83,11 @@ export interface Order {
   volumeRequirement: string;
   weight: string;
   instructions?: string;
+  options?: {
+    express?: boolean;
+    fragile?: boolean;
+    temperatureControlled?: boolean;
+  };
   driverId?: string | null;
   driverAssignedAt?: string | null;
 }

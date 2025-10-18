@@ -37,6 +37,7 @@ export interface OrderOptions {
   fragile?: boolean;
   insurance?: boolean;
   returnDocuments?: boolean;
+  temperatureControlled?: boolean;
 }
 
 export interface PriceBreakdown {
@@ -44,6 +45,7 @@ export interface PriceBreakdown {
   km: number;
   express: string;
   fragile: string;
+  temperature: string;
 }
 
 export interface OrderPrice {
@@ -223,10 +225,12 @@ export function estimatePrice(params: {
   km: number;
   express?: boolean;
   fragile?: boolean;
+  temperatureControlled?: boolean;
 }): OrderPrice {
-  const { base, km, express, fragile } = params;
+  const { base, km, express, fragile, temperatureControlled } = params;
   const kmCost = km * 0.9;
-  const multiplier = (express ? 1.3 : 1) * (fragile ? 1.15 : 1);
+  const multiplier =
+    (express ? 1.3 : 1) * (fragile ? 1.15 : 1) * (temperatureControlled ? 1.2 : 1);
   const total = Number(((base + kmCost) * multiplier).toFixed(2));
   return {
     breakdown: {
@@ -234,6 +238,7 @@ export function estimatePrice(params: {
       km: Number(kmCost.toFixed(2)),
       express: express ? "+30%" : "0%",
       fragile: fragile ? "+15%" : "0%",
+      temperature: temperatureControlled ? "+20%" : "0%",
     },
     total,
   };
@@ -264,6 +269,7 @@ export function createReorderDraft(orderId: string): ClientOrder {
       km,
       express: source.options?.express,
       fragile: source.options?.fragile,
+      temperatureControlled: source.options?.temperatureControlled,
     }),
     createdAt: new Date().toISOString(),
   };

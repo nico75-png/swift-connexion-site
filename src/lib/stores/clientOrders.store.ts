@@ -51,6 +51,11 @@ export interface ClientOrderCreateInput {
   quoteId: string;
   currency?: string;
   instructions?: string;
+  options?: {
+    express?: boolean;
+    fragile?: boolean;
+    temperatureControlled?: boolean;
+  };
 }
 
 const TRANSPORT_LABELS: Record<string, string> = {
@@ -187,7 +192,12 @@ export const listOrdersByClient = async (clientId: string): Promise<ClientOrderL
   });
 };
 
-const buildPrice = (quoteAmount: number, normalizedCode: string, distanceKm: number | null): ClientOrder["price"] => {
+const buildPrice = (
+  quoteAmount: number,
+  normalizedCode: string,
+  distanceKm: number | null,
+  options?: { express?: boolean; fragile?: boolean; temperatureControlled?: boolean },
+): ClientOrder["price"] => {
   const total = Number(Number.isFinite(quoteAmount) ? quoteAmount.toFixed(2) : "0");
   const baseShare = Number((total * 0.6).toFixed(2));
   const kmShareBase = distanceKm ?? 0;
@@ -195,12 +205,16 @@ const buildPrice = (quoteAmount: number, normalizedCode: string, distanceKm: num
   const adjustment = Number((total - baseShare - kmShare).toFixed(2));
   const finalBase = Number((baseShare + Math.min(0, adjustment)).toFixed(2));
   const finalKm = Number((kmShare + Math.max(0, adjustment)).toFixed(2));
+  const expressOption = Boolean(options?.express ?? (normalizedCode === "express" || normalizedCode === "document"));
+  const fragileOption = Boolean(options?.fragile ?? FRAGILE_TYPES.has(normalizedCode));
+  const temperatureOption = Boolean(options?.temperatureControlled);
   return {
     breakdown: {
       base: finalBase,
       km: finalKm,
-      express: normalizedCode === "express" ? "+30%" : "0%",
-      fragile: FRAGILE_TYPES.has(normalizedCode) ? "+15%" : "0%",
+      express: expressOption ? "+30%" : "0%",
+      fragile: fragileOption ? "+15%" : "0%",
+      temperature: temperatureOption ? "+20%" : "0%",
     },
     total,
   };
@@ -251,10 +265,11 @@ export const appendClientOrderFromCreate = (input: ClientOrderCreateInput): Clie
     weightKg,
     volumeM3,
     options: {
-      express: normalizedCode === "express" || normalizedCode === "document",
-      fragile: FRAGILE_TYPES.has(normalizedCode),
+      express: Boolean(input.options?.express ?? (normalizedCode === "express" || normalizedCode === "document")),
+      fragile: Boolean(input.options?.fragile ?? FRAGILE_TYPES.has(normalizedCode)),
+      temperatureControlled: Boolean(input.options?.temperatureControlled),
     },
-    price: buildPrice(quoteAmount, normalizedCode, km),
+    price: buildPrice(quoteAmount, normalizedCode, km, input.options),
     driverId: null,
     driver: null,
     notes: instructions,

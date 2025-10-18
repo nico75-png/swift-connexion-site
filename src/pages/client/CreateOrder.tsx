@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { createOrder } from "@/lib/services/orders.service";
 import { quoteOrder, type QuoteOrderResult } from "@/lib/services/quotes.service";
 import { useAuth } from "@/lib/stores/auth.store";
+import { getClientPackageLabel, type PackageType } from "@/lib/packageTaxonomy";
 
 type Step = 1 | 2;
 
@@ -82,6 +83,9 @@ const CreateOrder = () => {
       weight: "",
       volume: "",
       driverInstructions: "",
+      expressDelivery: false,
+      fragilePackage: false,
+      temperatureControlled: false,
     }),
     [customer.defaultDeliveryAddress, customer.defaultPickupAddress],
   );
@@ -116,6 +120,9 @@ const CreateOrder = () => {
           weight: parseLocaleNumber(draftValues.weight),
           volume: parseLocaleNumber(draftValues.volume),
           driverInstructions: draftValues.driverInstructions?.trim() || undefined,
+          expressDelivery: draftValues.expressDelivery,
+          fragilePackage: draftValues.fragilePackage,
+          temperatureControlled: draftValues.temperatureControlled,
         });
 
         if (!isActive) {
@@ -187,6 +194,9 @@ const CreateOrder = () => {
           weight: parseLocaleNumber(draftValues.weight),
           volume: parseLocaleNumber(draftValues.volume),
           driverInstructions: draftValues.driverInstructions?.trim() || undefined,
+          expressDelivery: draftValues.expressDelivery,
+          fragilePackage: draftValues.fragilePackage,
+          temperatureControlled: draftValues.temperatureControlled,
           quoteId: quoteResult.quote.id,
           quoteAmount: quoteResult.quote.amount,
         },
@@ -254,6 +264,13 @@ const CreateOrder = () => {
                       </p>
                     </header>
                     <div className="rounded-lg border bg-muted/20 p-6">
+                      {draftValues.packageType ? (
+                        <div className="mb-4 flex flex-wrap gap-2">
+                          <Badge variant="outline" className="bg-background/80">
+                            {getClientPackageLabel(draftValues.packageType as PackageType)}
+                          </Badge>
+                        </div>
+                      ) : null}
                       <div className="grid gap-4 md:grid-cols-2">
                         <div>
                           <p className="text-xs uppercase text-muted-foreground">Société</p>
@@ -264,12 +281,16 @@ const CreateOrder = () => {
                           <p className="font-medium">{customer.siret}</p>
                         </div>
                         <div>
-                          <p className="text-xs uppercase text-muted-foreground">Type de colis</p>
-                          <p className="font-medium">{draftValues.packageType || "-"}</p>
+                          <p className="text-xs uppercase text-muted-foreground">Type de transport</p>
+                          <p className="font-medium">
+                            {draftValues.packageType
+                              ? getClientPackageLabel(draftValues.packageType as PackageType)
+                              : "-"}
+                          </p>
                         </div>
                         {quoteResult.success && quoteResult.quote?.transportLabel ? (
                           <div>
-                            <p className="text-xs uppercase text-muted-foreground">Type de transport</p>
+                            <p className="text-xs uppercase text-muted-foreground">Catégorie tarifaire</p>
                             <p className="font-medium capitalize">{quoteResult.quote.transportLabel}</p>
                           </div>
                         ) : null}
@@ -294,6 +315,33 @@ const CreateOrder = () => {
                           <p className="font-medium">{draftValues.volume ? `${draftValues.volume} m³` : "-"}</p>
                         </div>
                       </div>
+                      {(() => {
+                        const options: string[] = [];
+                        if (draftValues.expressDelivery) {
+                          options.push("Livraison express (+30 %)");
+                        }
+                        if (draftValues.fragilePackage) {
+                          options.push("Colis fragile (+15 %)");
+                        }
+                        if (draftValues.temperatureControlled) {
+                          options.push("Température contrôlée");
+                        }
+                        if (options.length === 0) {
+                          return null;
+                        }
+                        return (
+                          <div className="mt-6 space-y-2">
+                            <p className="text-xs uppercase text-muted-foreground">Options sélectionnées</p>
+                            <div className="flex flex-wrap gap-2">
+                              {options.map(option => (
+                                <Badge key={option} variant="secondary">
+                                  {option}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
                       {draftValues.packageNote?.trim() ? (
                         <div className="mt-6 rounded-md border bg-background/60 p-4">
                           <p className="text-xs uppercase text-muted-foreground">Précision sur le colis</p>
@@ -383,6 +431,12 @@ const CreateOrder = () => {
                               <dt className="text-muted-foreground">Suppléments</dt>
                               <dd className="font-medium">
                                 {formatCurrency(quoteResult.quote.breakdown.supplements)}
+                              </dd>
+                            </div>
+                            <div className="flex items-center justify-between gap-4">
+                              <dt className="text-muted-foreground">Options</dt>
+                              <dd className="font-medium">
+                                {formatCurrency(quoteResult.quote.breakdown.options ?? 0)}
                               </dd>
                             </div>
                             <div className="flex items-center justify-between gap-4">

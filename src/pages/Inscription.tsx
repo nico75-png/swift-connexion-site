@@ -5,7 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, X } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { toast } from "sonner";
-import { SECTORS, SECTOR_LABELS, type Sector } from "@/lib/packageTaxonomy";
+import { SECTOR_LABELS, type Sector } from "@/lib/packageTaxonomy";
+import { cn } from "@/lib/utils";
 
 const Inscription = () => {
   const navigate = useNavigate();
@@ -110,19 +111,37 @@ const Inscription = () => {
                         </div>
                         <div>
                           <label className="text-sm font-medium mb-2 block">Secteur d'activité *</label>
-                          <select 
-                            required 
-                            value={sector}
-                            onChange={(e) => setSector(e.target.value as Sector | "")}
-                            className="w-full h-11 px-4 rounded-lg border border-input bg-background"
-                          >
-                            <option value="">Sélectionnez votre secteur</option>
-                            {Object.entries(SECTOR_LABELS).map(([key, label]) => (
-                              <option key={key} value={key}>
-                                {label}
-                              </option>
-                            ))}
-                          </select>
+                          <div className="space-y-3">
+                            <p className="text-xs text-muted-foreground">
+                              Ce choix personnalise définitivement vos types de transport.
+                            </p>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              {Object.entries(SECTOR_LABELS).map(([key, label]) => {
+                                const value = key as Sector;
+                                const isSelected = sector === value;
+                                return (
+                                  <button
+                                    key={key}
+                                    type="button"
+                                    onClick={() => setSector(value)}
+                                    className={cn(
+                                      "w-full rounded-xl border px-4 py-3 text-left transition",
+                                      "hover:border-primary/70 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                                      isSelected
+                                        ? "border-primary bg-primary/5 text-primary"
+                                        : "border-border bg-background"
+                                    )}
+                                  >
+                                    <span className="block text-sm font-semibold">{label}</span>
+                                    <span className="mt-1 block text-xs text-muted-foreground">
+                                      Sélection unique — contactez notre support pour changer.
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                          <input type="hidden" name="sector" value={sector} required />
                         </div>
                       </div>
                     </div>

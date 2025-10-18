@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { Order } from "@/lib/stores/driversOrders.store";
 import { createDuplicateDraftFromOrder, type OrderDuplicateDraft } from "./OrderDuplicate";
 import { createOrderFromDuplicateDraft } from "@/services/orders/duplicateOrder";
@@ -25,7 +25,6 @@ interface OrderDuplicateModalProps {
 }
 
 const OrderDuplicateModal = ({ sourceOrder, open, onOpenChange, onCreated }: OrderDuplicateModalProps) => {
-  const { toast } = useToast();
   const [formValues, setFormValues] = useState<OrderDuplicateDraft>(() => createDuplicateDraftFromOrder(sourceOrder));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +42,13 @@ const OrderDuplicateModal = ({ sourceOrder, open, onOpenChange, onCreated }: Ord
 
   const handleChange = (field: keyof OrderDuplicateDraft) => (value: string) => {
     setFormValues((previous) => ({ ...previous, [field]: value }));
+  };
+
+  const handleOptionToggle = (option: keyof OrderDuplicateDraft["options"]) => (checked: boolean) => {
+    setFormValues((previous) => ({
+      ...previous,
+      options: { ...previous.options, [option]: checked },
+    }));
   };
 
   const handleClose = (nextOpen: boolean) => {
@@ -68,11 +74,7 @@ const OrderDuplicateModal = ({ sourceOrder, open, onOpenChange, onCreated }: Ord
         zoneRequirement: formValues.zoneRequirement,
         amount: formValues.amount,
         sourceOrderId: sourceOrder.id,
-      });
-
-      toast({
-        title: "Brouillon créé",
-        description: `La commande ${newOrder.id} a été créée à partir de ${sourceOrder.id}.`,
+        options: formValues.options,
       });
 
       onCreated?.(newOrder);
@@ -147,6 +149,38 @@ const OrderDuplicateModal = ({ sourceOrder, open, onOpenChange, onCreated }: Ord
             />
           </div>
 
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Options</p>
+            <div className="space-y-2">
+              <label className="flex items-center gap-3 text-sm">
+                <Checkbox
+                  checked={formValues.options.express}
+                  onCheckedChange={(checked) => handleOptionToggle("express")(Boolean(checked))}
+                  disabled={isSubmitting}
+                />
+                <span>Express</span>
+              </label>
+              <label className="flex items-center gap-3 text-sm">
+                <Checkbox
+                  checked={formValues.options.fragile}
+                  onCheckedChange={(checked) => handleOptionToggle("fragile")(Boolean(checked))}
+                  disabled={isSubmitting}
+                />
+                <span>Fragile</span>
+              </label>
+              <label className="flex items-center gap-3 text-sm">
+                <Checkbox
+                  checked={formValues.options.temperatureControlled}
+                  onCheckedChange={(checked) =>
+                    handleOptionToggle("temperatureControlled")(Boolean(checked))
+                  }
+                  disabled={isSubmitting}
+                />
+                <span>Température dirigée</span>
+              </label>
+            </div>
+          </div>
+
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label htmlFor="duplicate-date">Date</Label>
@@ -212,7 +246,7 @@ const OrderDuplicateModal = ({ sourceOrder, open, onOpenChange, onCreated }: Ord
             Annuler
           </Button>
           <Button type="button" onClick={handleSubmit} disabled={isCreateDisabled}>
-            {isSubmitting ? "Création..." : "Créer la commande"}
+            {isSubmitting ? "Création..." : "Créer la nouvelle commande"}
           </Button>
         </DialogFooter>
       </DialogContent>

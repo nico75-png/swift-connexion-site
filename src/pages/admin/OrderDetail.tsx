@@ -25,11 +25,12 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import QuickActions from "@/components/admin/orders/QuickActions";
 import AssignDriverModal from "@/components/admin/orders/AssignDriverModal";
-import MessageComposerModal from "@/components/messages/MessageComposerModal";
 import OrderDuplicateModal from "@/components/admin/orders/OrderDuplicateModal";
 import OrderCancelModal from "@/components/orders/OrderCancelModal";
+import ContactClientModal from "@/components/admin/orders/ContactClientModal";
 import {
   assignDriver,
+  logAdministrativeAction,
   buildTimeline,
   canCancelOrder,
   downloadDocument,
@@ -103,7 +104,7 @@ const AdminOrderDetailPage = () => {
 
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
-  const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -150,6 +151,17 @@ const AdminOrderDetailPage = () => {
 
   const legacyOrder = useMemo(() => (order ? toLegacyOrder(order) : null), [order]);
 
+  const registerAction = useCallback(
+    async (label: string, meta?: Record<string, unknown>) => {
+      if (!order) {
+        return;
+      }
+      const updated = await logAdministrativeAction(order.id, { label, meta });
+      setOrder(updated);
+    },
+    [order],
+  );
+
   const handleAssignDriver = async (driverId: string) => {
     if (!order) return;
     try {
@@ -183,10 +195,63 @@ const AdminOrderDetailPage = () => {
     await downloadDocument(url);
   };
 
-  const handleOpenComposer = () => {
+  const handleOpenContact = () => {
     if (!order) return;
-    setIsComposerOpen(true);
+    setIsContactModalOpen(true);
   };
+
+  const handleSendEmail = useCallback(
+    async ({ subject, message }: { subject: string; message: string }) => {
+      toast({
+        title: "Email envoyé",
+        description: "Le client a été contacté par email.",
+      });
+
+      try {
+        await registerAction("Contact client · Email envoyé", {
+          channel: "email",
+          subject,
+          message,
+          to: order?.customer.contact.email,
+        });
+      } catch (caught) {
+        const errorMessage =
+          caught instanceof Error
+            ? caught.message
+            : "Impossible d'enregistrer l'action dans le journal.";
+        toast({
+          title: "Journal d'activité indisponible",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
+    },
+    [order, registerAction, toast],
+  );
+
+  const handleCallClient = useCallback(async () => {
+    toast({
+      title: "Appel lancé",
+      description: "Le client est contacté par téléphone.",
+    });
+
+    try {
+      await registerAction("Contact client · Appel initié", {
+        channel: "phone",
+        phone: order?.customer.contact.phone,
+      });
+    } catch (caught) {
+      const errorMessage =
+        caught instanceof Error
+          ? caught.message
+          : "Impossible d'enregistrer l'action dans le journal.";
+      toast({
+        title: "Journal d'activité indisponible",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  }, [order, registerAction, toast]);
 
   const handleBackToList = () => {
     navigate("/admin/commandes");
@@ -265,7 +330,7 @@ const AdminOrderDetailPage = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setIsDuplicateModalOpen(true)}>Dupliquer</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleOpenComposer}>Contacter le client</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleOpenContact}>Contacter le client</DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setIsCancelModalOpen(true)}
                 disabled={!canCancelOrder(order.status)}
@@ -454,7 +519,7 @@ const AdminOrderDetailPage = () => {
               <QuickActions
                 order={order}
                 onDuplicate={() => setIsDuplicateModalOpen(true)}
-                onContactClient={handleOpenComposer}
+                onContactClient={handleOpenContact}
                 onCancelOrder={() => setIsCancelModalOpen(true)}
                 isCancelDisabled={!canCancelOrder(order.status)}
               />
@@ -494,18 +559,45 @@ const AdminOrderDetailPage = () => {
           sourceOrder={legacyOrder}
           open={isDuplicateModalOpen}
           onOpenChange={setIsDuplicateModalOpen}
-          onCreated={() => {
+          onCreated={(createdOrder) => {
             setIsDuplicateModalOpen(false);
             toast({
               title: "Commande dupliquée",
-              description: "La commande a été ajoutée à la liste.",
+              description: "Commande dupliquée avec succès.",
+            });
+            registerAction("Commande dupliquée · nouvelle commande créée", {
+              action: "duplicate",
+              newOrderId: createdOrder.id,
+              sourceOrderId: order.id,
+              sourceOrderNumber: order.orderNumber,
+            }).catch((caught) => {
+              const errorMessage =
+                caught instanceof Error
+                  ? caught.message
+                  : "Impossible d'enregistrer l'action dans le journal.";
+              toast({
+                title: "Journal d'activité indisponible",
+                description: errorMessage,
+                variant: "destructive",
+              });
             });
           }}
         />
       )}
 
-      {legacyOrder && (
-        <MessageComposerModal order={legacyOrder} open={isComposerOpen} onOpenChange={setIsComposerOpen} />
+      {order && (
+        <ContactClientModal
+          open={isContactModalOpen}
+          onOpenChange={setIsContactModalOpen}
+          contact={{
+            name: order.customer.contact.name,
+            email: order.customer.contact.email,
+            phone: order.customer.contact.phone,
+            formattedPhone: formatPhoneDisplay(order.customer.contact.phone),
+          }}
+          onSendEmail={handleSendEmail}
+          onCallClient={handleCallClient}
+        />
       )}
 
       <OrderCancelModal

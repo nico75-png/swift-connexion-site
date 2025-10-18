@@ -21,6 +21,11 @@ export interface CreateOrderFromDraftPayload {
   zoneRequirement: ZoneCode;
   amount: number;
   sourceOrderId: string;
+  options: {
+    express: boolean;
+    fragile: boolean;
+    temperatureControlled: boolean;
+  };
 }
 
 const toIsoString = (date: string, time: string) => {
@@ -76,6 +81,11 @@ export const createOrderFromDuplicateDraft = async (
     volumeRequirement: formatUnitValue(volumeValue, "m³"),
     weight: formatUnitValue(weightValue, "kg"),
     instructions: payload.instructions?.trim() || undefined,
+    options: {
+      express: payload.options.express,
+      fragile: payload.options.fragile,
+      temperatureControlled: payload.options.temperatureControlled,
+    },
     driverId: null,
     driverAssignedAt: null,
   };

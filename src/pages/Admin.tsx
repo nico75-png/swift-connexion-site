@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarCheck, Loader2, Users, Zap } from "lucide-react";
+import { CalendarCheck, Loader2, Truck, Users, Zap } from "lucide-react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -9,10 +9,11 @@ import Topbar from "@/components/dashboard/Topbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getClients, type ClientRecord } from "@/lib/clientStorage";
-import { useOrdersStore } from "@/providers/AdminDataProvider";
+import { useDriversStore, useOrdersStore } from "@/providers/AdminDataProvider";
 
 const Admin = () => {
   const { orders, ready } = useOrdersStore();
+  const { drivers } = useDriversStore();
   const [clients, setClients] = useState<ClientRecord[]>([]);
 
   useEffect(() => {
@@ -63,6 +64,11 @@ const Admin = () => {
   const inProgressOrdersCount = useMemo(
     () => orders.filter((order) => order.status === "En cours").length,
     [orders],
+  );
+
+  const activeDriverCount = useMemo(
+    () => drivers.filter((driver) => driver.active && driver.lifecycleStatus !== "INACTIF").length,
+    [drivers],
   );
 
   const weeklyOrdersData = useMemo(() => {
@@ -146,7 +152,7 @@ const Admin = () => {
         </div>
       )}
 
-      <div className="mb-8 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-8 grid gap-6 md:grid-cols-2 xl:grid-cols-5">
         <Card className="border-none shadow-soft">
           <CardHeader className="flex flex-row items-center justify-between gap-3">
             <div>
@@ -210,6 +216,21 @@ const Admin = () => {
             {clients.length === 0 ? "Aucun client enregistré" : "Contacts prêts à commander"}
           </CardContent>
         </Card>
+
+        <Card className="border-none shadow-soft">
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-muted-foreground">Chauffeurs actifs</p>
+              <p className="text-3xl font-bold">{activeDriverCount}</p>
+            </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <Truck className="h-5 w-5" />
+            </div>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            {activeDriverCount === 0 ? "Aucun chauffeur actif" : "Chauffeurs prêts à intervenir"}
+          </CardContent>
+        </Card>
       </div>
 
       <Card className="mb-8 border-none shadow-soft">
@@ -225,7 +246,12 @@ const Admin = () => {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={weeklyOrdersData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="day" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} />
+                <XAxis
+                  dataKey="day"
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
                 <YAxis
                   allowDecimals={false}
                   tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}

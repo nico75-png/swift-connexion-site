@@ -95,9 +95,9 @@ const formSchema = z
     }
   });
 
-type FormValues = z.infer<typeof formSchema>;
+export type FormValues = z.infer<typeof formSchema>;
 
-interface CreateOrderFormProps {
+export interface CreateOrderFormProps {
   customer: AuthClient;
   defaultValues: FormValues;
   onSubmit: (values: FormValues) => Promise<void> | void;

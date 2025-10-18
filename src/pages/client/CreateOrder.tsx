@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-import CreateOrderForm, { type CreateOrderFormValues, parseLocaleNumber } from "@/components/orders/CreateOrderForm";
+import CreateOrderForm, { type FormValues as CreateOrderFormValues, parseLocaleNumber } from "@/components/orders/CreateOrderForm";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import ClientSidebar from "@/components/dashboard/ClientSidebar";
 import Topbar from "@/components/dashboard/Topbar";

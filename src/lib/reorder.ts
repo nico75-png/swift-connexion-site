@@ -424,7 +424,7 @@ export function ensureOrdersDataShape(): ClientOrder[] {
     const normalized = stored.map((item) => {
       const coords = item.from?.coords ?? mockGeocode(item.from?.address);
       const formattedId = ensureOrderNumberFormat(item.id ?? item.reference ?? "");
-      const formattedReference = ensureOrderNumberFormat(item.reference ?? formattedId || item.id);
+      const formattedReference = ensureOrderNumberFormat((item.reference ?? formattedId) || item.id);
       return {
         ...item,
         id: formattedId || item.id,

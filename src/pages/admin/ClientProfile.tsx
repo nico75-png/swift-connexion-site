@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Download, Edit, Mail, Phone, MapPin } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -7,6 +7,16 @@ import Topbar from "@/components/dashboard/Topbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
@@ -16,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +37,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import {
   AreaChart,
@@ -38,6 +50,7 @@ import {
 } from "recharts";
 import { CreateOrderForClientDialog } from "@/pages/admin/Clients";
 import { type ClientRecord } from "@/lib/clientStorage";
+import { useAuth } from "@/lib/stores/auth.store";
 import {
   callCustomer,
   disableCustomerAccount,
@@ -51,6 +64,7 @@ import {
 const AdminClientProfile = () => {
   const { id } = useParams();
   const { toast } = useToast();
+  const { currentUser } = useAuth();
   const [client, setClient] = useState(() => ({
     id: id || "1",
     company: "Cabinet Dupont",
@@ -71,9 +85,14 @@ const AdminClientProfile = () => {
   );
   const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
   const [isDisableDialogOpen, setIsDisableDialogOpen] = useState(false);
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [isEmailSending, setIsEmailSending] = useState(false);
   const [isCalling, setIsCalling] = useState(false);
   const [isDisabling, setIsDisabling] = useState(false);
+  const [emailSubject, setEmailSubject] = useState("Suivi de votre compte");
+  const [emailMessage, setEmailMessage] = useState("");
+  const [emailFormErrors, setEmailFormErrors] = useState<{ email?: string; message?: string }>({});
+  const [hasAcknowledgedDisable, setHasAcknowledgedDisable] = useState(false);
 
   const clientRecord = useMemo<ClientRecord>(
     () => ({
@@ -93,12 +112,46 @@ const AdminClientProfile = () => {
     [client],
   );
 
-  const statusBadgeClass =
-    client.status === "Actif"
-      ? "bg-success/10 text-success border-success/20"
-      : "bg-warning/10 text-warning border-warning/20";
+  const defaultEmailSubject = useMemo(
+    () => `Suivi de votre compte ${client.company}`,
+    [client.company],
+  );
+
+  const statusBadgeClass = useMemo(() => {
+    if (client.status === "Actif") {
+      return "bg-success/10 text-success border-success/20";
+    }
+    if (client.status === "Désactivé") {
+      return "bg-destructive/10 text-destructive border-destructive/20";
+    }
+    return "bg-warning/10 text-warning border-warning/20";
+  }, [client.status]);
+
+  const isPrivilegedUser = Boolean(
+    currentUser && ["admin", "support"].includes(currentUser.role),
+  );
+
+  const areQuickActionsDisabled = client.status !== "Actif";
+
+  useEffect(() => {
+    if (!isEmailDialogOpen) {
+      setEmailSubject(defaultEmailSubject);
+      setEmailMessage("");
+      setEmailFormErrors({});
+    }
+  }, [defaultEmailSubject, isEmailDialogOpen]);
+
+  useEffect(() => {
+    if (!isDisableDialogOpen) {
+      setHasAcknowledgedDisable(false);
+    }
+  }, [isDisableDialogOpen]);
 
   const handleOrderDialogChange = (open: boolean) => {
+    if (areQuickActionsDisabled) {
+      setIsOrderDialogOpen(false);
+      return;
+    }
     setIsOrderDialogOpen(open);
   };
 
@@ -111,18 +164,98 @@ const AdminClientProfile = () => {
     }));
   };
 
-  const handleSendEmail = async () => {
+  const handleEmailDialogChange = (open: boolean) => {
+    if (!isPrivilegedUser && open) {
+      toast({
+        title: "Accès refusé",
+        description: "Action réservée aux administrateurs.",
+        variant: "destructive",
+      });
+      setIsEmailDialogOpen(false);
+      return;
+    }
+
+    if (areQuickActionsDisabled && open) {
+      toast({
+        title: "Compte désactivé",
+        description: "Les actions rapides ne sont plus disponibles pour ce client.",
+        variant: "destructive",
+      });
+      setIsEmailDialogOpen(false);
+      return;
+    }
+
+    setIsEmailDialogOpen(open);
+  };
+
+  const handleEmailSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!isPrivilegedUser || !currentUser) {
+      toast({
+        title: "Accès refusé",
+        description: "Action réservée aux administrateurs.",
+        variant: "destructive",
+      });
+      setIsEmailDialogOpen(false);
+      return;
+    }
+
+    if (areQuickActionsDisabled) {
+      toast({
+        title: "Compte désactivé",
+        description: "Les actions rapides ne sont plus disponibles pour ce client.",
+        variant: "destructive",
+      });
+      setIsEmailDialogOpen(false);
+      return;
+    }
+
     if (isEmailSending) {
+      return;
+    }
+
+    const emailAddress = (client.email || "").trim();
+    const messageContent = emailMessage.trim();
+    const subjectContent = emailSubject.trim() || defaultEmailSubject;
+    const nextErrors: typeof emailFormErrors = {};
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailAddress) {
+      nextErrors.email = "Adresse email manquante.";
+    } else if (!emailPattern.test(emailAddress)) {
+      nextErrors.email = "Adresse email invalide.";
+    }
+
+    if (!messageContent) {
+      nextErrors.message = "Le message ne peut pas être vide.";
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setEmailFormErrors(nextErrors);
+      toast({
+        title: "Envoi impossible",
+        description: nextErrors.email ?? nextErrors.message,
+        variant: "destructive",
+      });
       return;
     }
 
     try {
       setIsEmailSending(true);
-      await sendEmailToCustomer(client.id);
+      await sendEmailToCustomer({
+        customerId: client.id,
+        to: emailAddress,
+        subject: subjectContent,
+        message: messageContent,
+        adminId: currentUser.id,
+      });
       toast({
         title: "Email envoyé",
-        description: `Un email a été envoyé à ${client.contact}.`,
+        description: `Email envoyé avec succès à ${emailAddress}.`,
       });
+      setEmailFormErrors({});
+      setIsEmailDialogOpen(false);
     } catch (error) {
       console.error("Failed to send email", error);
       toast({
@@ -136,16 +269,48 @@ const AdminClientProfile = () => {
   };
 
   const handleCallCustomer = async () => {
+    if (!isPrivilegedUser || !currentUser) {
+      toast({
+        title: "Accès refusé",
+        description: "Action réservée aux administrateurs.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (areQuickActionsDisabled) {
+      toast({
+        title: "Compte désactivé",
+        description: "Les actions rapides ne sont plus disponibles pour ce client.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (isCalling) {
+      return;
+    }
+
+    const phoneNumber = (client.phone || "").trim();
+    if (!phoneNumber) {
+      toast({
+        title: "Appel impossible",
+        description: "Numéro de téléphone manquant.",
+        variant: "destructive",
+      });
       return;
     }
 
     try {
       setIsCalling(true);
-      await callCustomer(client.phone);
+      await callCustomer({
+        customerId: client.id,
+        phoneNumber,
+        adminId: currentUser.id,
+      });
       toast({
-        title: "Appel en cours",
-        description: `Appel vers ${client.phone} déclenché.`,
+        title: "Appel lancé",
+        description: `Appel en cours vers ${phoneNumber}.`,
       });
     } catch (error) {
       console.error("Failed to initiate call", error);
@@ -160,19 +325,33 @@ const AdminClientProfile = () => {
   };
 
   const handleDisableAccount = async () => {
-    if (client.status !== "Actif") {
+    if (!isPrivilegedUser || !currentUser) {
+      toast({
+        title: "Accès refusé",
+        description: "Action réservée aux administrateurs.",
+        variant: "destructive",
+      });
       setIsDisableDialogOpen(false);
       return;
     }
 
-    const companyName = client.company;
+    if (areQuickActionsDisabled) {
+      setIsDisableDialogOpen(false);
+      return;
+    }
+
     try {
       setIsDisabling(true);
-      await disableCustomerAccount(client.id);
-      setClient((previous) => ({ ...previous, status: "Inactif" }));
+      await disableCustomerAccount({
+        customerId: client.id,
+        adminId: currentUser.id,
+      });
+      setClient((previous) => ({ ...previous, status: "Désactivé" }));
+      setIsOrderDialogOpen(false);
+      setIsEmailDialogOpen(false);
       toast({
         title: "Compte désactivé",
-        description: `${companyName} a été désactivé.`,
+        description: "Le compte a été désactivé avec succès.",
       });
     } catch (error) {
       console.error("Failed to disable account", error);
@@ -241,6 +420,27 @@ const AdminClientProfile = () => {
       description: "Génération de la synthèse client en cours...",
     });
   };
+
+  if (!isPrivilegedUser) {
+    return (
+      <DashboardLayout
+        sidebar={<AdminSidebar />}
+        topbar={<Topbar title="Accès restreint" />}
+      >
+        <div className="flex h-full items-center justify-center">
+          <Card className="max-w-lg border-none shadow-soft">
+            <CardHeader>
+              <CardTitle>Section réservée</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-muted-foreground">
+              <p>Cette page est réservée aux équipes Admin et Support.</p>
+              <p>Veuillez contacter un administrateur pour obtenir l'accès.</p>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <>
@@ -509,39 +709,53 @@ const AdminClientProfile = () => {
               <CardHeader>
                 <CardTitle>Actions rapides</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
+              <CardContent className="space-y-3">
+                {areQuickActionsDisabled ? (
+                  <Alert variant="destructive" className="bg-destructive/10">
+                    <AlertTitle>Compte désactivé</AlertTitle>
+                    <AlertDescription>
+                      Les actions rapides sont désactivées pour ce client.
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
                 <Button
                   variant="cta"
-                  className="w-full justify-start"
-                  onClick={() => setIsOrderDialogOpen(true)}
+                  className="w-full gap-2 text-base"
+                  onClick={() => {
+                    if (areQuickActionsDisabled) return;
+                    setIsOrderDialogOpen(true);
+                  }}
+                  disabled={areQuickActionsDisabled}
                 >
-                  Créer une commande
+                  <span aria-hidden="true">🟡</span>
+                  <span>Créer une commande</span>
                 </Button>
                 <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={handleSendEmail}
-                  disabled={isEmailSending}
+                  variant="secondary"
+                  className="w-full gap-2 text-base"
+                  onClick={() => handleEmailDialogChange(true)}
+                  disabled={areQuickActionsDisabled || isEmailSending}
                 >
-                  <Mail className="h-4 w-4 mr-2" />
-                  {isEmailSending ? "Envoi en cours..." : "Envoyer un email"}
+                  <span aria-hidden="true">📧</span>
+                  <span>{isEmailSending ? "Envoi en cours..." : "Envoyer un email"}</span>
                 </Button>
                 <Button
-                  variant="outline"
-                  className="w-full justify-start"
+                  variant="secondary"
+                  className="w-full gap-2 text-base"
                   onClick={handleCallCustomer}
-                  disabled={isCalling}
+                  disabled={areQuickActionsDisabled || isCalling}
                 >
-                  <Phone className="h-4 w-4 mr-2" />
-                  {isCalling ? "Appel..." : "Appeler le client"}
+                  <span aria-hidden="true">📞</span>
+                  <span>{isCalling ? "Appel en cours..." : "Appeler le client"}</span>
                 </Button>
                 <Button
-                  variant="outline"
-                  className="w-full justify-start text-warning hover:text-warning"
+                  variant="destructive"
+                  className="w-full gap-2 text-base"
                   onClick={() => setIsDisableDialogOpen(true)}
-                  disabled={client.status !== "Actif"}
+                  disabled={areQuickActionsDisabled}
                 >
-                  Désactiver le compte
+                  <span aria-hidden="true">🔴</span>
+                  <span>Désactiver le compte</span>
                 </Button>
               </CardContent>
             </Card>
@@ -551,10 +765,63 @@ const AdminClientProfile = () => {
 
       <CreateOrderForClientDialog
         client={clientRecord}
-        open={isOrderDialogOpen}
+        open={isOrderDialogOpen && !areQuickActionsDisabled}
         onOpenChange={handleOrderDialogChange}
         onOrderCreated={handleOrderCreated}
       />
+
+      <Dialog open={isEmailDialogOpen} onOpenChange={handleEmailDialogChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Envoyer un email</DialogTitle>
+            <DialogDescription>
+              Le message sera envoyé à {client.contact} ({client.email}).
+            </DialogDescription>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={handleEmailSubmit}>
+            <div className="space-y-2">
+              <Label htmlFor="email-to">Destinataire</Label>
+              <Input
+                id="email-to"
+                value={client.email}
+                disabled
+                className={emailFormErrors.email ? "border-destructive" : undefined}
+              />
+              {emailFormErrors.email ? (
+                <p className="text-sm text-destructive">{emailFormErrors.email}</p>
+              ) : null}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email-subject">Objet</Label>
+              <Input
+                id="email-subject"
+                value={emailSubject}
+                onChange={(event) => setEmailSubject(event.target.value)}
+                placeholder={defaultEmailSubject}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email-message">Message</Label>
+              <Textarea
+                id="email-message"
+                value={emailMessage}
+                onChange={(event) => setEmailMessage(event.target.value)}
+                placeholder="Écrivez votre message..."
+                rows={6}
+                className={emailFormErrors.message ? "border-destructive" : undefined}
+              />
+              {emailFormErrors.message ? (
+                <p className="text-sm text-destructive">{emailFormErrors.message}</p>
+              ) : null}
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={isEmailSending}>
+                {isEmailSending ? "Envoi en cours..." : "Envoyer l'email"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog
         open={isDisableDialogOpen}
@@ -562,21 +829,43 @@ const AdminClientProfile = () => {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmer la désactivation</AlertDialogTitle>
-            <AlertDialogDescription>
-              Cette action désactivera l'accès du client. Confirmez-vous la
-              désactivation ?
+            <AlertDialogTitle>Désactiver définitivement ce compte</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                ⚠️ Attention : cette action est irréversible. Le compte client
+                sera désactivé définitivement et ne pourra plus jamais être
+                réactivé.
+              </p>
+              <p>
+                Une fois confirmé, le client ne pourra plus se connecter ni créer
+                de nouvelles commandes.
+              </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="space-y-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+            <Label htmlFor="confirm-disable" className="flex items-start gap-3 text-sm">
+              <Checkbox
+                id="confirm-disable"
+                checked={hasAcknowledgedDisable}
+                onCheckedChange={(checked) =>
+                  setHasAcknowledgedDisable(checked === true)
+                }
+              />
+              <span>
+                Je confirme avoir vérifié la demande et je comprends qu'aucune
+                réactivation ne sera possible après cette action.
+              </span>
+            </Label>
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDisabling}>
               Annuler
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDisableAccount}
-              disabled={isDisabling}
+              disabled={isDisabling || !hasAcknowledgedDisable}
             >
-              {isDisabling ? "Désactivation..." : "Désactiver"}
+              {isDisabling ? "Désactivation..." : "Oui, désactiver définitivement"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

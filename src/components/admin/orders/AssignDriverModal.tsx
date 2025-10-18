@@ -60,6 +60,13 @@ const AssignDriverModal = ({
     [drivers, selectedDriverId],
   );
 
+  const selectedDriverCompatibility = useMemo(() => {
+    if (!selectedDriver) {
+      return null;
+    }
+    return evaluateDriverCompatibility(selectedDriver, requirements);
+  }, [selectedDriver, requirements]);
+
   useEffect(() => {
     if (open) {
       setSearch("");
@@ -122,13 +129,6 @@ const AssignDriverModal = ({
         return a.name.localeCompare(b.name);
       });
   }, [drivers, search, vehicleTypeFilter, showAvailableOnly, requirements]);
-
-  const selectedDriverCompatibility = useMemo(() => {
-    if (!selectedDriver) {
-      return null;
-    }
-    return evaluateDriverCompatibility(selectedDriver, requirements);
-  }, [selectedDriver, requirements]);
 
   const canConfirm = Boolean(selectedDriverCompatibility?.assignable && allowAssignment);
 

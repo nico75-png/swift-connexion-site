@@ -91,6 +91,7 @@ const toLegacyOrder = (order: AdminOrderDetail): LegacyOrder => ({
   instructions: order.driverInstructions,
   driverId: order.assignedDriver?.id ?? null,
   driverAssignedAt: order.assignedDriver ? order.pickupAt : null,
+  sector: "B2B",
 });
 
 const AdminOrderDetailPage = () => {

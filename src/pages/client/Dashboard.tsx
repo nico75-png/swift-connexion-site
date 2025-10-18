@@ -165,7 +165,8 @@ const ClientDashboard = () => {
   return (
     <DashboardLayout
       sidebar={<ClientSidebar />}
-      topbar={<Topbar userName={currentUser?.name ?? "Client"} notifications={formattedNotifications} />}
+      topbar={<Topbar userName={currentUser?.name ?? undefined} notifications={formattedNotifications} />}
+      showProfileReminder
     >
       <div className="space-y-6">
         {/* En-tête */}

@@ -71,7 +71,8 @@ const ClientPreferences = () => {
   return (
     <DashboardLayout
       sidebar={<ClientSidebar />}
-      topbar={<Topbar userName={currentClient?.contactName ?? "Client"} />}
+      topbar={<Topbar userName={currentClient?.contactName ?? undefined} />}
+      showProfileReminder
     >
       <div className="max-w-3xl space-y-6">
         {/* En-tête */}

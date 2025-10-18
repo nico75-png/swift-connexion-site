@@ -132,7 +132,7 @@ const CommandeSansCompte = () => {
                         type="text"
                         required
                         className="w-full h-11 px-4 rounded-lg border border-input bg-background"
-                        placeholder="Jean Dupont"
+                        placeholder="Votre nom complet"
                       />
                     </div>
                     <div>

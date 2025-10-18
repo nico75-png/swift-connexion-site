@@ -7,12 +7,17 @@ import Layout from "@/components/layout/Layout";
 import { toast } from "sonner";
 import { SECTOR_LABELS, type Sector } from "@/lib/packageTaxonomy";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { upsertProfile } from "@/lib/api/profiles";
+import { useAuthProfile } from "@/providers/AuthProvider";
 
 const Inscription = () => {
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [sector, setSector] = useState<Sector | "">("");
   const [acceptedCGU, setAcceptedCGU] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { refreshProfile } = useAuthProfile();
 
   const passwordRequirements = [
     { label: "Au moins 8 caractères", test: (p: string) => p.length >= 8 },
@@ -22,9 +27,9 @@ const Inscription = () => {
     { label: "Un caractère spécial", test: (p: string) => /[!@#$%^&*]/.test(p) },
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
     if (!sector) {
       toast.error("Veuillez sélectionner votre secteur d'activité");
       return;
@@ -41,8 +46,59 @@ const Inscription = () => {
       return;
     }
 
-    toast.success("Compte créé avec succès ! Bienvenue chez One Connexion");
-    setTimeout(() => navigate("/espace-client"), 1000);
+    const formData = new FormData(event.currentTarget);
+    const firstName = String(formData.get("first_name") ?? "").trim();
+    const lastName = String(formData.get("last_name") ?? "").trim();
+    const email = String(formData.get("email") ?? "").trim();
+    const phone = String(formData.get("phone") ?? "").trim();
+    const company = String(formData.get("company") ?? "").trim();
+    const siret = String(formData.get("siret") ?? "").trim();
+
+    setIsSubmitting(true);
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            phone,
+            company,
+            siret,
+            sector,
+          },
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      const user = data.user;
+
+      if (user) {
+        try {
+          await upsertProfile({
+            userId: user.id,
+            firstName,
+            lastName,
+          });
+          await refreshProfile();
+        } catch (profileError) {
+          console.error("Failed to persist profile", profileError);
+        }
+      }
+
+      toast.success("Compte créé avec succès ! Bienvenue chez One Connexion");
+      navigate("/espace-client");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "La création du compte a échoué.";
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -69,8 +125,9 @@ const Inscription = () => {
                         <input
                           type="text"
                           required
+                          name="last_name"
                           className="w-full h-11 px-4 rounded-lg border border-input bg-background"
-                          placeholder="Dupont"
+                          placeholder="Nom"
                         />
                       </div>
                       <div>
@@ -78,8 +135,9 @@ const Inscription = () => {
                         <input
                           type="text"
                           required
+                          name="first_name"
                           className="w-full h-11 px-4 rounded-lg border border-input bg-background"
-                          placeholder="Jean"
+                          placeholder="Prénom"
                         />
                       </div>
                     </div>
@@ -94,6 +152,7 @@ const Inscription = () => {
                         <input
                           type="text"
                           required
+                          name="company"
                           className="w-full h-11 px-4 rounded-lg border border-input bg-background"
                           placeholder="Nom de l'entreprise"
                         />
@@ -105,6 +164,7 @@ const Inscription = () => {
                             type="text"
                             required
                             pattern="[0-9]{14}"
+                            name="siret"
                             className="w-full h-11 px-4 rounded-lg border border-input bg-background"
                             placeholder="14 chiffres"
                           />
@@ -157,6 +217,7 @@ const Inscription = () => {
                           <input
                             type="email"
                             required
+                            name="email"
                             className="w-full h-11 px-4 rounded-lg border border-input bg-background"
                             placeholder="email@entreprise.fr"
                           />
@@ -166,6 +227,7 @@ const Inscription = () => {
                           <input
                             type="tel"
                             required
+                            name="phone"
                             className="w-full h-11 px-4 rounded-lg border border-input bg-background"
                             placeholder="01 23 45 67 89"
                           />
@@ -179,6 +241,7 @@ const Inscription = () => {
                           required
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
+                          name="password"
                           className="w-full h-11 px-4 rounded-lg border border-input bg-background"
                           placeholder="••••••••"
                         />
@@ -227,8 +290,14 @@ const Inscription = () => {
                     </label>
                   </div>
 
-                  <Button type="submit" variant="cta" size="lg" className="w-full">
-                    Créer mon compte
+                  <Button
+                    type="submit"
+                    variant="cta"
+                    size="lg"
+                    className="w-full"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Création en cours…" : "Créer mon compte"}
                   </Button>
 
                   <p className="text-center text-sm text-muted-foreground">

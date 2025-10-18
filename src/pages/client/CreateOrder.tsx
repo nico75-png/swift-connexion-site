@@ -232,7 +232,8 @@ const CreateOrder = () => {
   return (
     <DashboardLayout
       sidebar={<ClientSidebar />}
-      topbar={<Topbar userName={currentUser?.name} />}
+      topbar={<Topbar userName={currentUser?.name ?? undefined} />}
+      showProfileReminder
     >
       <div className="max-w-3xl mx-auto space-y-6">
         <Card>

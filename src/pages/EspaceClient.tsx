@@ -7,9 +7,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RotateCcw, User, Settings, MapPin, Download, CheckCircle2, Clock } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Layout from "@/components/layout/Layout";
+import { useAuthProfile } from "@/providers/AuthProvider";
 
 const EspaceClient = () => {
   const [selectedOrder, setSelectedOrder] = useState<number | null>(null);
+  const { resolvedDisplayName, fallbackEmail } = useAuthProfile();
+  const welcomeName = resolvedDisplayName ?? fallbackEmail ?? "";
 
   const stats: Array<{ label: string; value: string | number; icon: LucideIcon; color?: string }> = [];
 
@@ -41,7 +44,9 @@ const EspaceClient = () => {
       <section className="py-8 bg-gradient-hero text-primary-foreground">
         <div className="container mx-auto px-4">
           <h1 className="mb-2">Espace Client</h1>
-          <p className="text-primary-foreground/80">Bienvenue, Jean Dupont</p>
+          <p className="text-primary-foreground/80">
+            Bienvenue{welcomeName ? `, ${welcomeName}` : ""}
+          </p>
         </div>
       </section>
 
@@ -228,7 +233,7 @@ const EspaceClient = () => {
                         <label className="text-sm font-medium mb-2 block">Nom complet</label>
                         <input
                           type="text"
-                          defaultValue="Jean Dupont"
+                          defaultValue={welcomeName}
                           className="w-full h-11 px-4 rounded-lg border border-input bg-background"
                         />
                       </div>
@@ -236,7 +241,6 @@ const EspaceClient = () => {
                         <label className="text-sm font-medium mb-2 block">Entreprise</label>
                         <input
                           type="text"
-                          defaultValue="Cabinet Dupont & Associés"
                           className="w-full h-11 px-4 rounded-lg border border-input bg-background"
                         />
                       </div>
@@ -244,7 +248,7 @@ const EspaceClient = () => {
                         <label className="text-sm font-medium mb-2 block">Email</label>
                         <input
                           type="email"
-                          defaultValue="jean.dupont@cabinet.fr"
+                          defaultValue={fallbackEmail ?? ""}
                           className="w-full h-11 px-4 rounded-lg border border-input bg-background"
                         />
                       </div>

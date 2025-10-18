@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { addMonths, format, startOfMonth } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -19,29 +19,24 @@ type VariationInfo = {
 type OverviewStats = {
   currentOrdersCount: number;
   previousOrdersCount: number;
-  urgentOrdersCount: number;
+  currentRevenue: number;
+  previousRevenue: number;
   inProgressCount: number;
   currentActiveClients: number;
   previousActiveClients: number;
 };
 
 const numberFormatter = new Intl.NumberFormat("fr-FR");
+const currencyFormatter = new Intl.NumberFormat("fr-FR", {
+  style: "currency",
+  currency: "EUR",
+  minimumFractionDigits: 0,
+});
 
 const capitalizeFirst = (value: string) =>
   value.length > 0 ? value.charAt(0).toUpperCase() + value.slice(1) : value;
 
 const formatCount = (value: number) => numberFormatter.format(value);
-
-const detectExpressOption = (order: OrderRow) => {
-  const candidates = [order.driver_instructions, order.package_note, order.quote_id];
-  return candidates.some((field) => {
-    if (typeof field !== "string") {
-      return false;
-    }
-    const normalized = field.toLowerCase();
-    return normalized.includes("express") || normalized.includes("exprès");
-  });
-};
 
 const countActiveClients = (orders: OrderRow[]) => {
   const identifiers = new Set<string>();
@@ -54,19 +49,13 @@ const countActiveClients = (orders: OrderRow[]) => {
   return identifiers.size;
 };
 
-const buildVariation = (
+const buildPercentageVariation = (
   current: number,
   previous: number,
   previousLabel: string,
 ): VariationInfo | null => {
   if (previous === 0) {
-    if (current === 0) {
-      return { text: `— vs ${previousLabel}`, tone: "neutral" };
-    }
-    return {
-      text: `— vs ${previousLabel} (aucune donnée comparable)`,
-      tone: "neutral",
-    };
+    return null;
   }
 
   const delta = ((current - previous) / previous) * 100;
@@ -74,12 +63,33 @@ const buildVariation = (
   const formatted = new Intl.NumberFormat("fr-FR", {
     maximumFractionDigits: absolute < 10 ? 1 : 0,
   }).format(absolute);
-  const prefix = delta >= 0 ? "+" : "-";
-  const arrow = delta >= 0 ? "🔺" : "🔻";
+  const prefix = delta > 0 ? "+" : delta < 0 ? "-" : "";
+  const arrow = delta > 0 ? "🔺" : delta < 0 ? "🔻" : "—";
 
   return {
     text: `${arrow} ${prefix}${formatted}% vs ${previousLabel}`,
-    tone: delta >= 0 ? "up" : "down",
+    tone: delta > 0 ? "up" : delta < 0 ? "down" : "neutral",
+  };
+};
+
+const buildClientsVariation = (
+  current: number,
+  previous: number,
+  previousLabel: string,
+): VariationInfo | null => {
+  if (previous === 0) {
+    return null;
+  }
+
+  const delta = current - previous;
+  const absolute = Math.abs(delta);
+  const pluralized = absolute > 1 ? "clients" : "client";
+  const prefix = delta > 0 ? "+" : delta < 0 ? "-" : "";
+  const arrow = delta > 0 ? "🔺" : delta < 0 ? "🔻" : "—";
+
+  return {
+    text: `${arrow} ${prefix}${absolute} ${pluralized} vs ${previousLabel}`,
+    tone: delta > 0 ? "up" : delta < 0 ? "down" : "neutral",
   };
 };
 
@@ -88,6 +98,14 @@ const AdminStats = () => {
   const [stats, setStats] = useState<OverviewStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const currentMonthLabel = useMemo(
     () => format(referenceDate, "MMMM yyyy", { locale: fr }),
@@ -105,7 +123,7 @@ const AdminStats = () => {
   const ordersVariation = useMemo(
     () =>
       stats
-        ? buildVariation(
+        ? buildPercentageVariation(
             stats.currentOrdersCount,
             stats.previousOrdersCount,
             previousMonthLabel,
@@ -117,7 +135,7 @@ const AdminStats = () => {
   const clientsVariation = useMemo(
     () =>
       stats
-        ? buildVariation(
+        ? buildClientsVariation(
             stats.currentActiveClients,
             stats.previousActiveClients,
             previousMonthLabel,
@@ -126,79 +144,105 @@ const AdminStats = () => {
     [stats, previousMonthLabel],
   );
 
-  useEffect(() => {
-    let isMounted = true;
+  const revenueVariation = useMemo(
+    () =>
+      stats
+        ? buildPercentageVariation(
+            stats.currentRevenue,
+            stats.previousRevenue,
+            previousMonthLabel,
+          )
+        : null,
+    [stats, previousMonthLabel],
+  );
 
-    const loadStats = async () => {
-      setLoading(true);
-      setError(null);
+  const loadStats = useCallback(async () => {
+    if (!isMountedRef.current) {
+      return;
+    }
 
-      try {
-        const currentStart = startOfMonth(referenceDate).toISOString();
-        const nextMonthStart = startOfMonth(addMonths(referenceDate, 1)).toISOString();
-        const previousStart = startOfMonth(addMonths(referenceDate, -1)).toISOString();
+    setLoading(true);
+    setError(null);
 
-        const [currentOrdersResult, previousOrdersResult, inProgressResult] = await Promise.all([
-          supabase
-            .from("orders")
-            .select("id, customer_id, status, created_at, driver_instructions, package_note, quote_id")
-            .gte("created_at", currentStart)
-            .lt("created_at", nextMonthStart),
-          supabase
-            .from("orders")
-            .select("id, customer_id, status, created_at, driver_instructions, package_note, quote_id")
-            .gte("created_at", previousStart)
-            .lt("created_at", currentStart),
-          supabase
-            .from("orders")
-            .select("id", { count: "exact", head: true })
-            .eq("status", "EN_COURS"),
-        ]);
+    try {
+      const currentStart = startOfMonth(referenceDate).toISOString();
+      const nextMonthStart = startOfMonth(addMonths(referenceDate, 1)).toISOString();
+      const previousStart = startOfMonth(addMonths(referenceDate, -1)).toISOString();
 
-        if (currentOrdersResult.error) {
-          throw currentOrdersResult.error;
-        }
-        if (previousOrdersResult.error) {
-          throw previousOrdersResult.error;
-        }
-        if (inProgressResult.error) {
-          throw inProgressResult.error;
-        }
+      const [currentOrdersResult, previousOrdersResult, inProgressResult] = await Promise.all([
+        supabase
+          .from("orders")
+          .select("id, customer_id, status, created_at, amount")
+          .gte("created_at", currentStart)
+          .lt("created_at", nextMonthStart),
+        supabase
+          .from("orders")
+          .select("id, customer_id, status, created_at, amount")
+          .gte("created_at", previousStart)
+          .lt("created_at", currentStart),
+        supabase
+          .from("orders")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "EN_COURS"),
+      ]);
 
-        if (!isMounted) {
-          return;
-        }
+      if (currentOrdersResult.error) {
+        throw currentOrdersResult.error;
+      }
+      if (previousOrdersResult.error) {
+        throw previousOrdersResult.error;
+      }
+      if (inProgressResult.error) {
+        throw inProgressResult.error;
+      }
 
-        const currentOrders = currentOrdersResult.data ?? [];
-        const previousOrders = previousOrdersResult.data ?? [];
+      const currentOrders = (currentOrdersResult.data as OrderRow[] | null) ?? [];
+      const previousOrders = (previousOrdersResult.data as OrderRow[] | null) ?? [];
 
+      if (isMountedRef.current) {
         setStats({
           currentOrdersCount: currentOrders.length,
           previousOrdersCount: previousOrders.length,
-          urgentOrdersCount: currentOrders.filter(detectExpressOption).length,
+          currentRevenue: currentOrders.reduce((total, order) => total + (order.amount ?? 0), 0),
+          previousRevenue: previousOrders.reduce((total, order) => total + (order.amount ?? 0), 0),
           inProgressCount: inProgressResult.count ?? 0,
           currentActiveClients: countActiveClients(currentOrders),
           previousActiveClients: countActiveClients(previousOrders),
         });
-      } catch (fetchError) {
-        console.error(fetchError);
-        if (isMounted) {
-          setError("Impossible de récupérer les statistiques du mois en cours.");
-          setStats(null);
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
       }
-    };
+    } catch (fetchError) {
+      console.error(fetchError);
+      if (isMountedRef.current) {
+        setError("Impossible de récupérer les statistiques du mois en cours.");
+        setStats(null);
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [referenceDate]);
 
-    loadStats();
+  useEffect(() => {
+    void loadStats();
+
+    const channel = supabase
+      .channel("orders-overview")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders" },
+        () => {
+          if (isMountedRef.current) {
+            void loadStats();
+          }
+        },
+      )
+      .subscribe();
 
     return () => {
-      isMounted = false;
+      supabase.removeChannel(channel);
     };
-  }, [referenceDate]);
+  }, [loadStats]);
 
   const resolvedStats: OverviewStats | null = error ? null : stats;
 
@@ -268,7 +312,7 @@ const AdminStats = () => {
         <Card className="border border-border/50 bg-background/80 shadow-soft">
           <CardHeader>
             <CardTitle className="text-base font-semibold">
-              Courses urgentes 🚨
+              Chiffre d’affaires du mois 💰
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -277,13 +321,26 @@ const AdminStats = () => {
             ) : resolvedStats ? (
               <div className="space-y-3">
                 <p className="text-3xl font-bold">
-                  {formatCount(resolvedStats.urgentOrdersCount)}
+                  {currencyFormatter.format(resolvedStats.currentRevenue)}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {resolvedStats.urgentOrdersCount === 0
-                    ? "0 course urgente pour l’instant."
-                    : "Courses avec option express depuis le 1er."}
+                  {resolvedStats.currentRevenue === 0
+                    ? "0 € généré depuis le 1er du mois."
+                    : "Montant TTC des commandes depuis le 1er."}
                 </p>
+                {revenueVariation && (
+                  <p
+                    className={`text-sm font-semibold ${
+                      revenueVariation.tone === "up"
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : revenueVariation.tone === "down"
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-muted-foreground"
+                    }`}
+                  >
+                    {revenueVariation.text}
+                  </p>
+                )}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">

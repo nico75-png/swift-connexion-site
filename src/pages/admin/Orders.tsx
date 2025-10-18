@@ -230,7 +230,11 @@ const AdminOrders = () => {
 
         {filteredOrders.length === 0 && (
           <div className="py-12 text-center">
-            <p className="text-muted-foreground">Aucune commande trouvée</p>
+            <p className="text-muted-foreground">
+              {orders.length === 0
+                ? "Vous n’avez encore aucune commande."
+                : "Aucune commande ne correspond à votre recherche."}
+            </p>
           </div>
         )}
       </div>

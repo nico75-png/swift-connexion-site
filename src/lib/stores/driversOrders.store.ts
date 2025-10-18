@@ -212,85 +212,7 @@ export const generateId = () => {
   return `id-${Math.random().toString(36).slice(2, 11)}`;
 };
 
-export const defaultDrivers: Driver[] = [
-  {
-    id: "DRV-101",
-    name: "Marc Dubois",
-    fullname: "Marc Dubois",
-    phone: "06 12 34 56 78",
-    phoneNormalized: "0612345678",
-    email: "marc.dubois@one-connexion.test",
-    vehicle: { type: "Fourgon", capacity: "500 kg", capacityKg: 500, registration: "AB-123-CD" },
-    plate: "AB123CD",
-    plateNormalized: "AB123CD",
-    status: "AVAILABLE",
-    workflowStatus: "ACTIF",
-    nextFreeSlot: "Aujourd'hui · 16:00",
-    active: true,
-    lifecycleStatus: "ACTIF",
-    unavailabilities: [],
-    comment: "Polyvalent et réactif",
-    createdAt: "2025-01-14T08:15:00.000Z",
-    coversAllZones: true,
-  },
-  {
-    id: "DRV-102",
-    name: "Julie Lambert",
-    fullname: "Julie Lambert",
-    phone: "06 98 76 54 32",
-    phoneNormalized: "0698765432",
-    email: "julie.lambert@one-connexion.test",
-    vehicle: { type: "Scooter", capacity: "80 kg", capacityKg: 80 },
-    plate: "SC123OC",
-    plateNormalized: "SC123OC",
-    status: "ON_TRIP",
-    workflowStatus: "EN_COURSE",
-    nextFreeSlot: "Aujourd'hui · 18:15",
-    active: true,
-    lifecycleStatus: "ACTIF",
-    unavailabilities: [],
-    createdAt: "2025-01-14T09:45:00.000Z",
-    coversAllZones: true,
-  },
-  {
-    id: "DRV-103",
-    name: "Sophie Renard",
-    fullname: "Sophie Renard",
-    phone: "07 11 22 33 44",
-    phoneNormalized: "0711223344",
-    email: "sophie.renard@one-connexion.test",
-    vehicle: { type: "Voiture", capacity: "250 kg", capacityKg: 250, registration: "CD-456-EF" },
-    plate: "CD456EF",
-    plateNormalized: "CD456EF",
-    status: "PAUSED",
-    workflowStatus: "EN_PAUSE",
-    nextFreeSlot: "Demain · 08:00",
-    active: true,
-    lifecycleStatus: "ACTIF",
-    unavailabilities: [],
-    createdAt: "2025-01-13T15:30:00.000Z",
-    coversAllZones: true,
-  },
-  {
-    id: "DRV-104",
-    name: "Pierre Martin",
-    fullname: "Pierre Martin",
-    phone: "06 55 44 33 22",
-    phoneNormalized: "0655443322",
-    email: "pierre.martin@one-connexion.test",
-    vehicle: { type: "Utilitaire", capacity: "750 kg", capacityKg: 750, registration: "GH-789-IJ" },
-    plate: "GH789IJ",
-    plateNormalized: "GH789IJ",
-    status: "AVAILABLE",
-    workflowStatus: "ACTIF",
-    nextFreeSlot: "Aujourd'hui · 15:30",
-    active: true,
-    lifecycleStatus: "ACTIF",
-    unavailabilities: [],
-    createdAt: "2025-01-12T11:10:00.000Z",
-    coversAllZones: true,
-  },
-];
+export const defaultDrivers: Driver[] = [];
 
 const defaultOrders: Order[] = ADMIN_ORDER_SEEDS.map(buildOrderFromSeed);
 
@@ -314,83 +236,13 @@ const buildAssignment = (id: string, orderId: string, driverId: string): Assignm
   };
 };
 
-const defaultAssignments: Assignment[] = [
-  buildAssignment("ASN-001", "CMD-002", "DRV-103"),
-  buildAssignment("ASN-002", "CMD-003", "DRV-104"),
-  buildAssignment("ASN-003", "CMD-004", "DRV-101"),
-  buildAssignment("ASN-004", "CMD-007", "DRV-104"),
-  buildAssignment("ASN-005", "CMD-009", "DRV-102"),
-];
+const defaultAssignments: Assignment[] = [];
 
 const defaultScheduledAssignments: ScheduledAssignment[] = [];
 
-const defaultActivity: ActivityEntry[] = [
-  {
-    id: "ACT-1",
-    type: "CREATE",
-    orderId: "CMD-002",
-    at: addMinutes(getOrderSchedule("CMD-002").start, -120),
-    by: "system",
-    message: "Commande importée depuis l'espace client",
-  },
-  {
-    id: "ACT-2",
-    type: "ASSIGN",
-    orderId: "CMD-002",
-    driverId: "DRV-103",
-    at: addMinutes(getOrderSchedule("CMD-002").start, -45),
-    by: "admin.ines",
-    message: "Chauffeur Sophie Renard affecté à la tournée",
-  },
-  {
-    id: "ACT-3",
-    type: "STATUS_UPDATE",
-    orderId: "CMD-002",
-    driverId: "DRV-103",
-    at: getOrderSchedule("CMD-002").start,
-    by: "DRV-103",
-    message: "Statut mis à jour : Enlevé",
-  },
-  {
-    id: "ACT-4",
-    type: "STATUS_UPDATE",
-    orderId: "CMD-028",
-    driverId: "DRV-101",
-    at: addMinutes(getOrderSchedule("CMD-028").start, 45),
-    by: "DRV-101",
-    message: "Statut mis à jour : En cours de livraison",
-  },
-];
+const defaultActivity: ActivityEntry[] = [];
 
-const defaultNotifications: NotificationEntry[] = [
-  {
-    id: "NOTIF-1",
-    channel: "ADMIN",
-    orderId: "CMD-003",
-    driverId: "DRV-104",
-    read: false,
-    message: "Pierre Martin a confirmé la prise en charge de CMD-003",
-    createdAt: addMinutes(getOrderSchedule("CMD-003").start, -30),
-  },
-  {
-    id: "NOTIF-2",
-    channel: "ADMIN",
-    orderId: "CMD-028",
-    driverId: "DRV-101",
-    read: false,
-    message: "Mise à jour statut CMD-028 : en cours de livraison",
-    createdAt: addMinutes(getOrderSchedule("CMD-028").start, 30),
-  },
-  {
-    id: "NOTIF-3",
-    channel: "ADMIN",
-    orderId: "CMD-009",
-    driverId: "DRV-102",
-    read: true,
-    message: "Preuve de livraison importée pour CMD-009",
-    createdAt: addMinutes(getOrderSchedule("CMD-009").end, 20),
-  },
-];
+const defaultNotifications: NotificationEntry[] = [];
 
 const safeParse = <T,>(value: string | null, fallback: T): T => {
   if (!value) return fallback;

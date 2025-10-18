@@ -375,55 +375,14 @@ export function confirmReorder(draft: ClientOrder) {
 
 export function ensureDriverDataShape(): StoredDriver[] {
   const drivers = getFromStorage<StoredDriver[]>("oc_drivers", []);
-  if (!Array.isArray(drivers) || drivers.length === 0) {
-    const seeded: StoredDriver[] = [
-      {
-        id: "DRV-2001",
-        name: "Marc Dubois",
-        phone: "0612345678",
-        status: "ACTIF",
-        onPause: false,
-        capacityKg: 400,
-        lastLocation: { lat: 48.8566, lng: 2.3522 },
-        vehicleType: "utilitaire",
-        unavailabilities: [],
-      },
-      {
-        id: "DRV-2002",
-        name: "Julie Lambert",
-        phone: "0698765432",
-        status: "ACTIF",
-        onPause: false,
-        capacityKg: 150,
-        lastLocation: { lat: 48.8738, lng: 2.295 },
-        vehicleType: "voiture",
-        unavailabilities: [],
-      },
-      {
-        id: "DRV-2003",
-        name: "Thomas Renard",
-        phone: "0676543210",
-        status: "ACTIF",
-        onPause: false,
-        capacityKg: 250,
-        lastLocation: { lat: 48.902, lng: 2.369 },
-        vehicleType: "fourgon",
-        unavailabilities: [],
-      },
-      {
-        id: "DRV-2004",
-        name: "Sophie Marin",
-        phone: "0655123498",
-        status: "INACTIF",
-        onPause: true,
-        capacityKg: 200,
-        lastLocation: { lat: 48.821, lng: 2.28 },
-        vehicleType: "moto",
-        unavailabilities: [],
-      },
-    ];
-    saveToStorage("oc_drivers", seeded);
-    return seeded;
+  if (!Array.isArray(drivers)) {
+    saveToStorage("oc_drivers", []);
+    return [];
+  }
+
+  if (drivers.length === 0) {
+    saveToStorage("oc_drivers", []);
+    return [];
   }
 
   const enhanced = drivers.map((driver, index) => {
@@ -473,132 +432,9 @@ export function ensureOrdersDataShape(): ClientOrder[] {
     return normalized;
   }
 
-  const fallback: ClientOrder[] = [
-    {
-      id: "009",
-      status: "Livré",
-      customerId: "CLI-2001",
-      createdAt: "2025-01-15T12:00:00.000Z",
-      pickupAt: "2025-01-14T09:30:00.000Z",
-      dropoffEta: "2025-01-14T11:00:00.000Z",
-      type: "Document juridique",
-      transportTypeCode: "juridique",
-      from: {
-        address: "12 rue de la Paix, 75002 Paris",
-        contact: { name: "Cabinet Dupont", phone: "0145234567" },
-        coords: mockGeocode("12 rue de la Paix, 75002 Paris"),
-      },
-      to: {
-        address: "45 avenue des Champs-Élysées, 75008 Paris",
-        contact: { name: "Bureau client", phone: "0176543210" },
-      },
-      km: 14,
-      weightKg: 5,
-      volumeM3: 0.4,
-      parcelsCount: 2,
-      options: { express: true, fragile: false },
-      price: estimatePrice({ base: 18, km: 14, express: true, fragile: false }),
-      currency: "EUR",
-      quoteId: "Q-009",
-      driverId: "DRV-2001",
-      driver: { id: "DRV-2001", name: "Marc Dubois", phone: "0612345678" },
-      notes: "Remettre en main propre",
-    },
-    {
-      id: "010",
-      status: "Livré",
-      customerId: "CLI-2001",
-      createdAt: "2025-01-13T10:00:00.000Z",
-      pickupAt: "2025-01-13T08:15:00.000Z",
-      dropoffEta: "2025-01-13T09:00:00.000Z",
-      type: "Colis médical",
-      transportTypeCode: "colis",
-      from: {
-        address: "22 boulevard de Sébastopol, 75004 Paris",
-        contact: { name: "Clinique Sébastopol", phone: "0156759800" },
-        coords: mockGeocode("22 boulevard de Sébastopol, 75004 Paris"),
-      },
-      to: {
-        address: "5 rue Pasteur, 92100 Boulogne-Billancourt",
-        contact: { name: "Laboratoire BioPlus", phone: "0146347880" },
-      },
-      km: 19,
-      weightKg: 8,
-      volumeM3: 0.6,
-      parcelsCount: 1,
-      options: { express: true, fragile: true },
-      price: estimatePrice({ base: 22, km: 19, express: true, fragile: true }),
-      currency: "EUR",
-      quoteId: "Q-010",
-      driverId: "DRV-2003",
-      driver: { id: "DRV-2003", name: "Thomas Renard", phone: "0676543210" },
-      notes: "Transport à température contrôlée",
-    },
-    {
-      id: "1000",
-      status: "En cours",
-      customerId: "CLI-2001",
-      createdAt: "2025-01-16T07:30:00.000Z",
-      pickupAt: "2025-01-16T08:00:00.000Z",
-      dropoffEta: "2025-01-16T09:15:00.000Z",
-      type: "Monture optique",
-      transportTypeCode: "monture",
-      from: {
-        address: "78 rue Montorgueil, 75002 Paris",
-        contact: { name: "Maison Optique", phone: "0186752390" },
-        coords: mockGeocode("78 rue Montorgueil, 75002 Paris"),
-      },
-      to: {
-        address: "12 rue du Président Wilson, 92300 Levallois-Perret",
-        contact: { name: "Optique Levallois", phone: "0178635490" },
-      },
-      km: 9,
-      weightKg: 2,
-      volumeM3: 0.2,
-      parcelsCount: 1,
-      options: { express: false, fragile: true },
-      price: estimatePrice({ base: 16, km: 9, express: false, fragile: true }),
-      currency: "EUR",
-      quoteId: "Q-1000",
-      driverId: "DRV-2002",
-      driver: { id: "DRV-2002", name: "Julie Lambert", phone: "0698765432" },
-      notes: "Fragile, manipuler avec précaution",
-    },
-    {
-      id: "1001",
-      status: "En attente",
-      customerId: "CLI-2001",
-      createdAt: "2025-01-17T10:00:00.000Z",
-      pickupAt: "2025-01-17T14:30:00.000Z",
-      dropoffEta: "2025-01-17T16:00:00.000Z",
-      type: "Document express",
-      transportTypeCode: "document",
-      from: {
-        address: "5 rue de la République, 93100 Montreuil",
-        contact: { name: "Cabinet Martin", phone: "0149203040" },
-        coords: mockGeocode("5 rue de la République, 93100 Montreuil"),
-      },
-      to: {
-        address: "18 rue du Bac, 75007 Paris",
-        contact: { name: "Notaire Paris 7", phone: "0156789040" },
-      },
-      km: 12,
-      weightKg: 3,
-      volumeM3: 0.3,
-      parcelsCount: 1,
-      options: { express: true, fragile: false },
-      price: estimatePrice({ base: 20, km: 12, express: true, fragile: false }),
-      currency: "EUR",
-      quoteId: "Q-1001",
-      driverId: null,
-      driver: null,
-      notes: "Code porte 27B",
-    },
-  ];
-
-  saveToStorage("oc_orders", fallback);
+  saveToStorage("oc_orders", []);
   reconcileGlobalOrderSeq();
-  return fallback;
+  return [];
 }
 
 export function ensureAssignmentShape() {

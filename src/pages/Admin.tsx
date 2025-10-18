@@ -1,164 +1,252 @@
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Users, Package, TrendingUp, Activity, AlertCircle, Clock } from "lucide-react";
+import { Package, Users, Truck } from "lucide-react";
+
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import AdminSidebar from "@/components/dashboard/AdminSidebar";
 import Topbar from "@/components/dashboard/Topbar";
-import StatsCard from "@/components/dashboard/StatsCard";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { getClients, type ClientRecord } from "@/lib/clientStorage";
+import { useDriversStore, useOrdersStore } from "@/providers/AdminDataProvider";
 
-/**
- * Dashboard admin - Vue d'ensemble
- * KPIs, graphique hebdo, dernières commandes et nouveaux clients
- */
 const Admin = () => {
-  // KPIs du mois
-  const stats = [
-    { label: "Commandes ce mois", value: 247, icon: Package, color: "text-primary", trend: { value: 12, isPositive: true } },
-    { label: "Urgentes", value: 23, icon: AlertCircle, color: "text-warning" },
-    { label: "En cours", value: 18, icon: Clock, color: "text-info" },
-    { label: "Clients actifs", value: 156, icon: Users, color: "text-success", trend: { value: 8, isPositive: true } },
-  ];
+  const { orders, ready } = useOrdersStore();
+  const { drivers } = useDriversStore();
+  const [clients, setClients] = useState<ClientRecord[]>([]);
 
-  // Données graphique hebdomadaire
-  const weeklyData = [
-    { name: "Lun", commandes: 32 },
-    { name: "Mar", commandes: 45 },
-    { name: "Mer", commandes: 38 },
-    { name: "Jeu", commandes: 52 },
-    { name: "Ven", commandes: 48 },
-    { name: "Sam", commandes: 18 },
-    { name: "Dim", commandes: 14 },
-  ];
-
-  // Dernières commandes
-  const recentOrders = [
-    { id: "010", client: "Cabinet Dupont", status: "En cours", driver: "Marc D.", amount: 45.5, time: "Il y a 15 min" },
-    { id: "009", client: "Optique Vision", status: "Livré", driver: "Julie L.", amount: 38, time: "Il y a 1h" },
-    { id: "1000", client: "Lab Médical", status: "En attente", driver: "-", amount: 52, time: "Il y a 2h" },
-    { id: "1001", client: "Avocat & Associés", status: "Enlevé", driver: "Pierre M.", amount: 41, time: "Il y a 3h" },
-  ];
-
-  // Nouveaux clients
-  const newClients = [
-    { name: "Pharmacie Centrale", sector: "Santé", signupDate: "Aujourd'hui", orders: 0 },
-    { name: "Cabinet Martin", sector: "Juridique", signupDate: "Hier", orders: 2 },
-    { name: "Opticien Plus", sector: "Optique", signupDate: "Il y a 2j", orders: 5 },
-  ];
-
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      "Livré": "bg-success/10 text-success border-success/20",
-      "En cours": "bg-info/10 text-info border-info/20",
-      "Enlevé": "bg-secondary/10 text-secondary border-secondary/20",
-      "En attente": "bg-warning/10 text-warning border-warning/20",
-      "Annulé": "bg-destructive/10 text-destructive border-destructive/20",
+  useEffect(() => {
+    const refreshClients = () => {
+      setClients(getClients());
     };
-    return colors[status] || "";
+
+    refreshClients();
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "oc_clients") {
+        refreshClients();
+      }
+    };
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("focus", refreshClients);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("focus", refreshClients);
+    };
+  }, []);
+
+  const activeDriverCount = useMemo(
+    () => drivers.filter((driver) => driver.active && driver.lifecycleStatus !== "INACTIF").length,
+    [drivers],
+  );
+
+  const recentOrders = useMemo(
+    () =>
+      orders
+        .slice()
+        .sort((a, b) => {
+          const aTime = a.schedule?.start ? new Date(a.schedule.start).getTime() : 0;
+          const bTime = b.schedule?.start ? new Date(b.schedule.start).getTime() : 0;
+          return bTime - aTime;
+        })
+        .slice(0, 4),
+    [orders],
+  );
+
+  const recentClients = useMemo(
+    () =>
+      clients
+        .slice()
+        .sort((a, b) => {
+          const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return bTime - aTime;
+        })
+        .slice(0, 4),
+    [clients],
+  );
+
+  const formatOrderSchedule = (value: string | undefined) => {
+    if (!value) {
+      return null;
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+    return date.toLocaleString("fr-FR", {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const formatClientDate = (value: string | undefined | null) => {
+    if (!value) {
+      return null;
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+    return date.toLocaleDateString("fr-FR");
   };
 
   return (
-    <DashboardLayout
-      sidebar={<AdminSidebar />}
-      topbar={<Topbar title="Vue d'ensemble" />}
-    >
-      {/* KPIs */}
-      <div className="grid md:grid-cols-4 gap-6 mb-8">
-        {stats.map((stat, i) => (
-          <StatsCard key={i} {...stat} />
-        ))}
+    <DashboardLayout sidebar={<AdminSidebar />} topbar={<Topbar title="Vue d'ensemble" />}>
+      {!ready && (
+        <div className="mb-6 rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+          Chargement des données...
+        </div>
+      )}
+
+      <div className="mb-8 grid gap-6 md:grid-cols-3">
+        <Card className="border-none shadow-soft">
+          <CardHeader className="flex flex-row items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Package className="h-5 w-5" />
+            </div>
+            <CardTitle className="text-base">Commandes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{orders.length}</p>
+            <p className="text-sm text-muted-foreground">
+              {orders.length === 0 ? "Aucune commande pour le moment" : "Commandes enregistrées"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-soft">
+          <CardHeader className="flex flex-row items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-success/10 text-success">
+              <Users className="h-5 w-5" />
+            </div>
+            <CardTitle className="text-base">Clients</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{clients.length}</p>
+            <p className="text-sm text-muted-foreground">
+              {clients.length === 0 ? "Aucun client enregistré" : "Clients actifs"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-soft">
+          <CardHeader className="flex flex-row items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <Truck className="h-5 w-5" />
+            </div>
+            <CardTitle className="text-base">Chauffeurs</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{activeDriverCount}</p>
+            <p className="text-sm text-muted-foreground">
+              {activeDriverCount === 0 ? "Aucun chauffeur actif" : "Chauffeurs prêts à intervenir"}
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Graphique hebdo */}
-      <Card className="mb-8 border-none shadow-soft">
-        <CardHeader>
-          <CardTitle>Évolution hebdomadaire des commandes</CardTitle>
+      <div className="grid gap-8 lg:grid-cols-2">
+        <Card className="border-none shadow-soft">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Commandes</CardTitle>
+            <Link to="/admin/commandes">
+              <Button variant="ghost" size="sm">Accéder</Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {orders.length === 0 ? (
+              <p className="text-muted-foreground">Vous n’avez encore aucune commande.</p>
+            ) : (
+              <ul className="space-y-4">
+                {recentOrders.map((order) => {
+                  const formattedSchedule = formatOrderSchedule(order.schedule?.start);
+                  return (
+                    <li
+                      key={order.id}
+                      className="flex items-center justify-between rounded-md border border-border bg-card p-3"
+                    >
+                      <div>
+                        <p className="font-semibold">{order.id}</p>
+                        <p className="text-sm text-muted-foreground">{order.client}</p>
+                      </div>
+                      <div className="text-right text-sm text-muted-foreground">
+                        <p>{order.status}</p>
+                        {formattedSchedule && <p>{formattedSchedule}</p>}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-soft">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Clients</CardTitle>
+            <Link to="/admin/clients">
+              <Button variant="ghost" size="sm">Gérer</Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {clients.length === 0 ? (
+              <p className="text-muted-foreground">Aucun client actif.</p>
+            ) : (
+              <ul className="space-y-4">
+                {recentClients.map((client) => {
+                  const formattedDate = formatClientDate(client.createdAt);
+                  return (
+                    <li
+                      key={client.id}
+                      className="flex items-center justify-between rounded-md border border-border bg-card p-3"
+                    >
+                      <div>
+                        <p className="font-semibold">{client.company}</p>
+                        <p className="text-sm text-muted-foreground">{client.contact}</p>
+                      </div>
+                      <div className="text-right text-sm text-muted-foreground">
+                        <p>{client.sector}</p>
+                        {formattedDate && <p>{formattedDate}</p>}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="mt-8 border-none shadow-soft">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Chauffeurs</CardTitle>
+          <Link to="/admin/chauffeurs">
+            <Button variant="ghost" size="sm">Voir</Button>
+          </Link>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={weeklyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
-              <YAxis stroke="hsl(var(--muted-foreground))" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(var(--card))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "8px",
-                }}
-              />
-              <Line type="monotone" dataKey="commandes" stroke="hsl(var(--primary))" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
+          {drivers.length === 0 ? (
+            <p className="text-muted-foreground">Aucun chauffeur disponible pour le moment.</p>
+          ) : (
+            <div className="flex flex-col gap-2 text-sm text-muted-foreground">
+              <span>
+                Chauffeurs actifs : <span className="font-semibold text-foreground">{activeDriverCount}</span>
+              </span>
+              <span>
+                Chauffeurs inactifs :
+                <span className="font-semibold text-foreground"> {drivers.length - activeDriverCount}</span>
+              </span>
+            </div>
+          )}
         </CardContent>
       </Card>
-
-      <div className="grid lg:grid-cols-2 gap-8">
-        {/* Dernières commandes */}
-        <Card className="border-none shadow-soft">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Dernières commandes</CardTitle>
-            <Link to="/admin/commandes">
-              <Button variant="ghost" size="sm">Voir tout</Button>
-            </Link>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentOrders.map((order) => (
-                <div key={order.id} className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-base">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-1">
-                      <span className="font-mono text-sm font-semibold">{order.id}</span>
-                      <Badge variant="outline" className={getStatusColor(order.status)}>
-                        {order.status}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{order.client} • {order.driver}</p>
-                    <p className="text-xs text-muted-foreground">{order.time}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-lg">{order.amount}€</p>
-                    <Link to={`/admin/commandes/${order.id}`}>
-                      <Button variant="ghost" size="sm">Détails</Button>
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Nouveaux clients */}
-        <Card className="border-none shadow-soft">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Nouveaux clients</CardTitle>
-            <Link to="/admin/clients">
-              <Button variant="ghost" size="sm">Voir tout</Button>
-            </Link>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {newClients.map((client, i) => (
-                <div key={i} className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-base">
-                  <div className="flex-1">
-                    <p className="font-semibold mb-1">{client.name}</p>
-                    <p className="text-sm text-muted-foreground">{client.sector}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{client.signupDate}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-muted-foreground mb-2">{client.orders} commandes</p>
-                    <Link to={`/admin/clients/${i + 1}`}>
-                      <Button variant="outline" size="sm">Voir fiche</Button>
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </DashboardLayout>
   );
 };

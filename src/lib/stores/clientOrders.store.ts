@@ -1,4 +1,4 @@
-import { reconcileGlobalOrderSeq } from "@/lib/orderSequence";
+import { ensureOrderNumberFormat, reconcileGlobalOrderSeq } from "@/lib/orderSequence";
 import {
   ClientOrder,
   ensureOrdersDataShape,
@@ -164,9 +164,10 @@ const resolveAmount = async (order: ClientOrder): Promise<{ amount: number | nul
 const toListItem = async (order: ClientOrder): Promise<ClientOrderListItem> => {
   const { amount, currency } = await resolveAmount(order);
   const normalizedCode = normalizeTransportCode(order.transportTypeCode ?? "");
+  const formattedNumber = ensureOrderNumberFormat(order.reference ?? order.id);
   return {
     id: order.id,
-    orderNumber: order.reference ?? `ORD-${order.id}`,
+    orderNumber: formattedNumber || order.reference || order.id,
     createdAt: order.createdAt ?? order.pickupAt ?? null,
     transportType: normalizedCode || null,
     transportLabel: resolveTransportLabel(normalizedCode, order.type),

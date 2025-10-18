@@ -1,5 +1,5 @@
 import { differenceInMinutes, parseISO } from "date-fns";
-import { initGlobalOrderSeq, reconcileGlobalOrderSeq } from "@/lib/orderSequence";
+import { ensureOrderNumberFormat, initGlobalOrderSeq, reconcileGlobalOrderSeq } from "@/lib/orderSequence";
 import { ADMIN_ORDER_SEEDS, type AdminOrderSeed } from "./data/adminOrderSeeds";
 
 export type DriverStatus = "AVAILABLE" | "ON_TRIP" | "PAUSED";
@@ -132,8 +132,9 @@ const buildOrderFromSeed = (seed: AdminOrderSeed): Order => {
         }
       : undefined;
 
+  const orderId = ensureOrderNumberFormat(seed.number) || seed.number;
   return {
-    id: seed.number,
+    id: orderId,
     client: seed.client,
     sector: seed.sector,
     type: seed.transportType,
@@ -309,10 +310,18 @@ const writeStore = <T,>(key: string, value: T) => {
   window.localStorage.setItem(key, JSON.stringify(value));
 };
 
-export const getOrders = (): Order[] => readStore(STORAGE_KEYS.orders, defaultOrders);
+export const getOrders = (): Order[] =>
+  readStore(STORAGE_KEYS.orders, defaultOrders).map((order) => ({
+    ...order,
+    id: ensureOrderNumberFormat(order.id) || order.id,
+  }));
 
 export const saveOrders = (list: Order[]) => {
-  writeStore(STORAGE_KEYS.orders, list);
+  const normalized = list.map((order) => ({
+    ...order,
+    id: ensureOrderNumberFormat(order.id) || order.id,
+  }));
+  writeStore(STORAGE_KEYS.orders, normalized);
 };
 
 export const getDrivers = (): Driver[] => {

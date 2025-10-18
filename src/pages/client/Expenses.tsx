@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TrendingUp, DollarSign, Calendar, Download, FileSpreadsheet } from "lucide-react";
+import { Download, FileSpreadsheet } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useState } from "react";
 
 /**
@@ -17,18 +18,9 @@ const ClientExpenses = () => {
   const [periodFilter, setPeriodFilter] = useState("month");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const stats = [
-    { label: "Total cumulé", value: "1 869€", icon: DollarSign, color: "text-primary" },
-    { label: "Moyenne / commande", value: "35.60€", icon: TrendingUp, color: "text-success" },
-    { label: "Ce mois", value: "623€", icon: Calendar, color: "text-info" },
-  ];
+  const stats: Array<{ label: string; value: string | number; icon: LucideIcon; color?: string }> = [];
 
-  const expenses = [
-    { id: "009", date: "15/01/2025", status: "En cours", amount: 45.5 },
-    { id: "010", date: "14/01/2025", status: "Livré", amount: 52 },
-    { id: "1000", date: "14/01/2025", status: "Livré", amount: 38 },
-    { id: "1001", date: "13/01/2025", status: "En attente", amount: 35 },
-  ];
+  const expenses: Array<{ id: string; date: string; status: string; amount: number }> = [];
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -68,9 +60,13 @@ const ClientExpenses = () => {
 
         {/* KPIs */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {stats.map((stat, i) => (
-            <StatsCard key={i} {...stat} />
-          ))}
+          {stats.length > 0 ? (
+            stats.map((stat, i) => <StatsCard key={i} {...stat} />)
+          ) : (
+            <div className="col-span-full rounded-lg border border-dashed border-muted-foreground/40 p-6 text-center text-sm text-muted-foreground">
+              Aucune statistique disponible pour vos dépenses.
+            </div>
+          )}
         </div>
 
         {/* Graphique évolution */}
@@ -144,16 +140,24 @@ const ClientExpenses = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {expenses.map((expense) => (
-                    <tr key={expense.id} className="border-b hover:bg-muted/30">
-                      <td className="p-4 font-mono text-sm">{expense.id}</td>
-                      <td className="p-4 text-sm text-muted-foreground">{expense.date}</td>
-                      <td className="p-4">
-                        <Badge className={getStatusColor(expense.status)}>{expense.status}</Badge>
+                  {expenses.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="p-6 text-center text-sm text-muted-foreground">
+                        Aucune dépense enregistrée pour le moment.
                       </td>
-                      <td className="p-4 text-right font-semibold">{expense.amount.toFixed(2)}€</td>
                     </tr>
-                  ))}
+                  ) : (
+                    expenses.map((expense) => (
+                      <tr key={expense.id} className="border-b hover:bg-muted/30">
+                        <td className="p-4 font-mono text-sm">{expense.id}</td>
+                        <td className="p-4 text-sm text-muted-foreground">{expense.date}</td>
+                        <td className="p-4">
+                          <Badge className={getStatusColor(expense.status)}>{expense.status}</Badge>
+                        </td>
+                        <td className="p-4 text-right font-semibold">{expense.amount.toFixed(2)}€</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

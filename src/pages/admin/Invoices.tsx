@@ -34,68 +34,7 @@ const AdminInvoices = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState("all");
-  const [invoices, setInvoices] = useState<Invoice[]>([
-    {
-      id: "FACT-025",
-      client: "Cabinet Dupont",
-      clientEmail: "contact@cabinet-dupont.fr",
-      period: "Janvier 2025",
-      amount: 512.5,
-      status: "Payée",
-      dueDate: "2025-01-31",
-      paidDate: "2025-01-28",
-    },
-    {
-      id: "FACT-024",
-      client: "Optique Vision",
-      clientEmail: "facturation@optiquevision.fr",
-      period: "Janvier 2025",
-      amount: 1247,
-      status: "Payée",
-      dueDate: "2025-01-31",
-      paidDate: "2025-01-30",
-    },
-    {
-      id: "FACT-023",
-      client: "Lab Médical",
-      clientEmail: "compta@labmedical.fr",
-      period: "Janvier 2025",
-      amount: 845,
-      status: "En attente",
-      dueDate: "2025-01-31",
-      paidDate: null,
-    },
-    {
-      id: "FACT-022",
-      client: "Avocat & Associés",
-      clientEmail: "contact@avocat-associes.fr",
-      period: "Décembre 2024",
-      amount: 687.5,
-      status: "Payée",
-      dueDate: "2024-12-31",
-      paidDate: "2024-12-29",
-    },
-    {
-      id: "FACT-021",
-      client: "Pharmacie Centrale",
-      clientEmail: "compta@pharmacie-centrale.fr",
-      period: "Décembre 2024",
-      amount: 1534,
-      status: "Payée",
-      dueDate: "2024-12-31",
-      paidDate: "2024-12-30",
-    },
-    {
-      id: "FACT-020",
-      client: "Cabinet Martin",
-      clientEmail: "martin@cabinet-martin.fr",
-      period: "Décembre 2024",
-      amount: 234,
-      status: "En retard",
-      dueDate: "2024-12-31",
-      paidDate: null,
-    },
-  ]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const { toast } = useToast();
 
   const months = useMemo(

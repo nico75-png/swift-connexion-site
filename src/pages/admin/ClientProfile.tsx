@@ -287,45 +287,11 @@ const AdminClientProfile = () => {
     }
   };
 
-  const recentOrders = [
-    { id: "010", date: "2025-01-15", status: "En cours", amount: 45.5 },
-    { id: "1002", date: "2025-01-14", status: "Livré", amount: 38 },
-    { id: "1004", date: "2025-01-12", status: "Livré", amount: 52 },
-    { id: "1005", date: "2025-01-10", status: "Livré", amount: 41 },
-  ];
+  const recentOrders: Array<{ id: string; date: string; status: string; amount: number }> = [];
 
-  const invoices = [
-    {
-      id: "FACT-025",
-      period: "Janvier 2025",
-      amount: 512.5,
-      status: "Payée",
-      dueDate: "2025-01-31",
-    },
-    {
-      id: "FACT-024",
-      period: "Décembre 2024",
-      amount: 487.0,
-      status: "Payée",
-      dueDate: "2024-12-31",
-    },
-    {
-      id: "FACT-023",
-      period: "Novembre 2024",
-      amount: 445.0,
-      status: "Payée",
-      dueDate: "2024-11-30",
-    },
-  ];
+  const invoices: Array<{ id: string; period: string; amount: number; status: string; dueDate: string }> = [];
 
-  const spendingData = [
-    { month: "Juil", amount: 380 },
-    { month: "Aoû", amount: 420 },
-    { month: "Sep", amount: 395 },
-    { month: "Oct", amount: 445 },
-    { month: "Nov", amount: 487 },
-    { month: "Déc", amount: 512 },
-  ];
+  const spendingData: Array<{ month: string; amount: number }> = [];
 
   const handleSaveNotes = () => {
     toast({
@@ -711,33 +677,39 @@ const AdminClientProfile = () => {
                 <CardTitle>Évolution des dépenses (6 derniers mois)</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={250}>
-                  <AreaChart data={spendingData}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="hsl(var(--border))"
-                    />
-                    <XAxis
-                      dataKey="month"
-                      stroke="hsl(var(--muted-foreground))"
-                    />
-                    <YAxis stroke="hsl(var(--muted-foreground))" />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="amount"
-                      stroke="hsl(var(--success))"
-                      fill="hsl(var(--success) / 0.2)"
-                      strokeWidth={2}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                {spendingData.length === 0 ? (
+                  <div className="flex h-[250px] items-center justify-center rounded-lg border border-dashed border-muted-foreground/40 text-sm text-muted-foreground">
+                    Aucune donnée de dépenses disponible.
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={250}>
+                    <AreaChart data={spendingData}>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="hsl(var(--border))"
+                      />
+                      <XAxis
+                        dataKey="month"
+                        stroke="hsl(var(--muted-foreground))"
+                      />
+                      <YAxis stroke="hsl(var(--muted-foreground))" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "8px",
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="amount"
+                        stroke="hsl(var(--success))"
+                        fill="hsl(var(--success) / 0.2)"
+                        strokeWidth={2}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
               </CardContent>
             </Card>
 
@@ -764,20 +736,28 @@ const AdminClientProfile = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {recentOrders.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell className="font-mono font-semibold">
-                          {order.id}
-                        </TableCell>
-                        <TableCell>{order.date}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{order.status}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">
-                          {order.amount}€
+                    {recentOrders.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="py-6 text-center text-sm text-muted-foreground">
+                          Aucune commande récente.
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      recentOrders.map((order) => (
+                        <TableRow key={order.id}>
+                          <TableCell className="font-mono font-semibold">
+                            {order.id}
+                          </TableCell>
+                          <TableCell>{order.date}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{order.status}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">
+                            {order.amount}€
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -800,28 +780,36 @@ const AdminClientProfile = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {invoices.map((invoice) => (
-                      <TableRow key={invoice.id}>
-                        <TableCell className="font-mono font-semibold">
-                          {invoice.id}
-                        </TableCell>
-                        <TableCell>{invoice.period}</TableCell>
-                        <TableCell className="font-semibold">
-                          {invoice.amount}€
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {invoice.dueDate}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className="bg-success/10 text-success border-success/20"
-                          >
-                            {invoice.status}
-                          </Badge>
+                    {invoices.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="py-6 text-center text-sm text-muted-foreground">
+                          Aucune facture disponible.
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      invoices.map((invoice) => (
+                        <TableRow key={invoice.id}>
+                          <TableCell className="font-mono font-semibold">
+                            {invoice.id}
+                          </TableCell>
+                          <TableCell>{invoice.period}</TableCell>
+                          <TableCell className="font-semibold">
+                            {invoice.amount}€
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {invoice.dueDate}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className="bg-success/10 text-success border-success/20"
+                            >
+                              {invoice.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>

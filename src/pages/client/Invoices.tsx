@@ -17,35 +17,15 @@ const ClientInvoices = () => {
   const [monthFilter, setMonthFilter] = useState("all");
   const [yearFilter, setYearFilter] = useState("2025");
 
-  const invoices = [
-    {
-      id: "FACT-2025-01",
-      period: "Décembre 2024",
-      orders: 15,
-      amount: 623.50,
-      status: "Payée",
-      statusColor: "success",
-      date: "31/12/2024",
-    },
-    {
-      id: "FACT-2024-12",
-      period: "Novembre 2024",
-      orders: 12,
-      amount: 489.00,
-      status: "Payée",
-      statusColor: "success",
-      date: "30/11/2024",
-    },
-    {
-      id: "FACT-2024-11",
-      period: "Octobre 2024",
-      orders: 18,
-      amount: 756.50,
-      status: "Payée",
-      statusColor: "success",
-      date: "31/10/2024",
-    },
-  ];
+  const invoices: Array<{
+    id: string;
+    period: string;
+    orders: number;
+    amount: number;
+    status: string;
+    statusColor: "success" | "warning";
+    date: string;
+  }> = [];
 
   const getStatusColor = (color: string) => {
     const colors: Record<string, string> = {
@@ -115,28 +95,36 @@ const ClientInvoices = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {invoices.map((invoice) => (
-                    <tr key={invoice.id} className="border-b hover:bg-muted/30 transition-colors">
-                      <td className="p-4 font-mono text-sm">{invoice.id}</td>
-                      <td className="p-4 text-sm text-muted-foreground">{invoice.date}</td>
-                      <td className="p-4 text-sm">{invoice.period}</td>
-                      <td className="p-4 text-sm">{invoice.orders} courses</td>
-                      <td className="p-4 text-right font-semibold">{invoice.amount.toFixed(2)}€</td>
-                      <td className="p-4">
-                        <Badge className={getStatusColor(invoice.statusColor)}>
-                          {invoice.status}
-                        </Badge>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm">
-                            <Download className="h-4 w-4 mr-2" />
-                            PDF
-                          </Button>
-                        </div>
+                  {invoices.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="p-6 text-center text-sm text-muted-foreground">
+                        Aucune facture disponible pour le moment.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    invoices.map((invoice) => (
+                      <tr key={invoice.id} className="border-b hover:bg-muted/30 transition-colors">
+                        <td className="p-4 font-mono text-sm">{invoice.id}</td>
+                        <td className="p-4 text-sm text-muted-foreground">{invoice.date}</td>
+                        <td className="p-4 text-sm">{invoice.period}</td>
+                        <td className="p-4 text-sm">{invoice.orders} courses</td>
+                        <td className="p-4 text-right font-semibold">{invoice.amount.toFixed(2)}€</td>
+                        <td className="p-4">
+                          <Badge className={getStatusColor(invoice.statusColor)}>
+                            {invoice.status}
+                          </Badge>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex justify-end gap-2">
+                            <Button variant="ghost" size="sm">
+                              <Download className="h-4 w-4 mr-2" />
+                              PDF
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

@@ -4,73 +4,28 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, Clock, CheckCircle2, RotateCcw, FileText, User, Settings, MapPin, Download } from "lucide-react";
+import { RotateCcw, User, Settings, MapPin, Download, CheckCircle2, Clock } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 
 const EspaceClient = () => {
   const [selectedOrder, setSelectedOrder] = useState<number | null>(null);
 
-  // Mock data
-  const stats = [
-    { label: "En cours", value: 3, icon: Clock, color: "text-info" },
-    { label: "Livrées", value: 47, icon: CheckCircle2, color: "text-success" },
-    { label: "En attente", value: 1, icon: Package, color: "text-warning" },
-  ];
+  const stats: Array<{ label: string; value: string | number; icon: LucideIcon; color?: string }> = [];
 
-  const orders = [
-    {
-      id: "009",
-      date: "15/01/2025",
-      type: "Document juridique",
-      from: "Paris 75001",
-      to: "Boulogne 92100",
-      status: "En cours",
-      statusColor: "info",
-      price: 45.50,
-      timeline: [
-        { step: "Commande validée", time: "10:30", done: true },
-        { step: "Coursier assigné", time: "10:45", done: true },
-        { step: "Enlèvement effectué", time: "11:15", done: true },
-        { step: "En transit", time: "11:30", done: true },
-        { step: "Livraison", time: "12:00 (estimé)", done: false },
-      ],
-    },
-    {
-      id: "010",
-      date: "14/01/2025",
-      type: "Colis médical",
-      from: "Paris 75008",
-      to: "Versailles 78000",
-      status: "Livré",
-      statusColor: "success",
-      price: 52.00,
-    },
-    {
-      id: "1000",
-      date: "14/01/2025",
-      type: "Monture optique",
-      from: "Paris 75015",
-      to: "Saint-Cloud 92210",
-      status: "Livré",
-      statusColor: "success",
-      price: 38.00,
-    },
-    {
-      id: "1001",
-      date: "13/01/2025",
-      type: "Document express",
-      from: "Paris 75002",
-      to: "Neuilly 92200",
-      status: "En attente",
-      statusColor: "warning",
-      price: 35.00,
-    },
-  ];
+  const orders: Array<{
+    id: string;
+    date: string;
+    type: string;
+    from: string;
+    to: string;
+    status: string;
+    statusColor: "info" | "success" | "warning";
+    price: number;
+    timeline?: Array<{ step: string; time: string; done: boolean }>;
+  }> = [];
 
-  const frequentAddresses = [
-    { name: "Siège social", address: "123 Avenue de Paris, 75001 Paris" },
-    { name: "Entrepôt", address: "45 Rue du Commerce, 92100 Boulogne" },
-  ];
+  const frequentAddresses: Array<{ name: string; address: string }> = [];
 
   const getStatusColor = (color: string) => {
     const colors: Record<string, string> = {
@@ -94,19 +49,27 @@ const EspaceClient = () => {
         <div className="container mx-auto px-4">
           {/* Stats */}
           <div className="grid md:grid-cols-3 gap-6 mb-8">
-            {stats.map((stat, index) => (
-              <Card key={index} className="border-none shadow-soft">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
-                      <p className="text-3xl font-bold">{stat.value}</p>
-                    </div>
-                    <stat.icon className={`h-10 w-10 ${stat.color}`} />
-                  </div>
+            {stats.length === 0 ? (
+              <Card className="border-dashed border-muted-foreground/40 bg-transparent text-center shadow-none md:col-span-3">
+                <CardContent className="p-6 text-sm text-muted-foreground">
+                  Aucune statistique disponible pour vos commandes.
                 </CardContent>
               </Card>
-            ))}
+            ) : (
+              stats.map((stat, index) => (
+                <Card key={index} className="border-none shadow-soft">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
+                        <p className="text-3xl font-bold">{stat.value}</p>
+                      </div>
+                      <stat.icon className={`h-10 w-10 ${stat.color}`} />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
 
           {/* Tabs */}
@@ -144,38 +107,47 @@ const EspaceClient = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {orders.map((order, index) => (
-                          <tr key={index} className="border-b hover:bg-muted/30 transition-colors">
-                            <td className="p-4 font-mono text-sm">{order.id}</td>
-                            <td className="p-4 text-sm text-muted-foreground">{order.date}</td>
-                            <td className="p-4 text-sm">{order.type}</td>
-                            <td className="p-4 text-sm text-muted-foreground">
-                              {order.from} → {order.to}
-                            </td>
-                            <td className="p-4">
-                              <Badge className={getStatusColor(order.statusColor)}>
-                                {order.status}
-                              </Badge>
-                            </td>
-                            <td className="p-4 text-right font-semibold">{order.price.toFixed(2)}€</td>
-                            <td className="p-4">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setSelectedOrder(selectedOrder === index ? null : index)}
-                                >
-                                  Détails
-                                </Button>
-                                {order.status === "Livré" && (
-                                  <Button variant="ghost" size="sm">
-                                    <RotateCcw className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </div>
+                        {orders.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="p-6 text-center text-sm text-muted-foreground">
+                              Aucune commande enregistrée pour le moment.
                             </td>
                           </tr>
-                        ))}
+                        ) : (
+                          orders.map((order, index) => (
+                            <tr key={order.id} className="border-b hover:bg-muted/30 transition-colors">
+                              <td className="p-4 font-mono text-sm">{order.id}</td>
+                              <td className="p-4 text-sm text-muted-foreground">{order.date}</td>
+                              <td className="p-4 text-sm">{order.type}</td>
+                              <td className="p-4 text-sm text-muted-foreground">
+                                {order.from} → {order.to}
+                              </td>
+                              <td className="p-4">
+                                <Badge className={getStatusColor(order.statusColor)}>
+                                  {order.status}
+                                </Badge>
+                              </td>
+                              <td className="p-4 text-right font-semibold">{order.price.toFixed(2)}€</td>
+                              <td className="p-4">
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setSelectedOrder(selectedOrder === index ? null : index)}
+                                    disabled={!order.timeline || order.timeline.length === 0}
+                                  >
+                                    Détails
+                                  </Button>
+                                  {order.status === "Livré" && (
+                                    <Button variant="ghost" size="sm">
+                                      <RotateCcw className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -183,7 +155,7 @@ const EspaceClient = () => {
               </Card>
 
               {/* Order Details */}
-              {selectedOrder !== null && orders[selectedOrder].timeline && (
+              {selectedOrder !== null && orders[selectedOrder]?.timeline && (
                 <Card className="border-2 border-primary/20 shadow-medium animate-fade-in">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between mb-6">
@@ -197,23 +169,31 @@ const EspaceClient = () => {
                     <div className="grid md:grid-cols-2 gap-8">
                       <div>
                         <h4 className="font-semibold mb-4">Timeline</h4>
-                        <div className="space-y-4">
-                          {orders[selectedOrder].timeline?.map((step, i) => (
-                            <div key={i} className="flex items-start gap-3">
-                              <div className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                                step.done ? "bg-success text-white" : "bg-muted text-muted-foreground"
-                              }`}>
-                                {step.done ? <CheckCircle2 className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
+                        {orders[selectedOrder]?.timeline?.length ? (
+                          <div className="space-y-4">
+                            {orders[selectedOrder]?.timeline?.map((step, i) => (
+                              <div key={i} className="flex items-start gap-3">
+                                <div
+                                  className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                                    step.done ? "bg-success text-white" : "bg-muted text-muted-foreground"
+                                  }`}
+                                >
+                                  {step.done ? <CheckCircle2 className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
+                                </div>
+                                <div>
+                                  <p className={`font-medium ${step.done ? "" : "text-muted-foreground"}`}>
+                                    {step.step}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">{step.time}</p>
+                                </div>
                               </div>
-                              <div>
-                                <p className={`font-medium ${step.done ? "" : "text-muted-foreground"}`}>
-                                  {step.step}
-                                </p>
-                                <p className="text-sm text-muted-foreground">{step.time}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="rounded-lg border border-dashed border-muted-foreground/40 p-4 text-sm text-muted-foreground">
+                            Aucun détail de suivi disponible.
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -289,12 +269,18 @@ const EspaceClient = () => {
                         <h3 className="text-xl font-semibold">Adresses fréquentes</h3>
                       </div>
                       <div className="space-y-3">
-                        {frequentAddresses.map((addr, i) => (
-                          <div key={i} className="p-3 bg-muted/30 rounded-lg">
-                            <p className="font-medium">{addr.name}</p>
-                            <p className="text-sm text-muted-foreground">{addr.address}</p>
-                          </div>
-                        ))}
+                        {frequentAddresses.length === 0 ? (
+                          <p className="rounded-lg border border-dashed border-muted-foreground/40 p-3 text-sm text-muted-foreground">
+                            Aucune adresse favorite enregistrée.
+                          </p>
+                        ) : (
+                          frequentAddresses.map((addr, i) => (
+                            <div key={i} className="p-3 bg-muted/30 rounded-lg">
+                              <p className="font-medium">{addr.name}</p>
+                              <p className="text-sm text-muted-foreground">{addr.address}</p>
+                            </div>
+                          ))
+                        )}
                         <Button variant="outline" className="w-full">Ajouter une adresse</Button>
                       </div>
                     </CardContent>
@@ -345,21 +331,9 @@ const EspaceClient = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        <tr className="border-b hover:bg-muted/30">
-                          <td className="p-4 font-mono text-sm">FACT-2025-01</td>
-                          <td className="p-4 text-sm">31/12/2024</td>
-                          <td className="p-4 text-sm">Décembre 2024 (15 courses)</td>
-                          <td className="p-4 text-right font-semibold">623.50€</td>
-                          <td className="p-4">
-                            <Badge className="bg-success/10 text-success border-success/20">Payée</Badge>
-                          </td>
-                          <td className="p-4">
-                            <div className="flex justify-end gap-2">
-                              <Button variant="ghost" size="sm">
-                                <FileText className="h-4 w-4 mr-2" />
-                                PDF
-                              </Button>
-                            </div>
+                        <tr>
+                          <td colSpan={6} className="p-6 text-center text-sm text-muted-foreground">
+                            Aucune facture disponible pour le moment.
                           </td>
                         </tr>
                       </tbody>

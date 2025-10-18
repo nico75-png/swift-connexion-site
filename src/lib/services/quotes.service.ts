@@ -14,6 +14,9 @@ export interface QuoteOrderPayload {
   weight: number;
   volume: number;
   driverInstructions?: string;
+  expressDelivery?: boolean;
+  fragilePackage?: boolean;
+  temperatureControlled?: boolean;
 }
 
 export interface QuoteBreakdown {
@@ -22,6 +25,7 @@ export interface QuoteBreakdown {
   weight: number;
   volume: number;
   supplements: number;
+  options: number;
   taxes: number;
   discount: number;
   totalHT: number;
@@ -164,7 +168,13 @@ export const quoteOrder = async (payload: QuoteOrderPayload): Promise<QuoteOrder
   const volumeFee = Math.max(4, volume * 0.65);
   const supplements = computeSupplement(resolvedType);
   const discount = volume > 2 ? 5 : 0;
-  const totalHT = roundCurrency(base + distance + weightFee + volumeFee + supplements - discount);
+  const subtotal = base + distance + weightFee + volumeFee + supplements - discount;
+  const optionMultiplier =
+    (payload.expressDelivery ? 0.3 : 0) +
+    (payload.fragilePackage ? 0.15 : 0) +
+    (payload.temperatureControlled ? 0.2 : 0);
+  const optionsFee = roundCurrency(subtotal * optionMultiplier);
+  const totalHT = roundCurrency(subtotal + optionsFee);
   const taxes = roundCurrency(totalHT * 0.2);
   const totalTTC = roundCurrency(totalHT + taxes);
 
@@ -178,6 +188,7 @@ export const quoteOrder = async (payload: QuoteOrderPayload): Promise<QuoteOrder
       weight: roundCurrency(weightFee),
       volume: roundCurrency(volumeFee),
       supplements: roundCurrency(supplements),
+      options: optionsFee,
       discount: roundCurrency(discount),
       taxes,
       totalHT,

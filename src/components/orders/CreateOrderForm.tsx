@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -23,7 +24,8 @@ import {
 } from "@/components/ui/select";
 import type { AuthClient } from "@/lib/stores/auth.store";
 import { usePackageTypes } from "@/hooks/usePackageTypes";
-import type { Sector } from "@/lib/packageTaxonomy";
+import { Checkbox } from "@/components/ui/checkbox";
+import { SECTORS, type Sector } from "@/lib/packageTaxonomy";
 
 export const parseLocaleNumber = (value: string) => Number.parseFloat(value.replace(",", "."));
 
@@ -52,6 +54,9 @@ const formSchema = z
       .max(500, "500 caractères maximum")
       .optional()
       .or(z.literal("")),
+    expressDelivery: z.boolean().default(false),
+    fragilePackage: z.boolean().default(false),
+    temperatureControlled: z.boolean().default(false),
   })
   .refine(
     (data) => {
@@ -99,7 +104,8 @@ interface CreateOrderFormProps {
 const CreateOrderForm = ({ customer, defaultValues, onSubmit, isSubmitting }: CreateOrderFormProps) => {
   const [showInstructions, setShowInstructions] = useState(false);
   const packageTypes = usePackageTypes(customer.sector as Sector | undefined);
-  
+  const isMedicalSector = (customer.sector as Sector | undefined) === SECTORS.MEDICAL;
+
   const initialValues = useMemo(
     () => ({
       packageType: defaultValues.packageType ?? "",
@@ -111,6 +117,9 @@ const CreateOrderForm = ({ customer, defaultValues, onSubmit, isSubmitting }: Cr
       weight: defaultValues.weight ?? "",
       volume: defaultValues.volume ?? "",
       driverInstructions: defaultValues.driverInstructions ?? "",
+      expressDelivery: defaultValues.expressDelivery ?? false,
+      fragilePackage: defaultValues.fragilePackage ?? false,
+      temperatureControlled: defaultValues.temperatureControlled ?? false,
     }),
     [
       customer.defaultDeliveryAddress,
@@ -124,6 +133,9 @@ const CreateOrderForm = ({ customer, defaultValues, onSubmit, isSubmitting }: Cr
       defaultValues.time,
       defaultValues.volume,
       defaultValues.weight,
+      defaultValues.expressDelivery,
+      defaultValues.fragilePackage,
+      defaultValues.temperatureControlled,
     ],
   );
 
@@ -151,6 +163,12 @@ const CreateOrderForm = ({ customer, defaultValues, onSubmit, isSubmitting }: Cr
       setShowInstructions(true);
     }
   }, [initialValues.driverInstructions]);
+
+  useEffect(() => {
+    if (!isMedicalSector && form.getValues("temperatureControlled")) {
+      form.setValue("temperatureControlled", false, { shouldDirty: true, shouldValidate: true });
+    }
+  }, [form, isMedicalSector]);
 
   return (
     <Form {...form}>
@@ -180,9 +198,9 @@ const CreateOrderForm = ({ customer, defaultValues, onSubmit, isSubmitting }: Cr
           name="packageType"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Type de colis *</FormLabel>
-              <Select 
-                onValueChange={field.onChange} 
+              <FormLabel>Type de transport *</FormLabel>
+              <Select
+                onValueChange={field.onChange}
                 defaultValue={field.value}
                 disabled={form.formState.isSubmitting || isSubmitting}
               >
@@ -203,6 +221,83 @@ const CreateOrderForm = ({ customer, defaultValues, onSubmit, isSubmitting }: Cr
             </FormItem>
           )}
         />
+
+        <div className="space-y-3">
+          <p className="text-sm font-semibold">Options</p>
+          <div className="space-y-2">
+            <FormField
+              control={form.control}
+              name="expressDelivery"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start gap-3 rounded-lg border bg-background px-4 py-3">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={(checked) => field.onChange(Boolean(checked))}
+                      disabled={form.formState.isSubmitting || isSubmitting}
+                    />
+                  </FormControl>
+                  <div className="space-y-1">
+                    <FormLabel className="text-sm font-medium leading-none">
+                      Livraison express (+30 %)
+                    </FormLabel>
+                    <FormDescription className="text-xs text-muted-foreground">
+                      Priorité immédiate et traitement accéléré de votre transport.
+                    </FormDescription>
+                  </div>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="fragilePackage"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start gap-3 rounded-lg border bg-background px-4 py-3">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={(checked) => field.onChange(Boolean(checked))}
+                      disabled={form.formState.isSubmitting || isSubmitting}
+                    />
+                  </FormControl>
+                  <div className="space-y-1">
+                    <FormLabel className="text-sm font-medium leading-none">
+                      Colis fragile (+15 %)
+                    </FormLabel>
+                    <FormDescription className="text-xs text-muted-foreground">
+                      Manipulation renforcée et sécurisation du conditionnement.
+                    </FormDescription>
+                  </div>
+                </FormItem>
+              )}
+            />
+            {isMedicalSector ? (
+              <FormField
+                control={form.control}
+                name="temperatureControlled"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start gap-3 rounded-lg border bg-background px-4 py-3">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={(checked) => field.onChange(Boolean(checked))}
+                        disabled={form.formState.isSubmitting || isSubmitting}
+                      />
+                    </FormControl>
+                    <div className="space-y-1">
+                      <FormLabel className="text-sm font-medium leading-none">
+                        Température contrôlée
+                      </FormLabel>
+                      <FormDescription className="text-xs text-muted-foreground">
+                        Maintien de la chaîne du froid (2–8 °C) pour les envois sensibles.
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            ) : null}
+          </div>
+        </div>
 
         {selectedPackageType === "AUTRE" && (
           <FormField

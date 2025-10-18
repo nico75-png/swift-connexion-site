@@ -97,6 +97,7 @@ export const ReorderModal = ({ draft, open, onCancel, onConfirm }: ReorderModalP
         fragile: draft.options?.fragile ?? false,
         insurance: draft.options?.insurance ?? false,
         returnDocuments: draft.options?.returnDocuments ?? false,
+        temperatureControlled: draft.options?.temperatureControlled ?? false,
       },
     });
   }, [draft, open]);
@@ -205,6 +206,7 @@ export const ReorderModal = ({ draft, open, onCancel, onConfirm }: ReorderModalP
       km,
       express: formValues.options?.express,
       fragile: formValues.options?.fragile,
+      temperatureControlled: formValues.options?.temperatureControlled,
     });
   }, [draft, formValues]);
 
@@ -255,6 +257,7 @@ export const ReorderModal = ({ draft, open, onCancel, onConfirm }: ReorderModalP
     setIsSubmitting(true);
     const express = Boolean(formValues.options?.express);
     const fragile = Boolean(formValues.options?.fragile);
+    const temperatureControlled = Boolean(formValues.options?.temperatureControlled);
     const updatedPrice = pricePreview ?? draft.price;
     const updatedDraft: ClientOrder = {
       ...draft,
@@ -269,6 +272,7 @@ export const ReorderModal = ({ draft, open, onCancel, onConfirm }: ReorderModalP
         fragile,
         insurance: Boolean(formValues.options?.insurance),
         returnDocuments: Boolean(formValues.options?.returnDocuments),
+        temperatureControlled,
       },
       price: updatedPrice,
     };
@@ -293,6 +297,7 @@ export const ReorderModal = ({ draft, open, onCancel, onConfirm }: ReorderModalP
   const optionsList = [
     { label: "Express", value: formValues.options?.express },
     { label: "Fragile", value: formValues.options?.fragile },
+    { label: "Température contrôlée", value: formValues.options?.temperatureControlled },
     { label: "Assurance", value: formValues.options?.insurance },
     { label: "Retour de documents", value: formValues.options?.returnDocuments },
   ].filter((item) => item.value);
@@ -473,11 +478,12 @@ export const ReorderModal = ({ draft, open, onCancel, onConfirm }: ReorderModalP
                       Sélectionnez les compléments nécessaires pour la recommandation.
                     </p>
                     <div className="grid gap-2 sm:grid-cols-2">
-                      {["express", "fragile", "insurance", "returnDocuments"].map((optionKey) => {
+                      {["express", "fragile", "temperatureControlled", "insurance", "returnDocuments"].map((optionKey) => {
                         const key = optionKey as keyof OrderOptions;
                         const optionLabels: Record<keyof OrderOptions, string> = {
                           express: "Express",
                           fragile: "Fragile",
+                          temperatureControlled: "Température contrôlée",
                           insurance: "Assurance",
                           returnDocuments: "Retour documents",
                         };
@@ -534,6 +540,10 @@ export const ReorderModal = ({ draft, open, onCancel, onConfirm }: ReorderModalP
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Option Fragile</span>
                   <span className="font-semibold">{price.breakdown.fragile}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Option Température</span>
+                  <span className="font-semibold">{price.breakdown.temperature ?? "0%"}</span>
                 </div>
               </div>
               <div className="mt-2 flex items-center justify-between rounded-lg bg-primary/10 px-3 py-2">

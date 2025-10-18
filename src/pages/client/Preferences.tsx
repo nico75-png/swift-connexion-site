@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import ClientSidebar from "@/components/dashboard/ClientSidebar";
 import Topbar from "@/components/dashboard/Topbar";
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { MapPin, Bell, Settings as SettingsIcon, Trash2, Plus, Moon, Briefcase } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth, updateCurrentClient } from "@/lib/stores/auth.store";
+import { useAuth } from "@/lib/stores/auth.store";
 import { SECTOR_LABELS, type Sector } from "@/lib/packageTaxonomy";
 
 /**
@@ -20,16 +20,15 @@ import { SECTOR_LABELS, type Sector } from "@/lib/packageTaxonomy";
 const ClientPreferences = () => {
   const { currentClient } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
-  const [sector, setSector] = useState<Sector | "">(currentClient?.sector as Sector || "");
   const [addresses, setAddresses] = useState([
     { id: "1", name: "Siège social", address: "123 Avenue de Paris, 75001 Paris" },
     { id: "2", name: "Entrepôt", address: "45 Rue du Commerce, 92100 Boulogne" },
   ]);
 
+  const sector = useMemo(() => currentClient?.sector as Sector | undefined, [currentClient?.sector]);
+  const sectorLabel = sector ? SECTOR_LABELS[sector] ?? sector : "Non défini";
+
   const handleSave = () => {
-    if (sector && currentClient) {
-      updateCurrentClient({ sector });
-    }
     toast.success("Préférences enregistrées");
   };
 
@@ -74,18 +73,12 @@ const ClientPreferences = () => {
               <p className="text-sm text-muted-foreground mb-3">
                 Définit les types de colis disponibles lors de la création de commandes
               </p>
-              <Select value={sector} onValueChange={(value) => setSector(value as Sector)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez votre secteur" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(SECTOR_LABELS).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-3">
+                <p className="font-medium">{sectorLabel}</p>
+                <p className="text-xs text-muted-foreground">
+                  Pour toute modification, merci de contacter notre support client.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -14,11 +14,11 @@ export const SECTORS = {
 export type Sector = typeof SECTORS[keyof typeof SECTORS];
 
 export const SECTOR_LABELS: Record<Sector, string> = {
-  MEDICAL: 'Santé & Médical',
-  OPTIQUE: 'Optique',
-  JURIDIQUE: 'Juridique',
-  B2B: 'B2B Express',
-  EVENT: 'Événementiel',
+  MEDICAL: '🩺 Santé & Médical',
+  OPTIQUE: '👓 Optique',
+  JURIDIQUE: '⚖️ Juridique',
+  B2B: '🚚 B2B Express',
+  EVENT: '🎤 Événementiel',
 };
 
 // Types de colis (valeurs côté client)
@@ -56,32 +56,32 @@ export type PackageType =
 // Libellés affichés au client (détaillés)
 export const CLIENT_PACKAGE_LABELS: Record<PackageType, string> = {
   // Santé & Médical
-  DM_CONSOMMABLES: 'Dispositifs médicaux / Consommables',
-  UN3373: 'Échantillons biologiques (UN3373)',
-  MEDICAMENTS_AMBIANT: 'Médicaments (température ambiante)',
-  MEDICAMENTS_2_8: 'Médicaments (chaîne du froid 2-8°C)',
-  DOCS_CONFIDENTIELS: 'Documents confidentiels',
+  DM_CONSOMMABLES: 'DM/Consommables',
+  UN3373: 'UN3373',
+  MEDICAMENTS_AMBIANT: 'Médicaments ambiants',
+  MEDICAMENTS_2_8: 'Médicaments 2–8 °C',
+  DOCS_CONFIDENTIELS: 'Documents scellés',
   // Optique
-  VERRES_FRAGILES: 'Verres (fragile)',
-  MONTURES_FRAGILES: 'Montures (fragile)',
-  LENTILLES_LIQUIDE: 'Lentilles / Produits liquides',
-  PLV_REASSORT: 'PLV / Réassort',
-  SAV_ATELIER: 'SAV / Retour atelier',
+  VERRES_FRAGILES: 'Verres – Fragile',
+  MONTURES_FRAGILES: 'Montures & pièces atelier – Fragile',
+  LENTILLES_LIQUIDE: 'Lentilles & solutions – Liquide',
+  PLV_REASSORT: 'PLV & réassorts',
+  SAV_ATELIER: 'SAV labo/fabricant',
   // Juridique
-  DOSSIERS_CONFIDENTIELS: 'Dossiers confidentiels',
-  DEPOTS_GREFFE_NOMINATIF: 'Dépôts au greffe (remise nominative)',
-  JEUX_SIGNATURE_NOMINATIF: 'Jeux de signature (remise nominative)',
-  DOCS_SCELLES: 'Documents scellés',
+  DOSSIERS_CONFIDENTIELS: 'Dossiers audience',
+  DEPOTS_GREFFE_NOMINATIF: 'Dépôts greffe / apostilles',
+  JEUX_SIGNATURE_NOMINATIF: 'Jeux de signature',
+  DOCS_SCELLES: 'Documents scellés – remise nominative',
   // B2B Express
-  PROTOTYPE: 'Prototype',
-  PIECE_DEPANNAGE: 'Pièce de dépannage',
-  IT_ELECTRONIQUE: 'Matériel IT / Électronique',
+  PROTOTYPE: 'Prototypes & échantillons',
+  PIECE_DEPANNAGE: 'Pièces de dépannage',
+  IT_ELECTRONIQUE: 'IT (laptops, routeurs)',
   DOCS_SENSIBLES: 'Documents sensibles',
   // Événementiel
-  PLV_SIGNAL: 'PLV / Signalétique',
-  GOODIES_WELCOME: 'Goodies / Welcome pack',
-  REGIE_MATERIEL: 'Régie / Matériel événementiel',
-  DOCS_PROD_CONF: 'Documents de production / Conférence',
+  PLV_SIGNAL: 'Signalétique & PLV',
+  GOODIES_WELCOME: 'Goodies / welcome packs',
+  REGIE_MATERIEL: 'Matériel de régie',
+  DOCS_PROD_CONF: 'Documents prod (feuilles de service, listes)',
   // Commun
   AUTRE: 'Autre (préciser)',
 };
@@ -91,7 +91,7 @@ export const ADMIN_DRIVER_LABELS: Record<PackageType, string> = {
   // Santé & Médical
   DM_CONSOMMABLES: 'DM/Consommables',
   UN3373: 'UN3373',
-  MEDICAMENTS_AMBIANT: 'Médicaments',
+  MEDICAMENTS_AMBIANT: 'Médicaments ambiants',
   MEDICAMENTS_2_8: 'Thermo 2–8 °C',
   DOCS_CONFIDENTIELS: 'Documents scellés',
   // Optique
@@ -101,10 +101,10 @@ export const ADMIN_DRIVER_LABELS: Record<PackageType, string> = {
   PLV_REASSORT: 'PLV',
   SAV_ATELIER: 'SAV',
   // Juridique
-  DOSSIERS_CONFIDENTIELS: 'Documents scellés',
-  DEPOTS_GREFFE_NOMINATIF: 'Remise nominative',
-  JEUX_SIGNATURE_NOMINATIF: 'Remise nominative',
-  DOCS_SCELLES: 'Documents scellés',
+  DOSSIERS_CONFIDENTIELS: 'Documents scellés – remise nominative',
+  DEPOTS_GREFFE_NOMINATIF: 'Documents scellés – remise nominative',
+  JEUX_SIGNATURE_NOMINATIF: 'Documents scellés – remise nominative',
+  DOCS_SCELLES: 'Documents scellés – remise nominative',
   // B2B Express
   PROTOTYPE: 'Prototype',
   PIECE_DEPANNAGE: 'Pièce urgente',

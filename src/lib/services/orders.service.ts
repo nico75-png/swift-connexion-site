@@ -21,6 +21,9 @@ export interface CreateOrderPayload {
   weight: number;
   volume: number;
   driverInstructions?: string;
+  expressDelivery?: boolean;
+  fragilePackage?: boolean;
+  temperatureControlled?: boolean;
   quoteId: string;
   quoteAmount: number;
 }
@@ -72,6 +75,14 @@ const buildNewOrder = (
     volumeRequirement: `${payload.volume}`,
     weight: `${payload.weight}`,
     instructions: payload.driverInstructions?.trim() || undefined,
+    options: (() => {
+      const extras = {
+        express: Boolean(payload.expressDelivery),
+        fragile: Boolean(payload.fragilePackage),
+        temperatureControlled: Boolean(payload.temperatureControlled),
+      };
+      return extras.express || extras.fragile || extras.temperatureControlled ? extras : undefined;
+    })(),
     driverId: null,
     driverAssignedAt: null,
   };
@@ -107,6 +118,11 @@ export const createOrder = async (
       quoteId: payload.quoteId,
       currency: storedQuote?.currency ?? "EUR",
       instructions: payload.driverInstructions,
+      options: {
+        express: Boolean(payload.expressDelivery),
+        fragile: Boolean(payload.fragilePackage),
+        temperatureControlled: Boolean(payload.temperatureControlled),
+      },
     });
 
     appendActivity({

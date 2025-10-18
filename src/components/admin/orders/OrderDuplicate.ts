@@ -14,6 +14,11 @@ export interface OrderDuplicateDraft {
   instructions: string;
   zoneRequirement: ZoneCode;
   amount: number;
+  options: {
+    express: boolean;
+    fragile: boolean;
+    temperatureControlled: boolean;
+  };
 }
 
 const extractNumber = (value: string | null | undefined): string => {
@@ -69,4 +74,9 @@ export const createDuplicateDraftFromOrder = (order: Order): OrderDuplicateDraft
   instructions: order.instructions ?? "",
   zoneRequirement: order.zoneRequirement,
   amount: order.amount,
+  options: {
+    express: Boolean(order.options?.express),
+    fragile: Boolean(order.options?.fragile),
+    temperatureControlled: Boolean(order.options?.temperatureControlled),
+  },
 });

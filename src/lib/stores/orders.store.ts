@@ -42,6 +42,14 @@ export interface OrderAssignedDriver {
   availability: "Disponible" | "En course" | "Occupé" | "Indisponible";
 }
 
+export interface OrderAdministrativeEvent {
+  id: string;
+  label: string;
+  occurredAt: string;
+  author: string;
+  meta?: Record<string, unknown>;
+}
+
 export interface OrderDetailRecord {
   id: string;
   orderNumber: string;
@@ -68,6 +76,7 @@ export interface OrderDetailRecord {
   documents?: OrderDocuments;
   statusHistory: OrderStatusHistoryEntry[];
   assignmentEvents: OrderAssignmentEvent[];
+  administrativeEvents?: OrderAdministrativeEvent[];
   createdAt: string;
   updatedAt: string;
   excludedDriverIds?: string[];
@@ -111,6 +120,7 @@ const defaultOrders: OrderDetailRecord[] = [
       },
     ],
     assignmentEvents: [],
+    administrativeEvents: [],
     createdAt: "2025-01-31T09:12:00+01:00",
     updatedAt: "2025-01-31T09:12:00+01:00",
     excludedDriverIds: [],
@@ -185,6 +195,7 @@ const defaultOrders: OrderDetailRecord[] = [
         note: "Affectation confirmée",
       },
     ],
+    administrativeEvents: [],
     createdAt: "2025-01-30T11:20:00+01:00",
     updatedAt: "2025-02-01T14:40:00+01:00",
     excludedDriverIds: [],
@@ -264,6 +275,7 @@ const defaultOrders: OrderDetailRecord[] = [
         author: "admin.adrien",
       },
     ],
+    administrativeEvents: [],
     createdAt: "2025-01-18T10:05:00+01:00",
     updatedAt: "2025-01-20T09:05:00+01:00",
     excludedDriverIds: [],
@@ -274,29 +286,37 @@ let memoryOrders = [...defaultOrders];
 
 const isBrowser = typeof window !== "undefined";
 
+const normalizeRecord = (record: OrderDetailRecord): OrderDetailRecord => ({
+  ...record,
+  administrativeEvents: Array.isArray(record.administrativeEvents)
+    ? record.administrativeEvents.map((event) => ({ ...event }))
+    : [],
+});
+
 const readFromStorage = (): OrderDetailRecord[] => {
   if (!isBrowser) {
-    return memoryOrders;
+    return memoryOrders.map(normalizeRecord);
   }
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (!stored) {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultOrders));
-      return [...defaultOrders];
+      return defaultOrders.map(normalizeRecord);
     }
     const parsed = JSON.parse(stored) as OrderDetailRecord[];
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : [...defaultOrders];
+    const records = Array.isArray(parsed) && parsed.length > 0 ? parsed : [...defaultOrders];
+    return records.map(normalizeRecord);
   } catch (error) {
     console.error("Unable to parse order details store", error);
-    return [...defaultOrders];
+    return defaultOrders.map(normalizeRecord);
   }
 };
 
 const writeToStorage = (orders: OrderDetailRecord[]) => {
-  memoryOrders = [...orders];
+  memoryOrders = orders.map(normalizeRecord);
   if (!isBrowser) return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(orders.map(normalizeRecord)));
   } catch (error) {
     console.error("Unable to persist order details store", error);
   }
@@ -376,6 +396,7 @@ export const assignDriverToOrder = (orderId: string, payload: AssignDriverPayloa
     assignmentEvents: updatedAssignments
       .slice()
       .sort((a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime()),
+    administrativeEvents: existing.administrativeEvents ?? [],
     updatedAt: now,
   };
 
@@ -410,12 +431,55 @@ export const cancelOrderInStore = (orderId: string, payload: CancelOrderPayload)
     },
   ].sort((a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime());
 
+  const administrativeEvents = [
+    ...(existing.administrativeEvents ?? []),
+    {
+      id: `ADM-${orderId}-${Date.now()}`,
+      label: "Commande annulée",
+      occurredAt: now,
+      author: payload.author,
+      meta: { reason: payload.reason, note: payload.note },
+    },
+  ].sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
+
   const updated: OrderDetailRecord = {
     ...existing,
     status: "ANNULEE",
     assignedDriver: undefined,
     statusHistory: updatedHistory,
     assignmentEvents: existing.assignmentEvents,
+    administrativeEvents,
+    updatedAt: now,
+  };
+
+  persistOrderRecord(updated);
+  return updated;
+};
+
+export const appendAdministrativeEventToOrder = (
+  orderId: string,
+  payload: { label: string; author: string; meta?: Record<string, unknown> },
+): OrderDetailRecord => {
+  const existing = getOrderDetailRecord(orderId);
+  if (!existing) {
+    throw new Error("Commande introuvable");
+  }
+
+  const now = formatISO(new Date());
+  const events = [
+    ...(existing.administrativeEvents ?? []),
+    {
+      id: `ADM-${orderId}-${Date.now()}`,
+      label: payload.label,
+      occurredAt: now,
+      author: payload.author,
+      meta: payload.meta,
+    },
+  ].sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
+
+  const updated: OrderDetailRecord = {
+    ...existing,
+    administrativeEvents: events,
     updatedAt: now,
   };
 

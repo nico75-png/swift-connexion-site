@@ -3,6 +3,7 @@ import { fr } from "date-fns/locale";
 
 import {
   assignDriverToOrder,
+  appendAdministrativeEventToOrder,
   cancelOrderInStore,
   getOrderDetailRecord,
   listOrderDetails,
@@ -115,6 +116,17 @@ const buildActivityLog = (record: OrderDetailRecord): OrderActivityEntry[] => {
     });
   });
 
+  (record.administrativeEvents ?? []).forEach((event) => {
+    items.push({
+      id: event.id,
+      label: event.label,
+      occurredAt: event.occurredAt,
+      actor: event.author,
+      kind: "note",
+      meta: event.meta,
+    });
+  });
+
   return items.sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
 };
 
@@ -207,6 +219,18 @@ export const cancelOrder = async (
     note: payload.note,
   });
   syncLegacyOrder(record);
+  return toAdminOrderDetail(record);
+};
+
+export const logAdministrativeAction = async (
+  orderId: string,
+  payload: { label: string; author?: string; meta?: Record<string, unknown> },
+): Promise<AdminOrderDetail> => {
+  const record = appendAdministrativeEventToOrder(orderId, {
+    label: payload.label,
+    author: payload.author ?? "admin",
+    meta: payload.meta,
+  });
   return toAdminOrderDetail(record);
 };
 

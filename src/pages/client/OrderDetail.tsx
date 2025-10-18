@@ -7,6 +7,7 @@ import {
   MessageSquare,
   Phone,
   RotateCcw,
+  Info,
 } from "lucide-react";
 
 import OrderCancelModal from "@/components/dashboard/OrderCancelModal";
@@ -17,6 +18,7 @@ import Topbar from "@/components/dashboard/Topbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { ClientOrder } from "@/lib/reorder";
 import {
@@ -373,6 +375,15 @@ const ClientOrderDetail = () => {
                 <CardTitle>Détail tarifaire</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                <Alert className="border-primary/40 bg-primary/5">
+                  <AlertDescription className="flex items-start gap-2 text-sm text-primary">
+                    <Info className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                    <span>
+                      💡 Le tarif est calculé au kilomètre entre l&apos;adresse d&apos;enlèvement et l&apos;adresse de livraison. Le poids et
+                      le volume servent uniquement à préparer la logistique.
+                    </span>
+                  </AlertDescription>
+                </Alert>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Tarif de base</span>
                   <span className="font-medium">

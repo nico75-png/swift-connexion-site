@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Info } from "lucide-react";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
@@ -14,7 +16,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -22,10 +23,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { AuthClient } from "@/lib/stores/auth.store";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePackageTypes } from "@/hooks/usePackageTypes";
-import { Checkbox } from "@/components/ui/checkbox";
 import { SECTORS, type Sector } from "@/lib/packageTaxonomy";
+import type { AuthClient } from "@/lib/stores/auth.store";
 
 export const parseLocaleNumber = (value: string) => Number.parseFloat(value.replace(",", "."));
 
@@ -178,6 +181,16 @@ const CreateOrderForm = ({ customer, defaultValues, onSubmit, isSubmitting }: Cr
           <span>•</span>
           <span>Informations de transport</span>
         </div>
+
+        <Alert className="border-primary/40 bg-primary/5">
+          <AlertDescription className="flex items-start gap-2 text-sm text-primary">
+            <Info className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+            <span>
+              💡 Le tarif est automatiquement calculé selon la distance (km). Le poids et le volume n&apos;ont aucune incidence
+              sur le prix final. Ces informations servent uniquement à optimiser la logistique et l&apos;affectation du chauffeur.
+            </span>
+          </AlertDescription>
+        </Alert>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <label className="text-sm font-medium text-muted-foreground">Nom de la société</label>
@@ -402,18 +415,34 @@ const CreateOrderForm = ({ customer, defaultValues, onSubmit, isSubmitting }: Cr
             name="weight"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Poids (kg)</FormLabel>
-                <FormControl>
-                  <Input
-                    {...field}
-                    type="number"
-                    inputMode="decimal"
+              <FormLabel className="flex items-center gap-2">
+                Poids (kg)
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" className="text-muted-foreground transition hover:text-primary" aria-label="En savoir plus sur l'utilisation du poids">
+                      <Info className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs text-sm">
+                    Le poids est enregistré pour planifier le bon véhicule et anticiper d&apos;éventuels besoins logistiques. Il
+                    n&apos;a aucun impact sur le tarif.
+                  </TooltipContent>
+                </Tooltip>
+              </FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  type="number"
+                  inputMode="decimal"
                     step="0.1"
                     min={0.1}
                     placeholder="0,5"
                     disabled={form.formState.isSubmitting || isSubmitting}
                   />
                 </FormControl>
+                <FormDescription className="text-xs text-muted-foreground">
+                  Indication purement logistique pour préparer la course, sans effet sur le prix.
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -423,7 +452,20 @@ const CreateOrderForm = ({ customer, defaultValues, onSubmit, isSubmitting }: Cr
             name="volume"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Volume (m³)</FormLabel>
+                <FormLabel className="flex items-center gap-2">
+                  Volume (m³)
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button type="button" className="text-muted-foreground transition hover:text-primary" aria-label="En savoir plus sur l'utilisation du volume">
+                        <Info className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs text-sm">
+                      Le volume sert à vérifier la capacité utile du véhicule et à anticiper un matériel adapté. Il n&apos;influe
+                      pas sur le tarif.
+                    </TooltipContent>
+                  </Tooltip>
+                </FormLabel>
                 <FormControl>
                   <Input
                     {...field}
@@ -435,6 +477,9 @@ const CreateOrderForm = ({ customer, defaultValues, onSubmit, isSubmitting }: Cr
                     disabled={form.formState.isSubmitting || isSubmitting}
                   />
                 </FormControl>
+                <FormDescription className="text-xs text-muted-foreground">
+                  Valeur logistique uniquement, utilisée pour dimensionner le véhicule, pas pour calculer le tarif.
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}

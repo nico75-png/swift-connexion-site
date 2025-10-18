@@ -10,8 +10,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Info } from "lucide-react";
 import { createOrder } from "@/lib/services/orders.service";
 import { quoteOrder, type QuoteOrderResult } from "@/lib/services/quotes.service";
 import { useAuth } from "@/lib/stores/auth.store";
@@ -263,6 +265,15 @@ const CreateOrder = () => {
                         Vérifiez l&apos;ensemble des détails avant de confirmer votre commande.
                       </p>
                     </header>
+                    <Alert className="border-primary/40 bg-primary/5">
+                      <AlertDescription className="flex items-start gap-2 text-sm text-primary">
+                        <Info className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                        <span>
+                          💡 Le tarif est automatiquement calculé selon la distance parcourue. Les champs poids et volume sont
+                          collectés uniquement pour organiser la logistique et affecter le véhicule adéquat.
+                        </span>
+                      </AlertDescription>
+                    </Alert>
                     <div className="rounded-lg border bg-muted/20 p-6">
                       {draftValues.packageType ? (
                         <div className="mb-4 flex flex-wrap gap-2">
@@ -315,6 +326,10 @@ const CreateOrder = () => {
                           <p className="font-medium">{draftValues.volume ? `${draftValues.volume} m³` : "-"}</p>
                         </div>
                       </div>
+                      <p className="mt-6 rounded-md border border-dashed border-primary/40 bg-primary/5 p-3 text-sm text-primary">
+                        Le poids et le volume renseignés sont utilisés pour préparer le transport. Ils n&apos;impactent pas votre
+                        tarif.
+                      </p>
                       {(() => {
                         const options: string[] = [];
                         if (draftValues.expressDelivery) {
@@ -361,6 +376,15 @@ const CreateOrder = () => {
                       <h3 className="text-lg font-semibold">Tarif estimé</h3>
                       <p className="text-sm text-muted-foreground">Montant à confirmer avant création de la commande.</p>
                     </header>
+                    <Alert className="border-primary/40 bg-primary/5">
+                      <AlertDescription className="flex items-start gap-2 text-xs text-primary sm:text-sm">
+                        <Info className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                        <span>
+                          Le prix est calculé exclusivement sur la distance entre l&apos;enlèvement et la livraison. Les données de
+                          poids et volume sont conservées à des fins logistiques uniquement.
+                        </span>
+                      </AlertDescription>
+                    </Alert>
                     <div className="rounded-lg border bg-muted/10 p-6">
                       {quoteStatus === "loading" && (
                         <div className="space-y-4">
@@ -413,18 +437,6 @@ const CreateOrder = () => {
                               <dt className="text-muted-foreground">Distance</dt>
                               <dd className="font-medium">
                                 {formatCurrency(quoteResult.quote.breakdown.distance)}
-                              </dd>
-                            </div>
-                            <div className="flex items-center justify-between gap-4">
-                              <dt className="text-muted-foreground">Poids</dt>
-                              <dd className="font-medium">
-                                {formatCurrency(quoteResult.quote.breakdown.weight)}
-                              </dd>
-                            </div>
-                            <div className="flex items-center justify-between gap-4">
-                              <dt className="text-muted-foreground">Volume</dt>
-                              <dd className="font-medium">
-                                {formatCurrency(quoteResult.quote.breakdown.volume)}
                               </dd>
                             </div>
                             <div className="flex items-center justify-between gap-4">

@@ -38,6 +38,7 @@ export type CreateClientPayload = {
 };
 
 const STORAGE_KEY = "oc_clients";
+const CLEAR_MARKER_KEY = `${STORAGE_KEY}__cleared_at`;
 
 const isBrowser = typeof window !== "undefined";
 
@@ -53,6 +54,52 @@ const getStorage = (): Storage | null => {
     return null;
   }
 };
+
+const clearClientsFromStorage = (storage: Storage | null) => {
+  if (!storage) {
+    return;
+  }
+
+  try {
+    storage.removeItem(STORAGE_KEY);
+  } catch (error) {
+    console.warn("Failed to remove clients from storage", error);
+  }
+};
+
+export const clearClients = () => {
+  const storage = getStorage();
+  if (!storage) {
+    return;
+  }
+
+  clearClientsFromStorage(storage);
+
+  try {
+    storage.removeItem(CLEAR_MARKER_KEY);
+  } catch (error) {
+    console.warn("Failed to reset clear marker", error);
+  }
+};
+
+const ensureClientsCleared = () => {
+  const storage = getStorage();
+  if (!storage) {
+    return;
+  }
+
+  try {
+    const alreadyCleared = storage.getItem(CLEAR_MARKER_KEY);
+    if (!alreadyCleared) {
+      clearClientsFromStorage(storage);
+      storage.setItem(CLEAR_MARKER_KEY, new Date().toISOString());
+    }
+  } catch (error) {
+    console.warn("Failed to ensure clients are cleared", error);
+  }
+};
+
+ensureClientsCleared();
 
 const readClients = (): ClientRecord[] => {
   const storage = getStorage();

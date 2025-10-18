@@ -34,6 +34,38 @@ export const saveToStorage = (key: string, value: unknown) => {
 export const KEY_SEQ_GLOBAL = "oc_order_seq_global";
 export const KEY_LOCK = "oc_order_seq_lock";
 export const MIN_PAD = 3;
+export const ORDER_PREFIX = "ORD-";
+
+const DIGITS_PATTERN = /^(\d+)$/;
+const PREFIXED_PATTERN = /^ORD-(\d+)$/i;
+
+const extractOrderNumericValue = (value: unknown): number | null => {
+  if (value == null) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  const prefixedMatch = raw.match(PREFIXED_PATTERN);
+  if (prefixedMatch) {
+    const parsed = Number.parseInt(prefixedMatch[1], 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  const digitsMatch = raw.match(DIGITS_PATTERN);
+  if (digitsMatch) {
+    const parsed = Number.parseInt(digitsMatch[1], 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
+export const ensureOrderNumberFormat = (value: string | null | undefined): string => {
+  if (value == null) return "";
+  const raw = String(value).trim();
+  if (!raw) return "";
+  const numeric = extractOrderNumericValue(raw);
+  if (numeric == null) {
+    return raw;
+  }
+  return formatOrderNumber(numeric);
+};
 
 export function initGlobalOrderSeq() {
   const storage = getLocalStorage();
@@ -46,12 +78,9 @@ export function initGlobalOrderSeq() {
   const orders = getFromStorage<Array<{ id?: string }>>("oc_orders", []);
   let max = 0;
   for (const entry of orders) {
-    const raw = String(entry?.id ?? "").trim();
-    const match = raw.match(/^(\d+)$/) || raw.match(/^ORD-(\d+)$/);
-    if (!match) continue;
-    const value = Number.parseInt(match[1], 10);
-    if (Number.isFinite(value) && value > max) {
-      max = value;
+    const numeric = extractOrderNumericValue(entry?.id);
+    if (numeric != null && numeric > max) {
+      max = numeric;
     }
   }
   storage.setItem(KEY_SEQ_GLOBAL, String(max));
@@ -62,15 +91,27 @@ export function reconcileGlobalOrderSeq() {
   if (!storage) return;
   const orders = getFromStorage<Array<{ id?: string }>>("oc_orders", []);
   let max = Number.parseInt(storage.getItem(KEY_SEQ_GLOBAL) ?? "0", 10) || 0;
-  for (const entry of orders) {
-    const raw = String(entry?.id ?? "").trim();
-    const match = raw.match(/^(\d+)$/) || raw.match(/^ORD-(\d+)$/);
-    if (!match) continue;
-    const value = Number.parseInt(match[1], 10);
-    if (value > max) {
-      max = value;
+  let hasChange = false;
+  const normalized = orders.map((entry) => {
+    if (!entry || typeof entry !== "object") {
+      return entry;
     }
+    const formatted = ensureOrderNumberFormat(entry.id ?? "");
+    const numeric = extractOrderNumericValue(formatted);
+    if (numeric != null && numeric > max) {
+      max = numeric;
+    }
+    if (formatted && formatted !== entry.id) {
+      hasChange = true;
+      return { ...entry, id: formatted };
+    }
+    return entry;
+  });
+
+  if (hasChange) {
+    saveToStorage("oc_orders", normalized);
   }
+
   storage.setItem(KEY_SEQ_GLOBAL, String(max));
 }
 
@@ -129,10 +170,8 @@ function withSeqLock<T>(fn: () => T): T {
 
 function formatOrderNumber(value: number): string {
   const base = String(value);
-  if (base.length < MIN_PAD) {
-    return base.padStart(MIN_PAD, "0");
-  }
-  return base;
+  const padded = base.length < MIN_PAD ? base.padStart(MIN_PAD, "0") : base;
+  return `${ORDER_PREFIX}${padded}`;
 }
 
 export function generateNextOrderNumber(): string {
@@ -146,11 +185,10 @@ export function generateNextOrderNumber(): string {
     let next = current + 1;
 
     while (true) {
-      const candidate = formatOrderNumber(next);
-      const exists = orders.some((order) => String(order?.id ?? "") === candidate);
+      const exists = orders.some((order) => extractOrderNumericValue(order?.id) === next);
       if (!exists) {
         storage.setItem(KEY_SEQ_GLOBAL, String(next));
-        return candidate;
+        return formatOrderNumber(next);
       }
       next += 1;
     }
@@ -168,10 +206,9 @@ export function previewNextOrderNumber(): string | null {
     let next = current + 1;
 
     while (true) {
-      const candidate = formatOrderNumber(next);
-      const exists = orders.some((order) => String(order?.id ?? "") === candidate);
+      const exists = orders.some((order) => extractOrderNumericValue(order?.id) === next);
       if (!exists) {
-        return candidate;
+        return formatOrderNumber(next);
       }
       next += 1;
     }
@@ -179,8 +216,18 @@ export function previewNextOrderNumber(): string | null {
 }
 
 export function assertUniqueOrderIdOrThrow(id: string) {
+  const normalized = ensureOrderNumberFormat(id);
+  if (!PREFIXED_PATTERN.test(normalized)) {
+    throw new Error("Numéro de commande invalide");
+  }
+
+  const numeric = extractOrderNumericValue(normalized);
+  if (numeric == null) {
+    throw new Error("Numéro de commande invalide");
+  }
+
   const orders = getFromStorage<Array<{ id?: string }>>("oc_orders", []);
-  const duplicate = orders.some((order) => String(order?.id ?? "") === String(id));
+  const duplicate = orders.some((order) => extractOrderNumericValue(order?.id) === numeric);
   if (duplicate) {
     throw new Error("Numéro de commande déjà utilisé");
   }

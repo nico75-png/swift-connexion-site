@@ -1,6 +1,7 @@
 import { formatISO } from "date-fns";
 import { ADMIN_ORDER_SEEDS, CLIENT_DIRECTORY, type AdminOrderSeed } from "./data/adminOrderSeeds";
 import { defaultDrivers, type DriverStatus } from "./driversOrders.store";
+import { ensureOrderNumberFormat } from "@/lib/orderSequence";
 
 export type OrderStatus =
   | "EN_ATTENTE_AFFECTATION"
@@ -222,9 +223,10 @@ const buildDetailRecord = (seed: AdminOrderSeed): OrderDetailRecord => {
 
   const status = statusHistory[statusHistory.length - 1]?.status ?? "EN_ATTENTE_AFFECTATION";
 
+  const formattedNumber = ensureOrderNumberFormat(seed.number) || seed.number;
   return {
-    id: seed.number,
-    orderNumber: seed.number,
+    id: formattedNumber,
+    orderNumber: formattedNumber,
     status,
     amountTtc: seed.amount,
     currency: "EUR",
@@ -261,12 +263,17 @@ let memoryOrders = [...defaultOrders];
 
 const isBrowser = typeof window !== "undefined";
 
-const normalizeRecord = (record: OrderDetailRecord): OrderDetailRecord => ({
-  ...record,
-  administrativeEvents: Array.isArray(record.administrativeEvents)
-    ? record.administrativeEvents.map((event) => ({ ...event }))
-    : [],
-});
+const normalizeRecord = (record: OrderDetailRecord): OrderDetailRecord => {
+  const formatted = ensureOrderNumberFormat(record.orderNumber ?? record.id);
+  return {
+    ...record,
+    id: formatted || record.id,
+    orderNumber: formatted || record.orderNumber,
+    administrativeEvents: Array.isArray(record.administrativeEvents)
+      ? record.administrativeEvents.map((event) => ({ ...event }))
+      : [],
+  };
+};
 
 const readFromStorage = (): OrderDetailRecord[] => {
   if (!isBrowser) {

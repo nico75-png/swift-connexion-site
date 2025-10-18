@@ -19,6 +19,7 @@ import {
   ORDERS_EVENTS,
   listOrdersByClient,
 } from "@/lib/stores/clientOrders.store";
+import { ensureOrderNumberFormat } from "@/lib/orderSequence";
 import ReorderModal from "./components/ReorderModal";
 const OrdersPreviewSvg = () => <svg xmlns="http://www.w3.org/2000/svg" width="880" height="360" viewBox="0 0 880 360" role="img" aria-label="Aperçu Mes commandes avec numérotation séquentielle">
     <defs>
@@ -421,7 +422,7 @@ const ClientOrders = () => {
                           const canReorder = !order.status.toLowerCase().includes("cours");
                           const pickupDisplay = formatRoutePart(order.pickupAddress);
                           const deliveryDisplay = formatRoutePart(order.deliveryAddress);
-                          const displayNumber = order.orderNumber || `ORD-${order.id}`;
+                          const displayNumber = order.orderNumber || ensureOrderNumberFormat(order.id);
                           return (
                             <tr key={order.id} className="border-b transition-colors hover:bg-muted/30">
                               <td className="p-4 font-mono text-sm">{displayNumber}</td>

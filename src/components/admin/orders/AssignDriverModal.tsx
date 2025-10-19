@@ -409,7 +409,7 @@ const AssignDriverModal = ({
               Annuler
             </Button>
             <Button type="submit" disabled={!canConfirm}>
-              Affecter ce chauffeur
+              Confirmer l’affectation
             </Button>
           </DialogFooter>
         </form>

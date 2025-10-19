@@ -154,6 +154,11 @@ const AdminOrderDetailPage = () => {
 
   const legacyOrder = useMemo(() => (order ? toLegacyOrder(order) : null), [order]);
 
+  const formattedCreatedAt = useMemo(
+    () => (order ? new Date(order.createdAt).toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short" }) : "-"),
+    [order],
+  );
+
   const adminName = currentUser?.name ?? "Administrateur";
   const canManageAssignment = currentUser?.role === "admin" || currentUser?.role === "dispatch";
 
@@ -343,7 +348,7 @@ const AdminOrderDetailPage = () => {
     }
     switch (order.status) {
       case "LIVRE":
-        return "La commande est livrée : le changement de chauffeur n'est plus possible.";
+        return "Impossible de réaffecter un chauffeur sur une commande livrée.";
       case "ANNULEE":
         return "La commande est annulée : l'affectation ne peut plus être modifiée.";
       case "INCIDENT":
@@ -411,7 +416,7 @@ const AdminOrderDetailPage = () => {
               <CardTitle>Détails</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-3">
                 <div>
                   <p className="text-sm text-muted-foreground">Montant TTC</p>
                   <p className="text-xl font-semibold">{order.formattedAmount}</p>
@@ -420,6 +425,15 @@ const AdminOrderDetailPage = () => {
                   <p className="text-sm text-muted-foreground">Enlèvement prévu</p>
                   <p className="font-semibold">{order.formattedPickupAt}</p>
                 </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Date &amp; heure</p>
+                  <p className="font-semibold">{formattedCreatedAt}</p>
+                </div>
+              </div>
+              <Separator />
+              <div>
+                <p className="text-sm text-muted-foreground">Statut</p>
+                <Badge className={`mt-1 text-sm ${statusBadgeClass[order.status]}`}>{order.statusLabel}</Badge>
               </div>
               <Separator />
               <div className="grid gap-6 md:grid-cols-2">
@@ -496,11 +510,11 @@ const AdminOrderDetailPage = () => {
 
           <Card>
             <CardHeader className="border-b">
-              <CardTitle>Journal d'activité</CardTitle>
+              <CardTitle>Historique de la commande</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {order.activityLog.length === 0 && (
-                <p className="text-sm text-muted-foreground">Aucune activité enregistrée pour le moment.</p>
+                <p className="text-sm text-muted-foreground">Aucun historique disponible pour le moment.</p>
               )}
               {order.activityLog.map((item) => (
                 <div key={item.id} className="rounded-lg border border-border/60 bg-card/80 p-4">
@@ -555,7 +569,7 @@ const AdminOrderDetailPage = () => {
                         onClick={() => setIsAssignModalOpen(true)}
                         disabled={!isAssignmentEnabled}
                       >
-                        <UserPlus className="mr-2 h-4 w-4" /> Changer de chauffeur
+                        <UserPlus className="mr-2 h-4 w-4" /> Réaffecter un chauffeur
                       </Button>
                       {!isAssignmentEnabled && assignmentDisabledMessage && (
                         <p className="text-xs text-muted-foreground">{assignmentDisabledMessage}</p>

@@ -308,6 +308,11 @@ const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 
 export const listOrderDetails = (): OrderDetailRecord[] => clone(readFromStorage());
 
+export const upsertOrderDetailRecord = (record: OrderDetailRecord): OrderDetailRecord => {
+  persistOrderRecord(record);
+  return clone(record);
+};
+
 export const getOrderDetailRecord = (orderId: string): OrderDetailRecord | null => {
   const orders = readFromStorage();
   const match = orders.find((order) => order.id === orderId);

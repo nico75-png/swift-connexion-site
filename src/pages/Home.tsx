@@ -1,10 +1,24 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Zap, Shield, Activity, Heart, Glasses, Scale, Package2, PartyPopper, ArrowRight, Star } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Zap,
+  Shield,
+  Activity,
+  Heart,
+  Glasses,
+  Scale,
+  Package2,
+  PartyPopper,
+  ArrowRight,
+  Star,
+  CheckCircle2,
+} from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import heroCourier from "@/assets/hero-courier.jpg";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 const Home = () => {
   const [estimatedPrice, setEstimatedPrice] = useState<number | null>(null);
@@ -67,21 +81,52 @@ const Home = () => {
     },
   ];
 
-  const pricingCards = [
+  const pricingPlans = [
     {
-      sector: "Intra-Paris",
+      title: "Intra-Paris",
+      subtitle: "Idéal pour vos livraisons urgentes intramuros",
       price: "25",
-      features: ["Livraison en 1-2h", "Suivi GPS", "Assurance incluse"],
+      frequency: "par course",
+      description: "Jusqu'à 10 km inclus, puis 1,20 €/km",
+      features: [
+        "Enlèvement et livraison en 1 à 2 heures",
+        "Suivi GPS temps réel & preuve de dépôt",
+        "Assurance professionnelle incluse",
+      ],
+      primaryCta: { label: "Commander maintenant", href: "/connexion" },
+      secondaryCta: { label: "Voir le détail des tarifs", href: "/tarifs" },
     },
     {
-      sector: "Petite Couronne",
+      title: "Petite Couronne Pro",
+      subtitle: "Notre formule la plus demandée pour l'Île-de-France",
+      badge: "Populaire",
       price: "35",
-      features: ["Livraison en 2-3h", "Suivi GPS", "Assurance incluse"],
+      frequency: "par course",
+      description: "Jusqu'à 15 km inclus, puis 1,40 €/km",
+      features: [
+        "Livraison prioritaire sous 2 heures",
+        "Gestion multi-destinations et retours",
+        "Facturation mensuelle et comptes multiples",
+        "Support coursier dédié 7j/7",
+      ],
+      primaryCta: { label: "Créer un compte gratuit", href: "/inscription" },
+      secondaryCta: { label: "Parler à un expert", href: "/contact" },
+      popular: true,
     },
     {
-      sector: "Grande Couronne",
+      title: "Grande Couronne+",
+      subtitle: "Couverture élargie pour vos tournées et navettes",
       price: "45",
-      features: ["Livraison en 3-4h", "Suivi GPS", "Assurance incluse"],
+      frequency: "par course",
+      description: "Jusqu'à 25 km inclus, puis 1,70 €/km",
+      features: [
+        "Livraison express ou programmée",
+        "Prise en charge de colis volumineux",
+        "Reporting d'activité personnalisé",
+        "Gestion de tournées récurrentes",
+      ],
+      primaryCta: { label: "Demander un devis", href: "/contact" },
+      secondaryCta: { label: "Consulter les options", href: "/tarifs" },
     },
   ];
 
@@ -198,24 +243,98 @@ const Home = () => {
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6 mb-12">
-            {pricingCards.map((card, index) => (
-              <Card key={index} className="border-2 hover:border-primary transition-smooth">
-                <CardContent className="p-6 text-center">
-                  <h3 className="text-2xl mb-2">{card.sector}</h3>
-                  <div className="mb-6">
-                    <span className="text-4xl font-bold text-primary">À partir de {card.price}€</span>
-                  </div>
-                  <ul className="space-y-2 mb-6">
-                    {card.features.map((feature, i) => (
-                      <li key={i} className="text-sm text-muted-foreground flex items-center justify-center gap-2">
-                        <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            ))}
+            {pricingPlans.map((plan) => {
+              const isPopular = plan.popular;
+              return (
+                <Card
+                  key={plan.title}
+                  className={cn(
+                    "relative h-full overflow-hidden border-2 transition-smooth",
+                    isPopular
+                      ? "border-primary bg-primary text-primary-foreground shadow-large scale-[1.02]"
+                      : "border-border bg-background hover:border-primary/70 hover:shadow-medium",
+                  )}
+                >
+                  {plan.badge && (
+                    <div className="absolute left-1/2 top-6 -translate-x-1/2">
+                      <Badge
+                        variant={isPopular ? "secondary" : "default"}
+                        className={cn(
+                          "rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide",
+                          isPopular ? "bg-secondary text-secondary-foreground" : "bg-primary/10 text-primary",
+                        )}
+                      >
+                        {plan.badge}
+                      </Badge>
+                    </div>
+                  )}
+                  <CardContent className="flex h-full flex-col gap-6 p-8 text-left">
+                    <div className="space-y-3 text-center">
+                      <h3 className="text-2xl font-semibold">{plan.title}</h3>
+                      <p
+                        className={cn(
+                          "text-sm",
+                          isPopular ? "text-primary-foreground/80" : "text-muted-foreground",
+                        )}
+                      >
+                        {plan.subtitle}
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <div className="flex items-baseline justify-center gap-2">
+                        <span className="text-5xl font-bold">{plan.price}€</span>
+                        <span className={cn("text-sm", isPopular ? "text-primary-foreground/80" : "text-muted-foreground")}>{plan.frequency}</span>
+                      </div>
+                      <p
+                        className={cn(
+                          "mt-2 text-sm",
+                          isPopular ? "text-primary-foreground/80" : "text-muted-foreground",
+                        )}
+                      >
+                        {plan.description}
+                      </p>
+                    </div>
+                    <ul className="space-y-3">
+                      {plan.features.map((feature) => (
+                        <li
+                          key={feature}
+                          className={cn(
+                            "flex items-start gap-3 text-sm",
+                            isPopular ? "text-primary-foreground" : "text-muted-foreground",
+                          )}
+                        >
+                          <CheckCircle2
+                            className={cn(
+                              "mt-0.5 h-5 w-5",
+                              isPopular ? "text-secondary" : "text-primary",
+                            )}
+                          />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-auto space-y-3">
+                      <Button
+                        variant={isPopular ? "secondary" : "default"}
+                        size="lg"
+                        className="w-full"
+                        asChild
+                      >
+                        <Link to={plan.primaryCta.href}>{plan.primaryCta.label}</Link>
+                      </Button>
+                      <Button
+                        variant={isPopular ? "outline-light" : "ghost"}
+                        size="lg"
+                        className={cn("w-full", isPopular ? "text-primary-foreground" : "")}
+                        asChild
+                      >
+                        <Link to={plan.secondaryCta.href}>{plan.secondaryCta.label}</Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
           <div className="text-center">
             <Button variant="secondary" size="lg" asChild>

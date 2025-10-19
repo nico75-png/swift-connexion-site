@@ -6,7 +6,7 @@ export type Profile = Tables<"profiles">;
 export const fetchProfileByUserId = async (userId: string) => {
   const { data, error } = await supabase
     .from("profiles")
-    .select("user_id, first_name, last_name, display_name")
+    .select("*")
     .eq("user_id", userId)
     .maybeSingle();
 

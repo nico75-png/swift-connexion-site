@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Package,
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthProfile } from "@/providers/AuthProvider";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Sidebar pour l'espace client
@@ -21,6 +22,7 @@ import { useAuthProfile } from "@/providers/AuthProvider";
  */
 const ClientSidebar = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const navigate = useNavigate();
   const { resolvedDisplayName, fallbackEmail } = useAuthProfile();
   const sidebarName = resolvedDisplayName ?? fallbackEmail ?? "Profil client";
 
@@ -30,6 +32,17 @@ const ClientSidebar = () => {
 
   const closeMobileSidebar = () => {
     setIsMobileOpen(false);
+  };
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("Erreur lors de la déconnexion", error);
+      return;
+    }
+
+    closeMobileSidebar();
+    navigate("/connexion");
   };
 
   const menuItems = [
@@ -115,6 +128,7 @@ const ClientSidebar = () => {
           <button
             className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-sm text-white/70 transition-colors duration-200 hover:bg-white/10 hover:text-white"
             type="button"
+            onClick={handleLogout}
           >
             <LogOut className="h-5 w-5" />
             <span>Déconnexion</span>

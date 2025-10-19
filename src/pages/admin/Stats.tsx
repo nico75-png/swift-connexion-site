@@ -1,15 +1,48 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { addMonths, format, startOfMonth } from "date-fns";
+import {
+  addDays,
+  differenceInCalendarDays,
+  endOfDay,
+  endOfMonth,
+  endOfWeek,
+  endOfYear,
+  format,
+  startOfDay,
+  startOfMonth,
+  startOfWeek,
+  startOfYear,
+} from "date-fns";
 import { fr } from "date-fns/locale";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import AdminSidebar from "@/components/dashboard/AdminSidebar";
 import Topbar from "@/components/dashboard/Topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon } from "lucide-react";
+import type { DateRange as DayPickerRange } from "react-day-picker";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
 type OrderRow = Tables<"orders">;
+
+type DateRange = {
+  start: Date;
+  end: Date;
+};
+
+type DateShortcut =
+  | "today"
+  | "this_week"
+  | "this_month"
+  | "this_year"
+  | "custom";
 
 type VariationInfo = {
   text: string;
@@ -37,6 +70,73 @@ const capitalizeFirst = (value: string) =>
   value.length > 0 ? value.charAt(0).toUpperCase() + value.slice(1) : value;
 
 const formatCount = (value: number) => numberFormatter.format(value);
+
+const normalizeRange = (start: Date, end: Date): DateRange => {
+  const normalizedStart = startOfDay(start);
+  const normalizedEnd = endOfDay(end);
+  return normalizedStart <= normalizedEnd
+    ? { start: normalizedStart, end: normalizedEnd }
+    : { start: normalizedEnd, end: normalizedStart };
+};
+
+const computeShortcutRange = (shortcut: DateShortcut, reference = new Date()): DateRange => {
+  switch (shortcut) {
+    case "today":
+      return normalizeRange(reference, reference);
+    case "this_week": {
+      const start = startOfWeek(reference, { weekStartsOn: 1 });
+      const end = endOfWeek(reference, { weekStartsOn: 1 });
+      return normalizeRange(start, end);
+    }
+    case "this_year":
+      return normalizeRange(startOfYear(reference), endOfYear(reference));
+    case "this_month":
+    default:
+      return normalizeRange(startOfMonth(reference), endOfMonth(reference));
+  }
+};
+
+const computePreviousRange = (range: DateRange): DateRange => {
+  const length = differenceInCalendarDays(range.end, range.start) + 1;
+  const previousPeriodEnd = addDays(range.start, -1);
+  const previousPeriodStart = addDays(previousPeriodEnd, -(length - 1));
+  return normalizeRange(previousPeriodStart, previousPeriodEnd);
+};
+
+const formatRangeLabel = (range: DateRange) => {
+  const sameDay = differenceInCalendarDays(range.end, range.start) === 0;
+  if (sameDay) {
+    return capitalizeFirst(format(range.start, "d MMMM yyyy", { locale: fr }));
+  }
+
+  const startLabel = format(range.start, "d MMM", { locale: fr });
+  const endLabel = format(range.end, "d MMM yyyy", { locale: fr });
+  return `${startLabel} – ${endLabel}`;
+};
+
+const formatRangeDescription = (range: DateRange) => {
+  const sameDay = differenceInCalendarDays(range.end, range.start) === 0;
+  if (sameDay) {
+    return `Données du ${capitalizeFirst(
+      format(range.start, "EEEE d MMMM yyyy", { locale: fr }),
+    )}.`;
+  }
+
+  const startLabel = capitalizeFirst(
+    format(range.start, "EEEE d MMMM yyyy", { locale: fr }),
+  );
+  const endLabel = capitalizeFirst(
+    format(range.end, "EEEE d MMMM yyyy", { locale: fr }),
+  );
+  return `Données du ${startLabel} au ${endLabel}.`;
+};
+
+const shortcutLabels: Record<Exclude<DateShortcut, "custom">, string> = {
+  today: "Aujourd’hui",
+  this_week: "Cette semaine",
+  this_month: "Ce mois",
+  this_year: "Cette année",
+};
 
 const countActiveClients = (orders: OrderRow[]) => {
   const identifiers = new Set<string>();
@@ -94,11 +194,20 @@ const buildClientsVariation = (
 };
 
 const AdminStats = () => {
-  const [referenceDate] = useState(() => new Date());
+  const [selectedShortcut, setSelectedShortcut] = useState<DateShortcut>("this_month");
+  const [selectedRange, setSelectedRange] = useState<DateRange>(() =>
+    computeShortcutRange("this_month"),
+  );
+  const [calendarRange, setCalendarRange] = useState<DayPickerRange | undefined>(() => ({
+    from: selectedRange.start,
+    to: selectedRange.end,
+  }));
   const [stats, setStats] = useState<OverviewStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isMountedRef = useRef(true);
+  const cacheRef = useRef(new Map<string, OverviewStats>());
+  const activeRequestKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -107,17 +216,32 @@ const AdminStats = () => {
     };
   }, []);
 
-  const currentMonthLabel = useMemo(
-    () => format(referenceDate, "MMMM yyyy", { locale: fr }),
-    [referenceDate],
+  const previousRange = useMemo(
+    () => computePreviousRange(selectedRange),
+    [selectedRange],
   );
-  const previousMonthLabel = useMemo(
-    () => format(addMonths(referenceDate, -1), "MMMM yyyy", { locale: fr }),
-    [referenceDate],
+
+  const currentRangeLabel = useMemo(
+    () => formatRangeLabel(selectedRange),
+    [selectedRange],
   );
-  const currentPeriodEndLabel = useMemo(
-    () => format(referenceDate, "d MMMM yyyy", { locale: fr }),
-    [referenceDate],
+
+  const previousRangeLabel = useMemo(
+    () => formatRangeLabel(previousRange),
+    [previousRange],
+  );
+
+  const currentRangeDescription = useMemo(
+    () => formatRangeDescription(selectedRange),
+    [selectedRange],
+  );
+
+  const updatedAtLabel = useMemo(
+    () =>
+      capitalizeFirst(
+        format(selectedRange.end, "EEEE d MMMM yyyy à HH'h'mm", { locale: fr }),
+      ),
+    [selectedRange],
   );
 
   const ordersVariation = useMemo(
@@ -126,10 +250,10 @@ const AdminStats = () => {
         ? buildPercentageVariation(
             stats.currentOrdersCount,
             stats.previousOrdersCount,
-            previousMonthLabel,
+            previousRangeLabel,
           )
         : null,
-    [stats, previousMonthLabel],
+    [stats, previousRangeLabel],
   );
 
   const clientsVariation = useMemo(
@@ -138,10 +262,10 @@ const AdminStats = () => {
         ? buildClientsVariation(
             stats.currentActiveClients,
             stats.previousActiveClients,
-            previousMonthLabel,
+            previousRangeLabel,
           )
         : null,
-    [stats, previousMonthLabel],
+    [stats, previousRangeLabel],
   );
 
   const revenueVariation = useMemo(
@@ -150,10 +274,10 @@ const AdminStats = () => {
         ? buildPercentageVariation(
             stats.currentRevenue,
             stats.previousRevenue,
-            previousMonthLabel,
+            previousRangeLabel,
           )
         : null,
-    [stats, previousMonthLabel],
+    [stats, previousRangeLabel],
   );
 
   const loadStats = useCallback(async () => {
@@ -164,27 +288,41 @@ const AdminStats = () => {
     setLoading(true);
     setError(null);
 
-    try {
-      const currentStart = startOfMonth(referenceDate).toISOString();
-      const nextMonthStart = startOfMonth(addMonths(referenceDate, 1)).toISOString();
-      const previousStart = startOfMonth(addMonths(referenceDate, -1)).toISOString();
+    const currentStart = selectedRange.start.toISOString();
+    const currentEndExclusive = addDays(selectedRange.end, 1).toISOString();
+    const previousStart = previousRange.start.toISOString();
+    const previousEndExclusive = addDays(previousRange.end, 1).toISOString();
+    const cacheKey = `${currentStart}:${currentEndExclusive}`;
+    activeRequestKeyRef.current = cacheKey;
 
-      const [currentOrdersResult, previousOrdersResult, inProgressResult] = await Promise.all([
-        supabase
-          .from("orders")
-          .select("id, customer_id, status, created_at, amount")
-          .gte("created_at", currentStart)
-          .lt("created_at", nextMonthStart),
-        supabase
-          .from("orders")
-          .select("id, customer_id, status, created_at, amount")
-          .gte("created_at", previousStart)
-          .lt("created_at", currentStart),
-        supabase
-          .from("orders")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "EN_COURS"),
-      ]);
+    try {
+      
+      if (cacheRef.current.has(cacheKey)) {
+        const cached = cacheRef.current.get(cacheKey);
+        if (cached && activeRequestKeyRef.current === cacheKey) {
+          setStats(cached);
+          setLoading(false);
+        }
+        return;
+      }
+
+      const [currentOrdersResult, previousOrdersResult, inProgressResult] =
+        await Promise.all([
+          supabase
+            .from("orders")
+            .select("id, customer_id, status, created_at, amount")
+            .gte("created_at", currentStart)
+            .lt("created_at", currentEndExclusive),
+          supabase
+            .from("orders")
+            .select("id, customer_id, status, created_at, amount")
+            .gte("created_at", previousStart)
+            .lt("created_at", previousEndExclusive),
+          supabase
+            .from("orders")
+            .select("id", { count: "exact", head: true })
+            .eq("status", "EN_COURS"),
+        ]);
 
       if (currentOrdersResult.error) {
         throw currentOrdersResult.error;
@@ -199,29 +337,38 @@ const AdminStats = () => {
       const currentOrders = (currentOrdersResult.data as OrderRow[] | null) ?? [];
       const previousOrders = (previousOrdersResult.data as OrderRow[] | null) ?? [];
 
-      if (isMountedRef.current) {
-        setStats({
-          currentOrdersCount: currentOrders.length,
-          previousOrdersCount: previousOrders.length,
-          currentRevenue: currentOrders.reduce((total, order) => total + (order.amount ?? 0), 0),
-          previousRevenue: previousOrders.reduce((total, order) => total + (order.amount ?? 0), 0),
-          inProgressCount: inProgressResult.count ?? 0,
-          currentActiveClients: countActiveClients(currentOrders),
-          previousActiveClients: countActiveClients(previousOrders),
-        });
+      const computedStats: OverviewStats = {
+        currentOrdersCount: currentOrders.length,
+        previousOrdersCount: previousOrders.length,
+        currentRevenue: currentOrders.reduce(
+          (total, order) => total + (order.amount ?? 0),
+          0,
+        ),
+        previousRevenue: previousOrders.reduce(
+          (total, order) => total + (order.amount ?? 0),
+          0,
+        ),
+        inProgressCount: inProgressResult.count ?? 0,
+        currentActiveClients: countActiveClients(currentOrders),
+        previousActiveClients: countActiveClients(previousOrders),
+      };
+
+      if (isMountedRef.current && activeRequestKeyRef.current === cacheKey) {
+        setStats(computedStats);
+        cacheRef.current.set(cacheKey, computedStats);
       }
     } catch (fetchError) {
       console.error(fetchError);
-      if (isMountedRef.current) {
-        setError("Impossible de récupérer les statistiques du mois en cours.");
+      if (isMountedRef.current && activeRequestKeyRef.current === cacheKey) {
+        setError("Impossible de récupérer les statistiques pour la période sélectionnée.");
         setStats(null);
       }
     } finally {
-      if (isMountedRef.current) {
+      if (isMountedRef.current && activeRequestKeyRef.current === cacheKey) {
         setLoading(false);
       }
     }
-  }, [referenceDate]);
+  }, [selectedRange, previousRange]);
 
   useEffect(() => {
     void loadStats();
@@ -233,6 +380,7 @@ const AdminStats = () => {
         { event: "*", schema: "public", table: "orders" },
         () => {
           if (isMountedRef.current) {
+            cacheRef.current.clear();
             void loadStats();
           }
         },
@@ -246,6 +394,22 @@ const AdminStats = () => {
 
   const resolvedStats: OverviewStats | null = error ? null : stats;
 
+  const handleShortcutSelect = (shortcut: Exclude<DateShortcut, "custom">) => {
+    const range = computeShortcutRange(shortcut);
+    setSelectedShortcut(shortcut);
+    setSelectedRange(range);
+    setCalendarRange({ from: range.start, to: range.end });
+  };
+
+  const handleCalendarSelect = (range?: DayPickerRange) => {
+    setCalendarRange(range);
+    if (range?.from && range?.to) {
+      const normalized = normalizeRange(range.from, range.to);
+      setSelectedShortcut("custom");
+      setSelectedRange(normalized);
+    }
+  };
+
   return (
     <DashboardLayout
       sidebar={<AdminSidebar />}
@@ -253,25 +417,64 @@ const AdminStats = () => {
     >
       <div className="mb-8 space-y-2">
         <h1 className="text-3xl font-bold">Vue d’ensemble</h1>
-        <p className="text-sm text-muted-foreground">
-          Données du 1er {currentMonthLabel} au {currentPeriodEndLabel}.
-        </p>
+        <p className="text-sm text-muted-foreground">{currentRangeDescription}</p>
         {error ? (
           <p className="text-sm font-medium text-destructive">
             {error}
           </p>
         ) : (
           <p className="text-xs text-muted-foreground">
-            Mise à jour le {capitalizeFirst(currentPeriodEndLabel)}.
+            Mise à jour le {updatedAtLabel}.
           </p>
         )}
+        <div className="pt-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <CalendarIcon className="h-4 w-4" />
+                <span className="text-sm font-medium">{currentRangeLabel}</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[320px] p-4" align="start">
+              <div className="flex flex-wrap gap-2 pb-4">
+                {Object.entries(shortcutLabels).map(([shortcut, label]) => (
+                  <Button
+                    key={shortcut}
+                    variant={
+                      selectedShortcut === shortcut ? "default" : "secondary"
+                    }
+                    size="sm"
+                    onClick={() =>
+                      handleShortcutSelect(shortcut as Exclude<DateShortcut, "custom">)
+                    }
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
+              <Calendar
+                mode="range"
+                numberOfMonths={1}
+                selected={calendarRange}
+                onSelect={handleCalendarSelect}
+                initialFocus
+              />
+              <p className="pt-3 text-xs text-muted-foreground">
+                Choisissez une plage personnalisée ou utilisez un raccourci.
+              </p>
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card className="border border-border/50 bg-background/80 shadow-soft">
           <CardHeader>
             <CardTitle className="text-base font-semibold">
-              Commandes du mois 📦
+              Commandes 📦
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -284,8 +487,8 @@ const AdminStats = () => {
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {resolvedStats.currentOrdersCount === 0
-                    ? "Aucune commande enregistrée ce mois-ci."
-                    : "Commandes créées entre le 1er et aujourd’hui."}
+                    ? "0 commande sur la période sélectionnée."
+                    : "Commandes créées sur la période sélectionnée."}
                 </p>
                 {ordersVariation && (
                   <p
@@ -312,7 +515,7 @@ const AdminStats = () => {
         <Card className="border border-border/50 bg-background/80 shadow-soft">
           <CardHeader>
             <CardTitle className="text-base font-semibold">
-              Chiffre d’affaires du mois 💰
+              Chiffre d’affaires 💰
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -325,8 +528,8 @@ const AdminStats = () => {
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {resolvedStats.currentRevenue === 0
-                    ? "0 € généré depuis le 1er du mois."
-                    : "Montant TTC des commandes depuis le 1er."}
+                    ? "0 € de chiffre d’affaires sur la période sélectionnée."
+                    : "Montant TTC des commandes validées sur la période."}
                 </p>
                 {revenueVariation && (
                   <p
@@ -394,8 +597,8 @@ const AdminStats = () => {
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {resolvedStats.currentActiveClients === 0
-                    ? "0 client actif pour l’instant."
-                    : `Clients ayant passé au moins une commande en ${capitalizeFirst(currentMonthLabel)}.`}
+                    ? "0 client actif sur la période sélectionnée."
+                    : "Clients ayant passé au moins une commande sur la période."}
                 </p>
                 {clientsVariation && (
                   <p

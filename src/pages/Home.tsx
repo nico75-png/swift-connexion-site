@@ -83,50 +83,59 @@ const Home = () => {
 
   const pricingPlans = [
     {
-      title: "Intra-Paris",
-      subtitle: "Idéal pour vos livraisons urgentes intramuros",
-      price: "25",
-      frequency: "par course",
-      description: "Jusqu'à 10 km inclus, puis 1,20 €/km",
+      title: "Basic plan",
+      description: "Basic features for up to 10 users.",
+      price: "10",
+      currency: "$",
+      frequency: "per user per month",
+      featuresLabel: "FEATURES",
+      featuresIntro: "Everything in Basic plan includes:",
       features: [
-        "Enlèvement et livraison en 1 à 2 heures",
-        "Suivi GPS temps réel & preuve de dépôt",
-        "Assurance professionnelle incluse",
+        "Access to core features",
+        "Basic reporting and analytics",
+        "Up to 10 individual users",
+        "20GB individual data each user",
       ],
-      primaryCta: { label: "Commander maintenant", href: "/connexion" },
-      secondaryCta: { label: "Voir le détail des tarifs", href: "/tarifs" },
+      primaryCta: { label: "Get started", href: "/inscription" },
+      secondaryCta: { label: "Chat to sales", href: "/contact" },
     },
     {
-      title: "Petite Couronne Pro",
-      subtitle: "Notre formule la plus demandée pour l'Île-de-France",
-      badge: "Populaire",
-      price: "35",
-      frequency: "par course",
-      description: "Jusqu'à 15 km inclus, puis 1,40 €/km",
+      title: "Business plan",
+      description: "Growing teams up to 20 users.",
+      badge: "Popular",
+      price: "20",
+      currency: "$",
+      frequency: "per user per month",
+      featuresLabel: "FEATURES",
+      featuresIntro: "Everything in Basic plus:",
       features: [
-        "Livraison prioritaire sous 2 heures",
-        "Gestion multi-destinations et retours",
-        "Facturation mensuelle et comptes multiples",
-        "Support coursier dédié 7j/7",
+        "200+ integrations",
+        "Advanced reporting and analytics",
+        "Up to 20 individual users",
+        "40GB individual data each user",
+        "Priority chat and email support",
       ],
-      primaryCta: { label: "Créer un compte gratuit", href: "/inscription" },
-      secondaryCta: { label: "Parler à un expert", href: "/contact" },
+      primaryCta: { label: "Get started", href: "/inscription" },
+      secondaryCta: { label: "Chat to sales", href: "/contact" },
       popular: true,
     },
     {
-      title: "Grande Couronne+",
-      subtitle: "Couverture élargie pour vos tournées et navettes",
-      price: "45",
-      frequency: "par course",
-      description: "Jusqu'à 25 km inclus, puis 1,70 €/km",
+      title: "Enterprise plan",
+      description: "Advanced features and support.",
+      price: "40",
+      currency: "$",
+      frequency: "per user per month",
+      featuresLabel: "FEATURES",
+      featuresIntro: "Everything in Business plus:",
       features: [
-        "Livraison express ou programmée",
-        "Prise en charge de colis volumineux",
-        "Reporting d'activité personnalisé",
-        "Gestion de tournées récurrentes",
+        "Advanced custom fields",
+        "Audit log and data history",
+        "Unlimited individual users",
+        "Unlimited individual data",
+        "Personalised priority support",
       ],
-      primaryCta: { label: "Demander un devis", href: "/contact" },
-      secondaryCta: { label: "Consulter les options", href: "/tarifs" },
+      primaryCta: { label: "Get started", href: "/contact" },
+      secondaryCta: { label: "Chat to sales", href: "/contact" },
     },
   ];
 
@@ -234,7 +243,7 @@ const Home = () => {
       </section>
 
       {/* Pricing Preview Section */}
-      <section className="py-16 md:py-24">
+      <section className="py-16 md:py-24 bg-slate-50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="mb-4">Des tarifs clairs, sans devis obligatoire</h2>
@@ -249,83 +258,115 @@ const Home = () => {
                 <Card
                   key={plan.title}
                   className={cn(
-                    "relative h-full overflow-hidden border-2 transition-smooth",
-                    isPopular
-                      ? "border-primary bg-primary text-primary-foreground shadow-large scale-[1.02]"
-                      : "border-border bg-background hover:border-primary/70 hover:shadow-medium",
+                    "relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-1 shadow-soft transition-all hover:shadow-large",
+                    isPopular && "border-transparent bg-slate-950 text-white shadow-2xl hover:shadow-2xl",
                   )}
                 >
                   {plan.badge && (
                     <div className="absolute left-1/2 top-6 -translate-x-1/2">
                       <Badge
-                        variant={isPopular ? "secondary" : "default"}
                         className={cn(
-                          "rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide",
-                          isPopular ? "bg-secondary text-secondary-foreground" : "bg-primary/10 text-primary",
+                          "rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-wide",
+                          isPopular ? "bg-emerald-400 text-slate-950" : "bg-slate-900/5 text-slate-900",
                         )}
                       >
                         {plan.badge}
                       </Badge>
                     </div>
                   )}
-                  <CardContent className="flex h-full flex-col gap-6 p-8 text-left">
-                    <div className="space-y-3 text-center">
-                      <h3 className="text-2xl font-semibold">{plan.title}</h3>
+                  <CardContent
+                    className={cn(
+                      "flex h-full flex-col gap-8 rounded-[22px] bg-white p-10 pt-14 text-left",
+                      isPopular && "bg-transparent",
+                    )}
+                  >
+                    <div className="space-y-4 text-center">
+                      <h3 className="text-2xl font-semibold tracking-tight">{plan.title}</h3>
                       <p
                         className={cn(
-                          "text-sm",
-                          isPopular ? "text-primary-foreground/80" : "text-muted-foreground",
-                        )}
-                      >
-                        {plan.subtitle}
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <div className="flex items-baseline justify-center gap-2">
-                        <span className="text-5xl font-bold">{plan.price}€</span>
-                        <span className={cn("text-sm", isPopular ? "text-primary-foreground/80" : "text-muted-foreground")}>{plan.frequency}</span>
-                      </div>
-                      <p
-                        className={cn(
-                          "mt-2 text-sm",
-                          isPopular ? "text-primary-foreground/80" : "text-muted-foreground",
+                          "text-sm text-muted-foreground",
+                          isPopular && "text-white/80",
                         )}
                       >
                         {plan.description}
                       </p>
                     </div>
-                    <ul className="space-y-3">
-                      {plan.features.map((feature) => (
-                        <li
-                          key={feature}
+                    <div className="text-center">
+                      <div className="flex items-baseline justify-center gap-2">
+                        <span className="text-5xl font-bold">
+                          {plan.currency}
+                          {plan.price}
+                        </span>
+                        <span
                           className={cn(
-                            "flex items-start gap-3 text-sm",
-                            isPopular ? "text-primary-foreground" : "text-muted-foreground",
+                            "text-sm text-muted-foreground",
+                            isPopular && "text-white/80",
                           )}
                         >
-                          <CheckCircle2
+                          {plan.frequency}
+                        </span>
+                      </div>
+                    </div>
+                    <div
+                      className={cn(
+                        "rounded-2xl bg-slate-100/60 p-6 text-left",
+                        isPopular && "bg-white/5",
+                      )}
+                    >
+                      <p
+                        className={cn(
+                          "text-xs font-semibold tracking-[0.3em] text-slate-500",
+                          isPopular && "text-white/70",
+                        )}
+                      >
+                        {plan.featuresLabel}
+                      </p>
+                      <p
+                        className={cn(
+                          "mt-3 text-sm font-medium text-slate-700",
+                          isPopular && "text-white",
+                        )}
+                      >
+                        {plan.featuresIntro}
+                      </p>
+                      <ul className="mt-4 space-y-3">
+                        {plan.features.map((feature) => (
+                          <li
+                            key={feature}
                             className={cn(
-                              "mt-0.5 h-5 w-5",
-                              isPopular ? "text-secondary" : "text-primary",
+                              "flex items-start gap-3 text-sm text-slate-600",
+                              isPopular && "text-white/80",
                             )}
-                          />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
+                          >
+                            <CheckCircle2
+                              className={cn(
+                                "mt-0.5 h-5 w-5 flex-shrink-0",
+                                isPopular ? "text-emerald-400" : "text-emerald-500",
+                              )}
+                            />
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                     <div className="mt-auto space-y-3">
                       <Button
-                        variant={isPopular ? "secondary" : "default"}
                         size="lg"
-                        className="w-full"
+                        className={cn(
+                          "w-full rounded-xl bg-emerald-400 text-slate-950 shadow-md hover:bg-emerald-300",
+                          isPopular && "shadow-lg",
+                        )}
                         asChild
                       >
                         <Link to={plan.primaryCta.href}>{plan.primaryCta.label}</Link>
                       </Button>
                       <Button
-                        variant={isPopular ? "outline-light" : "ghost"}
+                        variant="ghost"
                         size="lg"
-                        className={cn("w-full", isPopular ? "text-primary-foreground" : "")}
+                        className={cn(
+                          "w-full rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900",
+                          isPopular && "border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white",
+                        )}
                         asChild
                       >
                         <Link to={plan.secondaryCta.href}>{plan.secondaryCta.label}</Link>

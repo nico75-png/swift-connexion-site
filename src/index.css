@@ -9,79 +9,71 @@ All colors MUST be HSL.
 @layer base {
   :root {
     /* One Connexion Design System - All HSL Colors */
-    --background: 210 20% 97%;
-    --foreground: 0 0% 12%;
+    --background: 216 33% 97%;
+    --foreground: 224 39% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 12%;
+    --card-foreground: 224 39% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 12%;
+    --popover-foreground: 224 39% 11%;
 
-    /* Bleu nuit primary #0F3556 */
-    --primary: 204 69% 20%;
+    /* Bleu nuit primary */
+    --primary: 215 88% 17%;
     --primary-foreground: 0 0% 100%;
-    
-    /* Bleu profond #123B63 */
-    --primary-dark: 207 68% 23%;
-    
-    /* Jaune CTA #FFB800 */
-    --cta: 43 100% 50%;
-    --cta-foreground: 204 69% 20%;
-    
-    /* Bleu clair accent #00A3E0 */
-    --secondary: 195 100% 44%;
+
+    /* Bleu profond */
+    --primary-dark: 217 89% 14%;
+
+    /* Orange doré CTA */
+    --cta: 33 98% 54%;
+    --cta-foreground: 215 88% 17%;
+
+    /* Bleu accent */
+    --secondary: 196 84% 38%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 210 20% 95%;
-    --muted-foreground: 0 0% 45%;
+    --muted: 214 32% 92%;
+    --muted-foreground: 222 14% 35%;
 
-    --accent: 195 100% 44%;
+    --accent: 196 84% 38%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 15% 88%;
-    --input: 210 15% 92%;
-    --ring: 204 69% 20%;
+    --border: 214 31% 88%;
+    --input: 214 31% 90%;
+    --ring: 215 88% 17%;
 
     --radius: 0.75rem;
-    
+
     /* Custom tokens */
     --success: 142 71% 45%;
     --warning: 38 92% 50%;
-    --info: 195 100% 44%;
-    
+    --info: 196 84% 38%;
+
     /* Gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(204 69% 20%) 0%, hsl(207 68% 23%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(195 100% 44%) 0%, hsl(195 100% 54%) 100%);
-    
+    --gradient-hero: linear-gradient(120deg, hsl(217 89% 14%) 0%, hsl(215 88% 20%) 45%, hsl(196 84% 32%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(196 84% 45%) 0%, hsl(196 84% 38%) 100%);
+    --gradient-surface: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(214 32% 92%) 100%);
+
     /* Shadows */
-    --shadow-soft: 0 2px 8px rgba(15, 53, 86, 0.08);
-    --shadow-medium: 0 4px 16px rgba(15, 53, 86, 0.12);
-    --shadow-large: 0 8px 32px rgba(15, 53, 86, 0.16);
-    
+    --shadow-soft: 0 6px 20px rgba(17, 30, 56, 0.08);
+    --shadow-medium: 0 16px 32px rgba(13, 38, 74, 0.12);
+    --shadow-large: 0 24px 48px rgba(10, 27, 56, 0.18);
+
     /* Animations */
     --transition-base: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-    --radius: 0.75rem;
-
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -128,6 +120,7 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    background-image: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(214 32% 96%) 60%, hsl(214 32% 92%) 100%);
   }
   
   h1, h2, h3, h4, h5, h6 {
@@ -151,28 +144,54 @@ All colors MUST be HSL.
   .gradient-hero {
     background: var(--gradient-hero);
   }
-  
+
   .gradient-accent {
     background: var(--gradient-accent);
   }
-  
+
+  .gradient-surface {
+    background: var(--gradient-surface);
+  }
+
   .shadow-soft {
     box-shadow: var(--shadow-soft);
   }
-  
+
   .shadow-medium {
     box-shadow: var(--shadow-medium);
   }
-  
+
   .shadow-large {
     box-shadow: var(--shadow-large);
   }
-  
+
   .transition-base {
     transition: var(--transition-base);
   }
-  
+
   .transition-smooth {
     transition: var(--transition-smooth);
+  }
+
+  .bg-grid-primary {
+    background-image: linear-gradient(
+        to right,
+        rgba(255, 255, 255, 0) 0,
+        rgba(255, 255, 255, 0) 94%,
+        rgba(255, 255, 255, 0.12) 94%,
+        rgba(255, 255, 255, 0.12) 100%
+      ),
+      linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0) 0,
+        rgba(255, 255, 255, 0) 94%,
+        rgba(255, 255, 255, 0.12) 94%,
+        rgba(255, 255, 255, 0.12) 100%
+      );
+    background-size: 120px 120px;
+  }
+
+  .card-spotlight {
+    background-image: radial-gradient(circle at top left, rgba(255, 255, 255, 0.16), transparent 55%);
   }
 }

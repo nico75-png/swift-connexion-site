@@ -7,6 +7,7 @@ import {
   cancelOrderInStore,
   getOrderDetailRecord,
   listOrderDetails,
+  upsertOrderDetailRecord,
   type OrderAssignmentEvent,
   type OrderAssignedDriver,
   type OrderDetailRecord,
@@ -26,6 +27,10 @@ import {
   type AssignmentRequirements,
   evaluateDriverCompatibility,
 } from "@/lib/utils/driver-compatibility";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
+import { ensureOrderNumberFormat } from "@/lib/orderSequence";
+import { ADMIN_DRIVER_LABELS, type PackageType } from "@/lib/packageTaxonomy";
 
 export interface OrderActivityEntry {
   id: string;
@@ -207,9 +212,151 @@ const toAdminOrderDetail = (record: OrderDetailRecord): AdminOrderDetail => ({
   activityLog: buildActivityLog(record),
 });
 
+type SupabaseOrderRow = Tables<"orders">;
+
+const resolveTransportLabel = (packageType: SupabaseOrderRow["package_type"] | null): string => {
+  if (!packageType) {
+    return "Course dédiée";
+  }
+  return ADMIN_DRIVER_LABELS[packageType as PackageType] ?? "Course dédiée";
+};
+
+const buildStatusHistoryFromSupabase = (
+  row: SupabaseOrderRow,
+  orderId: string,
+  status: OrderStatus,
+): OrderDetailRecord["statusHistory"] => {
+  const history: OrderDetailRecord["statusHistory"] = [
+    {
+      id: `ST-${orderId}-CREATED`,
+      status: "EN_ATTENTE_AFFECTATION",
+      occurredAt: row.created_at,
+      author: row.customer_company,
+    },
+  ];
+
+  if (status !== "EN_ATTENTE_AFFECTATION") {
+    history.push({
+      id: `ST-${orderId}-${status}`,
+      status,
+      occurredAt: row.updated_at ?? row.created_at,
+      author: row.driver_id ? row.driver_id : "system",
+    });
+  }
+
+  return history.sort((a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime());
+};
+
+const buildAssignmentEventsFromSupabase = (
+  row: SupabaseOrderRow,
+  orderId: string,
+  driverName: string | null,
+): OrderDetailRecord["assignmentEvents"] => {
+  if (!row.driver_id) {
+    return [];
+  }
+  return [
+    {
+      id: `AS-${orderId}-ASSIGNED`,
+      type: "ASSIGNED",
+      driverId: row.driver_id,
+      driverName: driverName ?? row.driver_id,
+      occurredAt: row.driver_assigned_at ?? row.updated_at ?? row.created_at,
+      author: "system",
+      note: row.driver_instructions ?? undefined,
+    },
+  ];
+};
+
+const buildAssignedDriverFromSupabase = (
+  row: SupabaseOrderRow,
+  driver: Driver | undefined,
+): OrderAssignedDriver | undefined => {
+  if (!row.driver_id || !driver) {
+    return undefined;
+  }
+  const vehicleLabel = driver.vehicle?.type
+    ? `${driver.vehicle.type}${driver.vehicle.capacity ? ` · ${driver.vehicle.capacity}` : ""}`
+    : "Véhicule";
+  return {
+    id: driver.id,
+    name: driver.name,
+    phone: driver.phone,
+    vehicle: vehicleLabel,
+    availability: availabilityLabel(driver.status),
+  };
+};
+
+const toOrderDetailRecordFromSupabase = (row: SupabaseOrderRow): OrderDetailRecord => {
+  const formattedId = ensureOrderNumberFormat(row.id) || row.id;
+  const status = (row.status as OrderStatus) ?? "EN_ATTENTE_AFFECTATION";
+  const drivers = getDrivers();
+  const driver = row.driver_id ? drivers.find((candidate) => candidate.id === row.driver_id) : undefined;
+  const assignedDriver = buildAssignedDriverFromSupabase(row, driver);
+  return {
+    id: formattedId,
+    orderNumber: formattedId,
+    status,
+    amountTtc: row.amount ?? 0,
+    currency: row.currency ?? "EUR",
+    pickupAt: row.schedule_start,
+    transportType: resolveTransportLabel(row.package_type),
+    customer: {
+      companyName: row.customer_company,
+      siret: "00000000000000",
+      contact: {
+        name: row.customer_company,
+        email: "contact@client.test",
+        phone: "+33102030405",
+      },
+    },
+    pickupAddress: row.pickup_address,
+    deliveryAddress: row.delivery_address,
+    weight: row.weight_kg,
+    volume: row.volume_m3,
+    driverInstructions: row.driver_instructions ?? undefined,
+    assignedDriver,
+    documents: {},
+    statusHistory: buildStatusHistoryFromSupabase(row, formattedId, status),
+    assignmentEvents: buildAssignmentEventsFromSupabase(row, formattedId, assignedDriver?.name ?? null),
+    administrativeEvents: [],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    excludedDriverIds: [],
+  };
+};
+
+const fetchOrderDetailFromSupabase = async (orderId: string): Promise<OrderDetailRecord | null> => {
+  if (!orderId) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return toOrderDetailRecordFromSupabase(data);
+};
+
 export const getOrderDetail = async (orderId: string): Promise<AdminOrderDetail | null> => {
   const record = getOrderDetailRecord(orderId);
-  return record ? toAdminOrderDetail(record) : null;
+  if (record) {
+    return toAdminOrderDetail(record);
+  }
+
+  const supabaseRecord = await fetchOrderDetailFromSupabase(orderId);
+  if (!supabaseRecord) {
+    return null;
+  }
+
+  const persisted = upsertOrderDetailRecord(supabaseRecord);
+  return toAdminOrderDetail(persisted);
 };
 
 export const listOrders = async (): Promise<AdminOrderDetail[]> => {

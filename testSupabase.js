@@ -8,18 +8,17 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 async function testSupabaseConnection() {
   try {
-    const { data: commandesData, error: commandesError } = await supabase
+    const { error: selectError } = await supabase
       .from('commandes_invités')
-      .select('*');
+      .select('*')
+      .limit(1);
 
-    if (commandesError) {
-      console.error('Erreur lors de la lecture des commandes:', commandesError);
-    } else {
-      console.log(
-        'Lecture des commandes réussie. Nombre de lignes lues :',
-        Array.isArray(commandesData) ? commandesData.length : 0,
-      );
+    if (selectError) {
+      console.error(`❌ Erreur de connexion à Supabase : ${selectError.message}`);
+      return;
     }
+
+    console.log('✅ Connexion à Supabase réussie.');
 
     const testOrder = {
       'nom et prénom': 'Test Codex',
@@ -33,18 +32,19 @@ async function testSupabaseConnection() {
       statut: 'PENDING',
     };
 
-    const { data: insertData, error: insertError } = await supabase
+    const { error: insertError } = await supabase
       .from('commandes_invités')
-      .insert([testOrder])
-      .select();
+      .insert([testOrder]);
 
     if (insertError) {
-      console.error("Erreur lors de l'insertion de la commande test:", insertError);
-    } else {
-      console.log('Insertion de la commande test réussie:', insertData);
+      console.error(`❌ Erreur lors de l'insertion : ${insertError.message}`);
+      return;
     }
+
+    console.log('✅ Insertion de la commande test réussie.');
   } catch (error) {
-    console.error('Erreur inattendue:', error);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`❌ Erreur inattendue : ${message}`);
   }
 }
 

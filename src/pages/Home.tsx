@@ -16,7 +16,6 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import Layout from "@/components/layout/Layout";
-import heroCourier from "@/assets/hero-courier.jpg";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -162,92 +161,140 @@ const Home = () => {
     <Layout>
       {/* Hero Section */}
       <section className="relative overflow-hidden gradient-hero text-primary-foreground">
-        <div className="pointer-events-none absolute inset-0 bg-primary/25 mix-blend-soft-light opacity-70" />
-        <div className="container relative mx-auto px-4 py-14 md:py-20">
-          <div className="grid items-center gap-12 md:grid-cols-2">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.18),_transparent_55%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/25 via-primary/10 to-transparent mix-blend-soft-light" />
+        <div className="container relative mx-auto px-4 py-16 md:py-20">
+          <div className="grid items-start gap-12 md:grid-cols-[1.1fr_0.9fr] lg:gap-16">
             <div className="space-y-8 animate-fade-in">
-              <div className="inline-flex items-center gap-3 rounded-full border border-primary-foreground/20 bg-primary-foreground/10 px-5 py-2 text-sm font-medium uppercase tracking-[0.35em]">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-white/90 backdrop-blur">
                 <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_theme(colors.emerald.400/0.8)]" />
                 One Connexion Express
               </div>
-              <div className="space-y-4">
-                <h1 className="text-4xl font-semibold leading-tight md:text-5xl lg:text-6xl">
-                  Votre partenaire coursier premium en Île-de-France
+              <div className="space-y-6">
+                <h1 className="max-w-xl text-4xl font-semibold leading-tight md:text-5xl lg:text-6xl">
+                  <span className="block bg-gradient-to-r from-cyan-100 via-white to-purple-200 bg-clip-text text-transparent">
+                    Révolutionnez votre logistique urbaine
+                  </span>
+                  <span className="mt-2 block text-primary-foreground/85">
+                    Des coursiers premium au service des professionnels exigeants
+                  </span>
                 </h1>
-                <p className="text-lg text-primary-foreground/90 md:text-xl">
-                  Livraison urgente ou programmée, dédiée aux professionnels exigeants : laboratoires, cabinets juridiques, opticiens et réseaux B2B.
-                  Un accompagnement expert, des délais garantis et une transparence totale.
+                <p className="max-w-2xl text-lg text-primary-foreground/85 md:text-xl">
+                  Optimisez vos opérations de transport et de livraison avec un interlocuteur unique, des délais garantis et une transparence totale sur chaque course.
                 </p>
               </div>
+              <div className="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-[0.25em] text-primary-foreground/70">
+                <span className="rounded-full bg-white/10 px-4 py-2 backdrop-blur">Santé &amp; médical</span>
+                <span className="rounded-full bg-white/10 px-4 py-2 backdrop-blur">Juridique</span>
+                <span className="rounded-full bg-white/10 px-4 py-2 backdrop-blur">Retail &amp; optique</span>
+                <span className="rounded-full bg-white/10 px-4 py-2 backdrop-blur">B2B express</span>
+              </div>
               <div className="flex flex-col gap-4 sm:flex-row">
-                <Button variant="cta" size="lg" asChild>
-                  <Link to="/commande-sans-compte">Commander maintenant</Link>
+                <Button variant="cta" size="lg" className="shadow-[0_15px_30px_rgba(18,113,255,0.35)]" asChild>
+                  <Link to="/commande-sans-compte" className="inline-flex items-center gap-2">
+                    Démarrer maintenant
+                    <ArrowRight className="h-5 w-5" />
+                  </Link>
                 </Button>
                 <Button variant="outline-light" size="lg" asChild>
-                  <Link to="/tarifs">Découvrir nos forfaits</Link>
+                  <Link to="/tarifs">Consulter nos forfaits</Link>
                 </Button>
               </div>
-              <div className="grid gap-3 text-base text-primary-foreground/90 sm:grid-cols-2">
-                <div className="flex items-center gap-3">
+              <div className="grid gap-4 text-sm text-primary-foreground/85 sm:grid-cols-2">
+                <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-md">
                   <CheckCircle2 className="h-5 w-5 text-emerald-400" />
                   <span>Suivi GPS en direct et interlocuteur dédié</span>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-md">
                   <CheckCircle2 className="h-5 w-5 text-emerald-400" />
                   <span>Disponibilité 7j/7 pour vos urgences critiques</span>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-md">
                   <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-                  <span>Transport sécurisé, traçabilité et assurance incluse</span>
+                  <span>Transport sécurisé et traçabilité complète</span>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-md">
                   <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-                  <span>Tarification claire, sans devis préalable obligatoire</span>
+                  <span>Tarification claire et immédiate</span>
                 </div>
               </div>
-              <div className="grid gap-6 border-t border-primary-foreground/10 pt-6 sm:grid-cols-3">
-                <div>
+              <div className="grid gap-4 border-t border-white/10 pt-6 sm:grid-cols-3">
+                <div className="rounded-2xl bg-white/5 p-4 text-center backdrop-blur">
                   <p className="text-3xl font-semibold md:text-4xl">98%</p>
-                  <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary-foreground/70">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-primary-foreground/70">
                     Livraisons dans les délais
                   </p>
                 </div>
-                <div>
+                <div className="rounded-2xl bg-white/5 p-4 text-center backdrop-blur">
                   <p className="text-3xl font-semibold md:text-4xl">3000+</p>
-                  <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary-foreground/70">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-primary-foreground/70">
                     Courses réalisées en 2023
                   </p>
                 </div>
-                <div>
+                <div className="rounded-2xl bg-white/5 p-4 text-center backdrop-blur">
                   <p className="text-3xl font-semibold md:text-4xl">15 min</p>
-                  <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary-foreground/70">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-primary-foreground/70">
                     Prise en charge moyenne
                   </p>
                 </div>
               </div>
             </div>
-            <div className="relative animate-scale-in">
-              <div className="relative overflow-hidden rounded-3xl shadow-large">
-                <div className="absolute inset-0 bg-gradient-to-tr from-primary/60 via-primary/10 to-transparent mix-blend-soft-light" />
-                <img
-                  src={heroCourier}
-                  alt="Coursier professionnel One Connexion"
-                  className="h-full w-full object-cover"
-                />
-              </div>
-              <div className="absolute bottom-6 left-1/2 w-[85%] max-w-sm -translate-x-1/2 rounded-2xl border border-white/10 bg-background/95 p-6 text-left shadow-2xl">
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary/80">
-                  Engagement qualité
-                </p>
-                <div className="mt-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-2xl font-semibold text-primary">4,9/5</p>
-                    <p className="text-xs text-muted-foreground">Avis clients vérifiés</p>
-                  </div>
-                  <div className="rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
-                    <span className="font-semibold">+150</span> partenaires actifs
-                  </div>
+            <div className="relative animate-fade-in">
+              <div className="pointer-events-none absolute -left-16 -top-10 h-40 w-40 rounded-full bg-cyan-400/30 blur-3xl" />
+              <div className="pointer-events-none absolute -right-12 bottom-0 h-48 w-48 rounded-full bg-purple-500/30 blur-3xl" />
+              <div className="relative mx-auto flex max-w-md flex-col gap-5">
+                <Card className="border-white/15 bg-white/10 p-6 text-left text-white shadow-[0_25px_60px_rgba(15,23,42,0.35)] backdrop-blur-xl">
+                  <CardContent className="space-y-4 p-0">
+                    <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-white/75">
+                      Solutions dédiées
+                    </div>
+                    <h3 className="text-2xl font-semibold leading-tight">Logistique premium, support 24/7</h3>
+                    <p className="text-sm text-white/75">
+                      Vos colis sensibles sont confiés à un coursier expert, suivi en temps réel et assurance incluse.
+                    </p>
+                    <div className="flex items-center gap-4 pt-2">
+                      <div className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white/80">Optimum Care</div>
+                      <div className="flex items-center gap-2 text-xs text-white/75">
+                        <Shield className="h-4 w-4" />
+                        Traçabilité renforcée
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <div className="grid gap-5 md:grid-cols-2">
+                  <Card className="border-white/15 bg-white/10 p-5 text-white backdrop-blur-xl">
+                    <CardContent className="space-y-3 p-0">
+                      <div className="flex items-center gap-3">
+                        <Activity className="h-5 w-5 text-emerald-300" />
+                        <p className="text-sm font-medium uppercase tracking-[0.2em] text-white/70">Performance</p>
+                      </div>
+                      <p className="text-3xl font-semibold">4,9/5</p>
+                      <p className="text-xs text-white/70">Satisfaction client vérifiée</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-white/15 bg-white/10 p-5 text-white backdrop-blur-xl">
+                    <CardContent className="space-y-3 p-0">
+                      <div className="flex items-center gap-3">
+                        <Package2 className="h-5 w-5 text-sky-300" />
+                        <p className="text-sm font-medium uppercase tracking-[0.2em] text-white/70">Couverture</p>
+                      </div>
+                      <p className="text-3xl font-semibold">+150</p>
+                      <p className="text-xs text-white/70">Partenaires actifs en Île-de-France</p>
+                    </CardContent>
+                  </Card>
                 </div>
+                <Card className="border-white/15 bg-white/10 p-5 text-white backdrop-blur-xl">
+                  <CardContent className="flex flex-col gap-4 p-0 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-medium uppercase tracking-[0.25em] text-white/70">Réactivité</p>
+                      <p className="text-2xl font-semibold">Prise en charge en 15 minutes</p>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-white/80">
+                      <Zap className="h-5 w-5 text-emerald-300" />
+                      Courses express garanties
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </div>

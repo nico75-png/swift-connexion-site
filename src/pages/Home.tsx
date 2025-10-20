@@ -161,32 +161,94 @@ const Home = () => {
   return (
     <Layout>
       {/* Hero Section */}
-      <section className="gradient-hero text-primary-foreground">
-        <div className="container mx-auto px-4 py-16 md:py-24">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="animate-fade-in">
-              <h1 className="mb-6">
-                Livraison urgente et programmée en Île-de-France
-              </h1>
-              <p className="text-lg md:text-xl mb-8 text-primary-foreground/90">
-                Transport B2B express pour professionnels : médical, juridique, optique et plus encore. 
-                Tarifs transparents, sans devis obligatoire.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
+      <section className="relative overflow-hidden gradient-hero text-primary-foreground">
+        <div className="pointer-events-none absolute inset-0 bg-primary/25 mix-blend-soft-light opacity-70" />
+        <div className="container relative mx-auto px-4 py-14 md:py-20">
+          <div className="grid items-center gap-12 md:grid-cols-2">
+            <div className="space-y-8 animate-fade-in">
+              <div className="inline-flex items-center gap-3 rounded-full border border-primary-foreground/20 bg-primary-foreground/10 px-5 py-2 text-sm font-medium uppercase tracking-[0.35em]">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_theme(colors.emerald.400/0.8)]" />
+                One Connexion Express
+              </div>
+              <div className="space-y-4">
+                <h1 className="text-4xl font-semibold leading-tight md:text-5xl lg:text-6xl">
+                  Votre partenaire coursier premium en Île-de-France
+                </h1>
+                <p className="text-lg text-primary-foreground/90 md:text-xl">
+                  Livraison urgente ou programmée, dédiée aux professionnels exigeants : laboratoires, cabinets juridiques, opticiens et réseaux B2B.
+                  Un accompagnement expert, des délais garantis et une transparence totale.
+                </p>
+              </div>
+              <div className="flex flex-col gap-4 sm:flex-row">
                 <Button variant="cta" size="lg" asChild>
                   <Link to="/commande-sans-compte">Commander maintenant</Link>
                 </Button>
                 <Button variant="outline-light" size="lg" asChild>
-                  <Link to="/tarifs">Voir les tarifs</Link>
+                  <Link to="/tarifs">Découvrir nos forfaits</Link>
                 </Button>
               </div>
+              <div className="grid gap-3 text-base text-primary-foreground/90 sm:grid-cols-2">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                  <span>Suivi GPS en direct et interlocuteur dédié</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                  <span>Disponibilité 7j/7 pour vos urgences critiques</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                  <span>Transport sécurisé, traçabilité et assurance incluse</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                  <span>Tarification claire, sans devis préalable obligatoire</span>
+                </div>
+              </div>
+              <div className="grid gap-6 border-t border-primary-foreground/10 pt-6 sm:grid-cols-3">
+                <div>
+                  <p className="text-3xl font-semibold md:text-4xl">98%</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary-foreground/70">
+                    Livraisons dans les délais
+                  </p>
+                </div>
+                <div>
+                  <p className="text-3xl font-semibold md:text-4xl">3000+</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary-foreground/70">
+                    Courses réalisées en 2023
+                  </p>
+                </div>
+                <div>
+                  <p className="text-3xl font-semibold md:text-4xl">15 min</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary-foreground/70">
+                    Prise en charge moyenne
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="animate-scale-in">
-              <img
-                src={heroCourier}
-                alt="Coursier professionnel One Connexion"
-                className="rounded-2xl shadow-large w-full object-cover"
-              />
+            <div className="relative animate-scale-in">
+              <div className="relative overflow-hidden rounded-3xl shadow-large">
+                <div className="absolute inset-0 bg-gradient-to-tr from-primary/60 via-primary/10 to-transparent mix-blend-soft-light" />
+                <img
+                  src={heroCourier}
+                  alt="Coursier professionnel One Connexion"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div className="absolute bottom-6 left-1/2 w-[85%] max-w-sm -translate-x-1/2 rounded-2xl border border-white/10 bg-background/95 p-6 text-left shadow-2xl">
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary/80">
+                  Engagement qualité
+                </p>
+                <div className="mt-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-2xl font-semibold text-primary">4,9/5</p>
+                    <p className="text-xs text-muted-foreground">Avis clients vérifiés</p>
+                  </div>
+                  <div className="rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
+                    <span className="font-semibold">+150</span> partenaires actifs
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

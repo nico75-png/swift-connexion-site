@@ -8,24 +8,10 @@ import {
   Package2,
   PartyPopper,
   CheckCircle2,
-  Stethoscope,
-  Building2,
-  Truck,
-  Award,
-  Sparkles,
-  Briefcase,
 } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 
 const Expertises = () => {
-  const heroBadges = [
-    { icon: Stethoscope, label: "Santé & médical", emoji: "🩺" },
-    { icon: Glasses, label: "Optique", emoji: "👓" },
-    { icon: Scale, label: "Juridique", emoji: "⚖️" },
-    { icon: Briefcase, label: "B2B & corporate", emoji: "🤝" },
-    { icon: PartyPopper, label: "Événementiel", emoji: "🎉" },
-  ];
-
   const expertises = [
     {
       icon: Heart,
@@ -132,64 +118,17 @@ const Expertises = () => {
   return (
     <Layout>
       {/* Hero */}
-      <section className="relative isolate overflow-hidden bg-[#0f2f63] py-20 text-white">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0f2f63] via-[#132c73] to-[#081a45]" />
-        <div className="absolute inset-0 opacity-20">
-          <div className="mx-auto flex h-full w-full max-w-5xl items-center justify-center px-6">
-            <div className="grid w-full max-w-3xl grid-cols-3 gap-6 text-6xl md:text-7xl">
-              {heroBadges.map((badge, index) => (
-                <span
-                  key={index}
-                  className="flex h-24 w-24 items-center justify-center rounded-3xl bg-white/5 shadow-lg shadow-black/10 backdrop-blur"
-                >
-                  {badge.emoji}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="absolute inset-0">
-          <div className="pointer-events-none absolute -left-10 top-10 h-44 w-44 rounded-full bg-white/10 blur-3xl" />
-          <div className="pointer-events-none absolute -right-10 bottom-10 h-56 w-56 rounded-full bg-[#4b8bff]/20 blur-3xl" />
-        </div>
-        <div className="relative">
-          <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="grid w-full max-w-md gap-4">
-              {heroBadges.map((badge, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/10 p-4 shadow-soft backdrop-blur"
-                >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-white/20 text-3xl">
-                    {badge.emoji}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm uppercase tracking-widest text-white/70">{badge.label}</span>
-                    <badge.icon className="mt-1 h-6 w-6 text-white" />
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
-              <div className="mb-5 flex items-center gap-3 rounded-full border border-white/30 bg-white/10 px-5 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-white/70">
-                <Sparkles className="h-4 w-4" />
-                Expertises sectorielles
-              </div>
-              <h1 className="mb-4 text-3xl font-semibold md:text-5xl">Nos expertises sectorielles</h1>
-              <p className="max-w-2xl text-lg text-white/80 md:text-xl">
-                Des solutions de transport adaptées à chaque métier, avec des engagements spécifiques et un savoir-faire reconnu.
-              </p>
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-4 lg:justify-start">
-                <Button asChild size="lg" variant="secondary" className="bg-white text-[#0f2f63] hover:bg-white/90">
-                  <Link to="/contact">Demander un devis</Link>
-                </Button>
-                <Button asChild size="lg" variant="outline" className="border-white/60 text-white hover:bg-white/10">
-                  <Link to="/commander">Commander une course</Link>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
+      <section className="bg-white">
+        <figure className="mx-auto max-w-7xl">
+          <img
+            src="/images/expertises-banner.svg"
+            alt="Nos expertises sectorielles Swift Connexion"
+            className="h-full w-full object-cover"
+          />
+          <figcaption className="sr-only">
+            Nos expertises sectorielles couvrent la santé, l'optique, le juridique, les services B2B et l'événementiel.
+          </figcaption>
+        </figure>
       </section>
 
       {/* Expertises Sections */}

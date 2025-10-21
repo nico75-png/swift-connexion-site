@@ -1,10 +1,24 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Heart, Glasses, Scale, Package2, PartyPopper, CheckCircle2 } from "lucide-react";
+import {
+  Heart,
+  Glasses,
+  Scale,
+  Package2,
+  PartyPopper,
+  CheckCircle2,
+  Stethoscope,
+  Building2,
+  Truck,
+  Award,
+  Sparkles,
+} from "lucide-react";
 import Layout from "@/components/layout/Layout";
 
 const Expertises = () => {
+  const heroIcons = [Stethoscope, Scale, Building2, Truck, Award];
+
   const expertises = [
     {
       icon: Heart,
@@ -111,12 +125,32 @@ const Expertises = () => {
   return (
     <Layout>
       {/* Hero */}
-      <section className="gradient-hero text-primary-foreground py-16">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="mb-6">Nos expertises sectorielles</h1>
-          <p className="text-xl max-w-3xl mx-auto text-primary-foreground/90">
-            Des solutions de transport adaptées à chaque métier, avec des engagements spécifiques et un savoir-faire reconnu
-          </p>
+      <section className="py-16">
+        <div className="container mx-auto px-4">
+          <div className="mx-auto max-w-5xl overflow-hidden rounded-3xl bg-[#0f2f63] p-10 text-white shadow-2xl shadow-primary/20">
+            <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-wrap items-center justify-center gap-4 lg:max-w-sm">
+                {heroIcons.map((Icon, index) => (
+                  <div
+                    key={index}
+                    className="flex h-20 w-20 items-center justify-center rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm"
+                  >
+                    <Icon className="h-10 w-10 text-white" />
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
+                <div className="mb-4 flex items-center justify-center gap-3 rounded-full bg-white/10 px-5 py-2 text-sm font-medium uppercase tracking-[0.2em] text-white/70 lg:justify-start">
+                  <Sparkles className="h-4 w-4" />
+                  Expertises sectorielles
+                </div>
+                <h1 className="mb-4 text-3xl font-semibold md:text-4xl">Nos expertises sectorielles</h1>
+                <p className="text-lg text-white/80 md:text-xl">
+                  Des solutions de transport adaptées à chaque métier, avec des engagements spécifiques et un savoir-faire reconnu.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

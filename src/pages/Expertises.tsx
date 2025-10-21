@@ -8,17 +8,10 @@ import {
   Package2,
   PartyPopper,
   CheckCircle2,
-  Stethoscope,
-  Building2,
-  Truck,
-  Award,
-  Sparkles,
 } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 
 const Expertises = () => {
-  const heroIcons = [Stethoscope, Scale, Building2, Truck, Award];
-
   const expertises = [
     {
       icon: Heart,
@@ -125,47 +118,17 @@ const Expertises = () => {
   return (
     <Layout>
       {/* Hero */}
-      <section className="relative isolate overflow-hidden bg-[#0f2f63] py-20 text-white">
-        <div className="absolute inset-0">
+      <section className="bg-white">
+        <figure className="mx-auto max-w-7xl">
           <img
             src="/images/expertises-banner.svg"
-            alt="Illustration des expertises sectorielles Swift Connexion"
+            alt="Nos expertises sectorielles Swift Connexion"
             className="h-full w-full object-cover"
           />
-          <div className="absolute inset-0 bg-[#081a45]/80" />
-        </div>
-        <div className="relative">
-          <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap items-center justify-center gap-4 lg:max-w-md lg:justify-start">
-              {heroIcons.map((Icon, index) => (
-                <div
-                  key={index}
-                  className="flex h-20 w-20 items-center justify-center rounded-2xl border border-white/20 bg-white/10 backdrop-blur-md"
-                >
-                  <Icon className="h-10 w-10 text-white" />
-                </div>
-              ))}
-            </div>
-            <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
-              <div className="mb-5 flex items-center gap-3 rounded-full border border-white/30 bg-white/10 px-5 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-white/70">
-                <Sparkles className="h-4 w-4" />
-                Expertises sectorielles
-              </div>
-              <h1 className="mb-4 text-3xl font-semibold md:text-5xl">Nos expertises sectorielles</h1>
-              <p className="max-w-2xl text-lg text-white/80 md:text-xl">
-                Des solutions de transport adaptées à chaque métier, avec des engagements spécifiques et un savoir-faire reconnu.
-              </p>
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-4 lg:justify-start">
-                <Button asChild size="lg" variant="secondary" className="bg-white text-[#0f2f63] hover:bg-white/90">
-                  <Link to="/contact">Demander un devis</Link>
-                </Button>
-                <Button asChild size="lg" variant="outline" className="border-white/60 text-white hover:bg-white/10">
-                  <Link to="/commander">Commander une course</Link>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
+          <figcaption className="sr-only">
+            Nos expertises sectorielles couvrent la santé, l'optique, le juridique, les services B2B et l'événementiel.
+          </figcaption>
+        </figure>
       </section>
 
       {/* Expertises Sections */}

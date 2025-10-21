@@ -1,36 +1,51 @@
 import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Download, FileText, Wallet } from "lucide-react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import ClientSidebar from "@/components/dashboard/ClientSidebar";
 import Topbar from "@/components/dashboard/Topbar";
 import CreateOrderButton from "@/components/dashboard/CreateOrderButton";
 import StatsCard from "@/components/dashboard/StatsCard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/lib/stores/auth.store";
 import { getNotifications } from "@/lib/stores/driversOrders.store";
 import type { NotificationEntry } from "@/lib/stores/driversOrders.store";
-import { listClientInvoices } from "@/lib/stores/data/clientInvoices";
+import { useInvoices } from "@/hooks/useInvoices";
 
-const MONTH_MAP: Record<string, string> = {
-  janvier: "01",
-  février: "02",
-  fevrier: "02",
-  mars: "03",
-  avril: "04",
-  mai: "05",
-  juin: "06",
-  juillet: "07",
-  août: "08",
-  aout: "08",
-  septembre: "09",
-  octobre: "10",
-  novembre: "11",
-  décembre: "12",
-  decembre: "12",
+const formatDate = (dateString: string | null) => {
+  if (!dateString) return "N/A";
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "Date invalide";
+    return format(date, "dd/MM/yyyy", { locale: fr });
+  } catch {
+    return "Date invalide";
+  }
+};
+
+const getStatusLabel = (status: string): string => {
+  const labels: Record<string, string> = {
+    pending: "En attente de paiement",
+    paid: "Payée",
+    overdue: "En retard",
+    cancelled: "Annulée",
+  };
+  return labels[status] || status;
+};
+
+const getStatusColor = (status: string) => {
+  const colors: Record<string, string> = {
+    paid: "bg-success/10 text-success border-success/20",
+    pending: "bg-warning/10 text-warning border-warning/20",
+    overdue: "bg-destructive/10 text-destructive border-destructive/20",
+    cancelled: "bg-muted text-muted-foreground border-muted",
+  };
+  return colors[status] || colors.pending;
 };
 
 /**
@@ -39,8 +54,7 @@ const MONTH_MAP: Record<string, string> = {
  */
 const ClientInvoices = () => {
   const { currentUser } = useAuth();
-  const [monthFilter, setMonthFilter] = useState("all");
-  const [yearFilter, setYearFilter] = useState("2025");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const notifications = useMemo<NotificationEntry[]>(() => getNotifications(), []);
   const formattedNotifications = useMemo(
     () =>
@@ -58,51 +72,49 @@ const ClientInvoices = () => {
     [notifications],
   );
 
-  const invoices = useMemo(() => listClientInvoices(), []);
-
-  const getStatusColor = (color: string) => {
-    const colors: Record<string, string> = {
-      success: "bg-success/10 text-success border-success/20",
-      warning: "bg-warning/10 text-warning border-warning/20",
-    };
-    return colors[color];
-  };
+  const { data: invoices = [], isLoading } = useInvoices(currentUser?.id);
 
   const filteredInvoices = useMemo(() => {
-    return invoices.filter((invoice) => {
-      const [monthLabel, yearLabel] = invoice.period.split(" ");
-      const normalizedMonth = MONTH_MAP[monthLabel.toLowerCase()] ?? invoice.date.slice(3, 5);
-      const matchesYear = yearFilter === "all" || yearLabel === yearFilter;
-      const matchesMonth = monthFilter === "all" || normalizedMonth === monthFilter;
-      return matchesYear && matchesMonth;
-    });
-  }, [invoices, monthFilter, yearFilter]);
+    if (statusFilter === "all") return invoices;
+    return invoices.filter((invoice) => invoice.status === statusFilter);
+  }, [invoices, statusFilter]);
 
   const outstandingTotal = useMemo(
     () =>
       invoices
-        .filter((invoice) => invoice.statusColor === "warning")
+        .filter((invoice) => invoice.status === "pending")
         .reduce((sum, invoice) => sum + invoice.amount, 0),
     [invoices],
   );
 
-  const handleDownload = useCallback((invoiceId: string) => {
-    const invoice = invoices.find((item) => item.id === invoiceId);
+  const paidCount = useMemo(
+    () => invoices.filter((invoice) => invoice.status === "paid").length,
+    [invoices],
+  );
+
+  const pendingCount = useMemo(
+    () => invoices.filter((invoice) => invoice.status === "pending").length,
+    [invoices],
+  );
+
+  const handleDownload = useCallback((invoiceNumber: string) => {
+    const invoice = invoices.find((item) => item.invoice_number === invoiceNumber);
     if (!invoice || typeof window === "undefined") return;
 
     const content = [
-      `Facture ${invoice.id}`,
-      `Période : ${invoice.period}`,
-      `Commandes : ${invoice.orders}`,
-      `Montant TTC : ${invoice.amount.toFixed(2)}€`,
-      `Statut : ${invoice.status}`,
+      `Facture ${invoice.invoice_number}`,
+      `Date : ${formatDate(invoice.created_at)}`,
+      `Date d'échéance : ${formatDate(invoice.due_date)}`,
+      `Montant : ${invoice.amount.toFixed(2)} ${invoice.currency}`,
+      `Statut : ${getStatusLabel(invoice.status)}`,
+      invoice.notes ? `Notes : ${invoice.notes}` : "",
     ].join("\n");
 
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${invoice.id}.txt`;
+    link.download = `${invoice.invoice_number}.txt`;
     link.click();
     URL.revokeObjectURL(url);
   }, [invoices]);
@@ -126,8 +138,8 @@ const ClientInvoices = () => {
         {/* Statistiques */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <StatsCard
-            label="Factures en cours"
-            value={invoices.filter((invoice) => invoice.statusColor === "warning").length}
+            label="Factures en attente"
+            value={pendingCount}
             icon={Wallet}
             color="text-warning"
           />
@@ -139,7 +151,7 @@ const ClientInvoices = () => {
           />
           <StatsCard
             label="Factures payées"
-            value={`${invoices.filter((invoice) => invoice.statusColor === "success").length}`}
+            value={paidCount}
             icon={FileText}
             color="text-success"
           />
@@ -149,24 +161,16 @@ const ClientInvoices = () => {
         <Card>
           <CardContent className="p-4">
             <div className="flex flex-col md:flex-row gap-4">
-              <Select value={monthFilter} onValueChange={setMonthFilter}>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full md:w-48">
-                  <SelectValue placeholder="Tous les mois" />
+                  <SelectValue placeholder="Tous les statuts" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tous les mois</SelectItem>
-                  <SelectItem value="01">Janvier</SelectItem>
-                  <SelectItem value="02">Février</SelectItem>
-                  <SelectItem value="12">Décembre</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={yearFilter} onValueChange={setYearFilter}>
-                <SelectTrigger className="w-full md:w-32">
-                  <SelectValue placeholder="Année" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="2025">2025</SelectItem>
-                  <SelectItem value="2024">2024</SelectItem>
+                  <SelectItem value="all">Tous les statuts</SelectItem>
+                  <SelectItem value="pending">En attente</SelectItem>
+                  <SelectItem value="paid">Payée</SelectItem>
+                  <SelectItem value="overdue">En retard</SelectItem>
+                  <SelectItem value="cancelled">Annulée</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -181,41 +185,47 @@ const ClientInvoices = () => {
                 <thead className="bg-muted/50 border-b">
                   <tr>
                     <th className="text-left p-4 text-sm font-semibold">N° Facture</th>
-                    <th className="text-left p-4 text-sm font-semibold">Date</th>
-                    <th className="text-left p-4 text-sm font-semibold">Période</th>
-                    <th className="text-left p-4 text-sm font-semibold">Commandes</th>
+                    <th className="text-left p-4 text-sm font-semibold">Date de création</th>
+                    <th className="text-left p-4 text-sm font-semibold">Date d'échéance</th>
                     <th className="text-right p-4 text-sm font-semibold">Montant</th>
                     <th className="text-left p-4 text-sm font-semibold">Statut</th>
                     <th className="text-right p-4 text-sm font-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredInvoices.length === 0 ? (
+                  {isLoading ? (
                     <tr>
-                      <td colSpan={7} className="p-6 text-center text-sm text-muted-foreground">
+                      <td colSpan={6} className="p-6 text-center text-sm text-muted-foreground">
+                        Chargement...
+                      </td>
+                    </tr>
+                  ) : filteredInvoices.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-6 text-center text-sm text-muted-foreground">
                         Aucune facture disponible pour le moment.
                       </td>
                     </tr>
                   ) : (
                     filteredInvoices.map((invoice) => (
                       <tr key={invoice.id} className="border-b hover:bg-muted/30 transition-colors">
-                        <td className="p-4 font-mono text-sm">{invoice.id}</td>
-                        <td className="p-4 text-sm text-muted-foreground">{invoice.date}</td>
-                        <td className="p-4 text-sm">{invoice.period}</td>
-                        <td className="p-4 text-sm">{invoice.orders} courses</td>
-                        <td className="p-4 text-right font-semibold">{invoice.amount.toFixed(2)}€</td>
+                        <td className="p-4 font-mono text-sm">{invoice.invoice_number}</td>
+                        <td className="p-4 text-sm text-muted-foreground">{formatDate(invoice.created_at)}</td>
+                        <td className="p-4 text-sm text-muted-foreground">{formatDate(invoice.due_date)}</td>
+                        <td className="p-4 text-right font-semibold">
+                          {invoice.amount.toFixed(2)} {invoice.currency}
+                        </td>
                         <td className="p-4">
-                          <Badge className={getStatusColor(invoice.statusColor)}>
-                            {invoice.status}
+                          <Badge className={getStatusColor(invoice.status)}>
+                            {getStatusLabel(invoice.status)}
                           </Badge>
                         </td>
                         <td className="p-4">
                           <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => handleDownload(invoice.id)}>
+                            <Button variant="ghost" size="sm" onClick={() => handleDownload(invoice.invoice_number)}>
                               <Download className="h-4 w-4 mr-2" />
                               Télécharger
                             </Button>
-                            {invoice.statusColor === "warning" && (
+                            {invoice.status === "pending" && (
                               <Button variant="cta" size="sm" asChild>
                                 <Link to={`/espace-client/factures/${invoice.id}/paiement`} state={{ invoice }}>
                                   Régler

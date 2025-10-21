@@ -162,14 +162,10 @@ const Home = () => {
             </div>
           </div>
           <div className="relative w-full max-w-xl self-stretch md:max-w-md lg:max-w-lg">
-            <div className="absolute -left-10 -top-10 hidden h-24 w-24 rounded-3xl border border-white/20 bg-white/10 md:block" />
+            
             <div className="absolute -right-6 bottom-16 hidden h-16 w-16 rounded-2xl border border-white/10 bg-white/5 md:block" />
             <div className="relative flex h-full items-center justify-center">
-              <div className="relative aspect-square w-full max-w-sm overflow-hidden rounded-[3rem] border border-white/10 bg-white/5 shadow-[0_40px_120px_-40px_rgba(15,23,42,0.9)] backdrop-blur">
-                
-                
-                
-              </div>
+              
             </div>
           </div>
         </div>

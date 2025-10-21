@@ -29,9 +29,9 @@ const OrdersPreviewSvg = () => <svg xmlns="http://www.w3.org/2000/svg" width="88
         .title{font:600 18px Inter, Arial; fill:#1F1F1F}
         .th{font:600 12px Inter, Arial; fill:#6B7280}
         .td{font:400 13px Inter, Arial; fill:#1F1F1F}
-        .badge{font:600 11px Inter, Arial; fill:#0F3556}
+        .badge{font:600 11px Inter, Arial; fill:hsl(var(--primary))}
         .cta{fill:#FFB800}
-        .icon{stroke:#0F3556; stroke-width:2; fill:none}
+        .icon{stroke:hsl(var(--primary)); stroke-width:2; fill:none}
         .chip{fill:#E8F0F7; stroke:#C7D7E6}
       `}</style>
     </defs>
@@ -80,16 +80,16 @@ const OrdersPreviewSvg = () => <svg xmlns="http://www.w3.org/2000/svg" width="88
         </text>
         <g transform="translate(750,-10)">
           <g>
-            <circle cx="10" cy="10" r="12" fill="#fff" stroke="#0F3556" />
+            <circle cx="10" cy="10" r="12" fill="#fff" stroke="hsl(var(--primary))" />
             <path className="icon" d="M10 6 a6 6 0 1 0 6 6" />
             <polyline className="icon" points="10,2 10,6 6,6" />
           </g>
           <g transform="translate(36,0)">
-            <rect x="-2" y="-2" width="24" height="24" rx="6" fill="#fff" stroke="#0F3556" />
-            <rect x="3" y="6" width="10" height="8" rx="2" stroke="#0F3556" fill="none" />
+            <rect x="-2" y="-2" width="24" height="24" rx="6" fill="#fff" stroke="hsl(var(--primary))" />
+            <rect x="3" y="6" width="10" height="8" rx="2" stroke="hsl(var(--primary))" fill="none" />
           </g>
           <g transform="translate(72,0)">
-            <rect x="-2" y="-2" width="24" height="24" rx="6" fill="#fff" stroke="#0F3556" />
+            <rect x="-2" y="-2" width="24" height="24" rx="6" fill="#fff" stroke="hsl(var(--primary))" />
             <circle className="icon" cx="10" cy="10" r="6" />
           </g>
         </g>
@@ -114,15 +114,15 @@ const OrdersPreviewSvg = () => <svg xmlns="http://www.w3.org/2000/svg" width="88
           B. Kaba
         </text>
         <g transform="translate(750,-10)">
-          <circle cx="10" cy="10" r="12" fill="#fff" stroke="#0F3556" />
+          <circle cx="10" cy="10" r="12" fill="#fff" stroke="hsl(var(--primary))" />
           <path className="icon" d="M10 6 a6 6 0 1 0 6 6" />
           <polyline className="icon" points="10,2 10,6 6,6" />
           <g transform="translate(36,0)">
-            <rect x="-2" y="-2" width="24" height="24" rx="6" fill="#fff" stroke="#0F3556" />
-            <rect x="3" y="6" width="10" height="8" rx="2" stroke="#0F3556" fill="none" />
+            <rect x="-2" y="-2" width="24" height="24" rx="6" fill="#fff" stroke="hsl(var(--primary))" />
+            <rect x="3" y="6" width="10" height="8" rx="2" stroke="hsl(var(--primary))" fill="none" />
           </g>
           <g transform="translate(72,0)">
-            <rect x="-2" y="-2" width="24" height="24" rx="6" fill="#fff" stroke="#0F3556" />
+            <rect x="-2" y="-2" width="24" height="24" rx="6" fill="#fff" stroke="hsl(var(--primary))" />
             <circle className="icon" cx="10" cy="10" r="6" />
           </g>
         </g>
@@ -147,15 +147,15 @@ const OrdersPreviewSvg = () => <svg xmlns="http://www.w3.org/2000/svg" width="88
           C. Nguyen
         </text>
         <g transform="translate(750,-10)">
-          <circle cx="10" cy="10" r="12" fill="#fff" stroke="#0F3556" />
+          <circle cx="10" cy="10" r="12" fill="#fff" stroke="hsl(var(--primary))" />
           <path className="icon" d="M10 6 a6 6 0 1 0 6 6" />
           <polyline className="icon" points="10,2 10,6 6,6" />
           <g transform="translate(36,0)">
-            <rect x="-2" y="-2" width="24" height="24" rx="6" fill="#fff" stroke="#0F3556" />
-            <rect x="3" y="6" width="10" height="8" rx="2" stroke="#0F3556" fill="none" />
+            <rect x="-2" y="-2" width="24" height="24" rx="6" fill="#fff" stroke="hsl(var(--primary))" />
+            <rect x="3" y="6" width="10" height="8" rx="2" stroke="hsl(var(--primary))" fill="none" />
           </g>
           <g transform="translate(72,0)">
-            <rect x="-2" y="-2" width="24" height="24" rx="6" fill="#fff" stroke="#0F3556" />
+            <rect x="-2" y="-2" width="24" height="24" rx="6" fill="#fff" stroke="hsl(var(--primary))" />
             <circle className="icon" cx="10" cy="10" r="6" />
           </g>
         </g>

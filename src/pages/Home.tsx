@@ -173,10 +173,10 @@ const Home = () => {
   return (
     <Layout>
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-[#0b2d63] text-white">
+      <section className="relative overflow-hidden bg-primary text-white">
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute -bottom-32 right-0 h-96 w-96 rounded-full bg-sky-500/20 blur-3xl" />
+          <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-primary-soft/20 blur-3xl" />
+          <div className="absolute -bottom-32 right-0 h-96 w-96 rounded-full bg-primary-soft/30 blur-3xl" />
         </div>
         <div className="container relative mx-auto max-w-5xl px-4 py-16 md:py-24">
           <div className="grid items-center gap-12 md:grid-cols-2">
@@ -197,12 +197,7 @@ const Home = () => {
                 <Button variant="cta" size="lg" asChild>
                   <Link to="/commande-sans-compte">Commander maintenant</Link>
                 </Button>
-                <Button
-                  variant="outline-light"
-                  size="lg"
-                  className="border-white/30 text-white hover:border-white hover:text-[#0b2d63]"
-                  asChild
-                >
+                <Button variant="outline-light" size="lg" className="border-white/30 text-white hover:text-primary" asChild>
                   <Link to="/tarifs">Voir les tarifs</Link>
                 </Button>
               </div>
@@ -232,14 +227,14 @@ const Home = () => {
                   className="h-full w-full object-cover"
                 />
               </div>
-              <div className="absolute -bottom-10 left-1/2 w-[85%] max-w-sm -translate-x-1/2 rounded-2xl border border-white/40 bg-white/95 p-6 text-left text-[#0b2d63] shadow-2xl">
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#0b2d63]/70">Engagement qualité</p>
+              <div className="absolute -bottom-10 left-1/2 w-[85%] max-w-sm -translate-x-1/2 rounded-2xl border border-white/40 bg-white/95 p-6 text-left text-primary shadow-2xl">
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary/70">Engagement qualité</p>
                 <div className="mt-4 flex items-center justify-between gap-4">
                   <div>
                     <p className="text-2xl font-semibold">4,9/5</p>
-                    <p className="text-xs text-[#0b2d63]/70">Avis clients vérifiés</p>
+                    <p className="text-xs text-primary/70">Avis clients vérifiés</p>
                   </div>
-                  <div className="rounded-full bg-[#0b2d63] px-4 py-2 text-sm font-semibold text-white">
+                  <div className="rounded-full bg-primary-dark px-4 py-2 text-sm font-semibold text-white">
                     +150 partenaires actifs
                   </div>
                 </div>

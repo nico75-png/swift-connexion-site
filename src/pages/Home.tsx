@@ -178,7 +178,7 @@ const Home = () => {
           <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -bottom-32 right-0 h-96 w-96 rounded-full bg-sky-500/20 blur-3xl" />
         </div>
-        <div className="container relative mx-auto px-4 py-16 md:py-24">
+        <div className="container relative mx-auto max-w-5xl px-4 py-16 md:py-24">
           <div className="grid items-center gap-12 md:grid-cols-2">
             <div className="space-y-8">
               <div className="inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-medium uppercase tracking-[0.35em]">

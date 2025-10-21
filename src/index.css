@@ -18,25 +18,28 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 12%;
 
-    /* Bleu nuit primary #0F3556 */
-    --primary: 204 69% 20%;
+    /* Bleu profond signature */
+    --primary: 205 67% 22%;
     --primary-foreground: 0 0% 100%;
-    
-    /* Bleu profond #123B63 */
-    --primary-dark: 207 68% 23%;
+
+    /* Variante contrastée pour les éléments d'action */
+    --primary-dark: 207 73% 16%;
+
+    /* Bleu adouci pour les accents et arrière-plans légers */
+    --primary-soft: 205 60% 32%;
     
     /* Jaune CTA #FFB800 */
     --cta: 43 100% 50%;
     --cta-foreground: 204 69% 20%;
     
-    /* Bleu clair accent #00A3E0 */
-    --secondary: 195 100% 44%;
+    /* Bleu accent complémentaire */
+    --secondary: 205 60% 35%;
     --secondary-foreground: 0 0% 100%;
 
     --muted: 210 20% 95%;
     --muted-foreground: 0 0% 45%;
 
-    --accent: 195 100% 44%;
+    --accent: 205 60% 35%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
@@ -44,7 +47,7 @@ All colors MUST be HSL.
 
     --border: 210 15% 88%;
     --input: 210 15% 92%;
-    --ring: 204 69% 20%;
+    --ring: 205 67% 22%;
 
     --radius: 0.75rem;
     
@@ -54,13 +57,13 @@ All colors MUST be HSL.
     --info: 195 100% 44%;
     
     /* Gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(204 69% 20%) 0%, hsl(207 68% 23%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(195 100% 44%) 0%, hsl(195 100% 54%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-dark)) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(var(--primary-soft)) 0%, hsl(var(--primary)) 100%);
     
     /* Shadows */
-    --shadow-soft: 0 2px 8px rgba(15, 53, 86, 0.08);
-    --shadow-medium: 0 4px 16px rgba(15, 53, 86, 0.12);
-    --shadow-large: 0 8px 32px rgba(15, 53, 86, 0.16);
+    --shadow-soft: 0 2px 8px rgba(29, 70, 113, 0.08);
+    --shadow-medium: 0 4px 16px rgba(29, 70, 113, 0.14);
+    --shadow-large: 0 8px 32px rgba(29, 70, 113, 0.2);
     
     /* Animations */
     --transition-base: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -97,19 +100,20 @@ All colors MUST be HSL.
 
     --primary: 0 0% 98%;
     --primary-foreground: 204 69% 20%;
-    
-    --primary-dark: 207 68% 23%;
-    
+
+    --primary-dark: 207 73% 16%;
+    --primary-soft: 205 60% 32%;
+
     --cta: 43 100% 50%;
     --cta-foreground: 204 69% 20%;
     
-    --secondary: 195 100% 44%;
+    --secondary: 205 60% 35%;
     --secondary-foreground: 0 0% 100%;
 
     --muted: 204 50% 15%;
     --muted-foreground: 0 0% 70%;
 
-    --accent: 195 100% 44%;
+    --accent: 205 60% 35%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
@@ -117,7 +121,7 @@ All colors MUST be HSL.
 
     --border: 204 50% 20%;
     --input: 204 50% 18%;
-    --ring: 195 100% 44%;
+    --ring: 205 60% 35%;
   }
 }
 

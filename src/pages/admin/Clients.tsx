@@ -471,13 +471,13 @@ const AdminClients = () => {
               placeholder="Rechercher par entreprise ou contact..."
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              className="pl-10 focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556]"
+              className="pl-10 focus-visible:ring-[#FFB800] focus-visible:border-primary"
             />
           </div>
 
           <Select value={sectorFilter} onValueChange={setSectorFilter}>
-            <SelectTrigger className="w-full md:w-48 focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556]">
-              <Filter className="h-4 w-4 mr-2 text-[#0F3556]" />
+            <SelectTrigger className="w-full md:w-48 focus-visible:ring-[#FFB800] focus-visible:border-primary">
+              <Filter className="h-4 w-4 mr-2 text-primary" />
               <SelectValue placeholder="Secteur" />
             </SelectTrigger>
             <SelectContent>
@@ -491,7 +491,7 @@ const AdminClients = () => {
           </Select>
 
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full md:w-48 focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556]">
+            <SelectTrigger className="w-full md:w-48 focus-visible:ring-[#FFB800] focus-visible:border-primary">
               <SelectValue placeholder="Statut" />
             </SelectTrigger>
             <SelectContent>
@@ -510,7 +510,7 @@ const AdminClients = () => {
                 id="btn-create-client"
                 ref={createButtonRef}
                 variant="cta"
-                className="bg-[#0F3556] hover:bg-[#0d2b46] text-white"
+                className="bg-primary hover:bg-primary-dark text-white"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Créer un client
@@ -556,7 +556,7 @@ const AdminClients = () => {
                     <TableCell className="text-sm">
                       <a
                         href={`mailto:${client.email}`}
-                        className="text-[#0F3556] hover:underline flex items-center gap-2"
+                        className="text-primary hover:underline flex items-center gap-2"
                       >
                         <Mail className="h-3 w-3" />
                         {client.email}
@@ -565,7 +565,7 @@ const AdminClients = () => {
                     <TableCell className="text-sm">
                       <a
                         href={`tel:${client.phone.replace(/\s+/g, "")}`}
-                        className="text-[#0F3556] hover:underline flex items-center gap-2"
+                        className="text-primary hover:underline flex items-center gap-2"
                       >
                         <Phone className="h-3 w-3" />
                         {client.phone}
@@ -579,7 +579,7 @@ const AdminClients = () => {
                         variant="outline"
                         className={
                           client.status === "Actif"
-                            ? "bg-[#0F3556]/10 text-[#0F3556] border-[#0F3556]/20"
+                            ? "bg-primary/10 text-primary border-primary/20"
                             : "bg-muted text-muted-foreground border-border"
                         }
                       >
@@ -623,15 +623,15 @@ const AdminClients = () => {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-          <div className="p-4 bg-[#F5F7FA] rounded-lg border border-[#0F3556]/10">
+          <div className="p-4 bg-[#F5F7FA] rounded-lg border border-primary/10">
             <p className="text-xs text-muted-foreground mb-1">Total clients</p>
-            <p className="text-2xl font-bold text-[#0F3556]">
+            <p className="text-2xl font-bold text-primary">
               {clients.length}
             </p>
           </div>
-          <div className="p-4 bg-[#0F3556]/10 rounded-lg border border-[#0F3556]/20">
-            <p className="text-xs text-[#0F3556] mb-1">Actifs</p>
-            <p className="text-2xl font-bold text-[#0F3556]">{activeCount}</p>
+          <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
+            <p className="text-xs text-primary mb-1">Actifs</p>
+            <p className="text-2xl font-bold text-primary">{activeCount}</p>
           </div>
           <div className="p-4 bg-[#FFB800]/10 rounded-lg border border-[#FFB800]/40">
             <p className="text-xs text-[#FFB800] mb-1">Total commandes</p>
@@ -982,7 +982,7 @@ const CreateOrderForClientDialog = ({
         className="flex h-[100vh] flex-col overflow-hidden bg-[#F5F7FA] p-0 text-[#1F1F1F] sm:h-auto sm:max-h-[90vh] sm:max-w-2xl sm:rounded-2xl"
       >
         <DialogHeader className="px-6 pb-4 pt-6">
-          <DialogTitle className="text-xl font-bold text-[#0F3556]">
+          <DialogTitle className="text-xl font-bold text-primary">
             Créer une commande
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
@@ -998,7 +998,7 @@ const CreateOrderForClientDialog = ({
           <div>
             <Label
               htmlFor="order-type"
-              className="text-sm font-semibold text-[#0F3556]"
+              className="text-sm font-semibold text-primary"
             >
               Type de transport *
             </Label>
@@ -1008,7 +1008,7 @@ const CreateOrderForClientDialog = ({
             >
               <SelectTrigger
                 id="order-type"
-                className={`mt-1 focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
+                className={`mt-1 focus-visible:ring-[#FFB800] focus-visible:border-primary ${
                   errors.type ? "border-red-500 focus-visible:ring-red-500" : ""
                 }`}
               >
@@ -1032,7 +1032,7 @@ const CreateOrderForClientDialog = ({
           <div>
             <Label
               htmlFor="order-pickup"
-              className="text-sm font-semibold text-[#0F3556]"
+              className="text-sm font-semibold text-primary"
             >
               Adresse de départ *
             </Label>
@@ -1042,7 +1042,7 @@ const CreateOrderForClientDialog = ({
               onChange={(event) =>
                 handleFieldChange("pickup")(event.target.value)
               }
-              className={`mt-1 focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
+              className={`mt-1 focus-visible:ring-[#FFB800] focus-visible:border-primary ${
                 errors.pickup ? "border-red-500 focus-visible:ring-red-500" : ""
               }`}
               placeholder="Adresse complète"
@@ -1058,7 +1058,7 @@ const CreateOrderForClientDialog = ({
           <div>
             <Label
               htmlFor="order-delivery"
-              className="text-sm font-semibold text-[#0F3556]"
+              className="text-sm font-semibold text-primary"
             >
               Adresse d'arrivée *
             </Label>
@@ -1068,7 +1068,7 @@ const CreateOrderForClientDialog = ({
               onChange={(event) =>
                 handleFieldChange("delivery")(event.target.value)
               }
-              className={`mt-1 focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
+              className={`mt-1 focus-visible:ring-[#FFB800] focus-visible:border-primary ${
                 errors.delivery
                   ? "border-red-500 focus-visible:ring-red-500"
                   : ""
@@ -1087,7 +1087,7 @@ const CreateOrderForClientDialog = ({
             <div>
               <Label
                 htmlFor="order-date"
-                className="text-sm font-semibold text-[#0F3556]"
+                className="text-sm font-semibold text-primary"
               >
                 Date *
               </Label>
@@ -1098,7 +1098,7 @@ const CreateOrderForClientDialog = ({
                 onChange={(event) =>
                   handleFieldChange("date")(event.target.value)
                 }
-                className={`mt-1 focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
+                className={`mt-1 focus-visible:ring-[#FFB800] focus-visible:border-primary ${
                   errors.date ? "border-red-500 focus-visible:ring-red-500" : ""
                 }`}
               />
@@ -1111,7 +1111,7 @@ const CreateOrderForClientDialog = ({
             <div>
               <Label
                 htmlFor="order-time"
-                className="text-sm font-semibold text-[#0F3556]"
+                className="text-sm font-semibold text-primary"
               >
                 Heure *
               </Label>
@@ -1122,7 +1122,7 @@ const CreateOrderForClientDialog = ({
                 onChange={(event) =>
                   handleFieldChange("time")(event.target.value)
                 }
-                className={`mt-1 focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
+                className={`mt-1 focus-visible:ring-[#FFB800] focus-visible:border-primary ${
                   errors.time ? "border-red-500 focus-visible:ring-red-500" : ""
                 }`}
               />
@@ -1138,7 +1138,7 @@ const CreateOrderForClientDialog = ({
             <div>
               <Label
                 htmlFor="order-weight"
-                className="text-sm font-semibold text-[#0F3556]"
+                className="text-sm font-semibold text-primary"
               >
                 Poids (kg) *
               </Label>
@@ -1152,7 +1152,7 @@ const CreateOrderForClientDialog = ({
                 onChange={(event) =>
                   handleFieldChange("weight")(event.target.value)
                 }
-                className={`mt-1 focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
+                className={`mt-1 focus-visible:ring-[#FFB800] focus-visible:border-primary ${
                   errors.weight
                     ? "border-red-500 focus-visible:ring-red-500"
                     : ""
@@ -1168,7 +1168,7 @@ const CreateOrderForClientDialog = ({
             <div>
               <Label
                 htmlFor="order-volume"
-                className="text-sm font-semibold text-[#0F3556]"
+                className="text-sm font-semibold text-primary"
               >
                 Volume (m³) *
               </Label>
@@ -1182,7 +1182,7 @@ const CreateOrderForClientDialog = ({
                 onChange={(event) =>
                   handleFieldChange("volume")(event.target.value)
                 }
-                className={`mt-1 focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
+                className={`mt-1 focus-visible:ring-[#FFB800] focus-visible:border-primary ${
                   errors.volume
                     ? "border-red-500 focus-visible:ring-red-500"
                     : ""
@@ -1206,7 +1206,7 @@ const CreateOrderForClientDialog = ({
               />
               <Label
                 htmlFor="order-express"
-                className="text-sm font-medium text-[#0F3556]"
+                className="text-sm font-medium text-primary"
               >
                 Livraison express (+30%)
               </Label>
@@ -1219,7 +1219,7 @@ const CreateOrderForClientDialog = ({
               />
               <Label
                 htmlFor="order-fragile"
-                className="text-sm font-medium text-[#0F3556]"
+                className="text-sm font-medium text-primary"
               >
                 Colis fragile (+15%)
               </Label>
@@ -1230,7 +1230,7 @@ const CreateOrderForClientDialog = ({
             <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Zone estimée</span>
-                <span className="font-semibold text-[#0F3556]">
+                <span className="font-semibold text-primary">
                   {ZONE_LABELS[pricePreview.zone]}
                 </span>
               </div>
@@ -1268,7 +1268,7 @@ const CreateOrderForClientDialog = ({
                 <span className="text-sm font-semibold text-muted-foreground">
                   Estimation
                 </span>
-                <span className="text-lg font-bold text-[#0F3556]">
+                <span className="text-lg font-bold text-primary">
                   {formatCurrencyEUR(pricePreview.total)}
                 </span>
               </div>
@@ -1291,7 +1291,7 @@ const CreateOrderForClientDialog = ({
               type="submit"
               form="form-create-order-client"
               disabled={isSubmitting}
-              className="w-full sm:w-auto bg-[#0F3556] hover:bg-[#0d2b46] text-white disabled:bg-[#0F3556]/50"
+              className="w-full sm:w-auto bg-primary hover:bg-primary-dark text-white disabled:bg-primary/50"
             >
               {isSubmitting ? (
                 <>
@@ -1555,7 +1555,7 @@ const CreateClientModal = ({
       <DialogHeader className="px-6 pt-6 text-left">
         <DialogTitle
           id="create-client-title"
-          className="text-xl font-bold text-[#0F3556]"
+          className="text-xl font-bold text-primary"
         >
           Créer un client
         </DialogTitle>
@@ -1589,7 +1589,7 @@ const CreateClientModal = ({
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="border-[#0F3556] text-[#0F3556] hover:bg-[#0F3556]/10"
+                  className="border-primary text-primary hover:bg-primary/10"
                 >
                   Voir la fiche (#{duplicateBanner.existingId})
                 </Button>
@@ -1607,7 +1607,7 @@ const CreateClientModal = ({
         <div>
           <Label
             htmlFor="company"
-            className="text-sm font-semibold text-[#0F3556]"
+            className="text-sm font-semibold text-primary"
           >
             Entreprise
           </Label>
@@ -1623,7 +1623,7 @@ const CreateClientModal = ({
             aria-describedby={
               shouldShowError("company") ? getErrorId("company") : undefined
             }
-            className={`mt-1 bg-white text-[#1F1F1F] focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
+            className={`mt-1 bg-white text-[#1F1F1F] focus-visible:ring-[#FFB800] focus-visible:border-primary ${
               shouldShowError("company")
                 ? "border-red-500 focus-visible:ring-red-500"
                 : ""
@@ -1644,7 +1644,7 @@ const CreateClientModal = ({
         <div>
           <Label
             htmlFor="contact"
-            className="text-sm font-semibold text-[#0F3556]"
+            className="text-sm font-semibold text-primary"
           >
             Contact principal
           </Label>
@@ -1659,7 +1659,7 @@ const CreateClientModal = ({
             aria-describedby={
               shouldShowError("contact") ? getErrorId("contact") : undefined
             }
-            className={`mt-1 bg-white text-[#1F1F1F] focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
+            className={`mt-1 bg-white text-[#1F1F1F] focus-visible:ring-[#FFB800] focus-visible:border-primary ${
               shouldShowError("contact")
                 ? "border-red-500 focus-visible:ring-red-500"
                 : ""
@@ -1680,7 +1680,7 @@ const CreateClientModal = ({
         <div>
           <Label
             htmlFor="email"
-            className="text-sm font-semibold text-[#0F3556]"
+            className="text-sm font-semibold text-primary"
           >
             Email
           </Label>
@@ -1695,7 +1695,7 @@ const CreateClientModal = ({
             aria-describedby={
               shouldShowError("email") ? getErrorId("email") : undefined
             }
-            className={`mt-1 bg-white text-[#1F1F1F] focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
+            className={`mt-1 bg-white text-[#1F1F1F] focus-visible:ring-[#FFB800] focus-visible:border-primary ${
               shouldShowError("email")
                 ? "border-red-500 focus-visible:ring-red-500"
                 : ""
@@ -1716,7 +1716,7 @@ const CreateClientModal = ({
         <div>
           <Label
             htmlFor="phone"
-            className="text-sm font-semibold text-[#0F3556]"
+            className="text-sm font-semibold text-primary"
           >
             Téléphone
           </Label>
@@ -1731,7 +1731,7 @@ const CreateClientModal = ({
             aria-describedby={
               shouldShowError("phone") ? getErrorId("phone") : undefined
             }
-            className={`mt-1 bg-white text-[#1F1F1F] focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
+            className={`mt-1 bg-white text-[#1F1F1F] focus-visible:ring-[#FFB800] focus-visible:border-primary ${
               shouldShowError("phone")
                 ? "border-red-500 focus-visible:ring-red-500"
                 : ""
@@ -1752,7 +1752,7 @@ const CreateClientModal = ({
         <div>
           <Label
             htmlFor="sector"
-            className="text-sm font-semibold text-[#0F3556]"
+            className="text-sm font-semibold text-primary"
           >
             Secteur
           </Label>
@@ -1770,7 +1770,7 @@ const CreateClientModal = ({
               aria-describedby={
                 shouldShowError("sector") ? getErrorId("sector") : undefined
               }
-              className={`mt-1 bg-white text-[#1F1F1F] focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
+              className={`mt-1 bg-white text-[#1F1F1F] focus-visible:ring-[#FFB800] focus-visible:border-primary ${
                 shouldShowError("sector")
                   ? "border-red-500 focus-visible:ring-red-500"
                   : ""
@@ -1800,7 +1800,7 @@ const CreateClientModal = ({
         <div>
           <Label
             htmlFor="address"
-            className="text-sm font-semibold text-[#0F3556]"
+            className="text-sm font-semibold text-primary"
           >
             Adresse
           </Label>
@@ -1815,7 +1815,7 @@ const CreateClientModal = ({
             aria-describedby={
               shouldShowError("address") ? getErrorId("address") : undefined
             }
-            className={`mt-1 bg-white text-[#1F1F1F] focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
+            className={`mt-1 bg-white text-[#1F1F1F] focus-visible:ring-[#FFB800] focus-visible:border-primary ${
               shouldShowError("address")
                 ? "border-red-500 focus-visible:ring-red-500"
                 : ""
@@ -1836,7 +1836,7 @@ const CreateClientModal = ({
         <div>
           <Label
             htmlFor="siret"
-            className="text-sm font-semibold text-[#0F3556]"
+            className="text-sm font-semibold text-primary"
           >
             SIRET
           </Label>
@@ -1855,7 +1855,7 @@ const CreateClientModal = ({
             aria-describedby={
               shouldShowError("siret") ? getErrorId("siret") : undefined
             }
-            className={`mt-1 bg-white text-[#1F1F1F] focus-visible:ring-[#FFB800] focus-visible:border-[#0F3556] ${
+            className={`mt-1 bg-white text-[#1F1F1F] focus-visible:ring-[#FFB800] focus-visible:border-primary ${
               shouldShowError("siret")
                 ? "border-red-500 focus-visible:ring-red-500"
                 : ""
@@ -1888,7 +1888,7 @@ const CreateClientModal = ({
           type="submit"
           form="form-create-client"
           disabled={!isFormValid || isSubmitting}
-          className="w-full sm:w-auto bg-[#0F3556] hover:bg-[#0d2b46] text-white disabled:bg-[#0F3556]/50"
+          className="w-full sm:w-auto bg-primary hover:bg-primary-dark text-white disabled:bg-primary/50"
         >
           {isSubmitting ? (
             <>

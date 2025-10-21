@@ -47,7 +47,7 @@ const AdminSidebar = () => {
         <button
           type="button"
           onClick={toggleMobileSidebar}
-          className="fixed left-4 top-4 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-[#0F3556] text-white shadow-lg transition-colors duration-200 hover:bg-[#113C63] focus:outline-none focus:ring-2 focus:ring-white/40 md:hidden"
+          className="fixed left-4 top-4 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-primary text-white shadow-lg transition-colors duration-200 hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-white/40 md:hidden"
           aria-label="Ouvrir le menu"
         >
           <Menu className="h-5 w-5" />
@@ -63,7 +63,7 @@ const AdminSidebar = () => {
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex h-full w-64 flex-col border-r border-white/10 bg-[#0F3556] text-white shadow-[4px_0_12px_rgba(0,0,0,0.18)] transition-transform duration-300 md:relative md:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex h-full w-64 flex-col border-r border-white/10 bg-primary text-white shadow-[4px_0_12px_rgba(0,0,0,0.18)] transition-transform duration-300 md:relative md:translate-x-0",
           isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         )}
       >
@@ -92,7 +92,7 @@ const AdminSidebar = () => {
                 cn(
                   "flex items-center gap-3 px-5 py-4 text-sm font-medium transition-colors duration-200 border-l-2 border-transparent",
                   isActive
-                    ? "bg-[#113C63] text-[#FFB800] border-[#FFB800]"
+                    ? "bg-primary-dark text-[#FFB800] border-cta"
                     : "text-white/80 hover:bg-white/10 hover:text-white hover:border-white/40"
                 )
               }

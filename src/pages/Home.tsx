@@ -163,7 +163,7 @@ const Home = () => {
           </div>
           <div className="relative w-full max-w-xl self-stretch md:max-w-md lg:max-w-lg">
             
-            <div className="absolute -right-6 bottom-16 hidden h-16 w-16 rounded-2xl border border-white/10 bg-white/5 md:block" />
+            
             <div className="relative flex h-full items-center justify-center">
               
             </div>

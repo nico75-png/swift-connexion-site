@@ -1,81 +1,55 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" role="img" aria-labelledby="title desc">
-  <title id="title">Bannière des expertises Swift Connexion</title>
-  <desc id="desc">Fond bleu dégradé avec titres et pictogrammes illustrant les expertises sectorielles Swift Connexion.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 420" role="img" aria-labelledby="title desc">
+  <title id="title">Bannière expertises Swift Connexion</title>
+  <desc id="desc">Fond bleu avec illustrations médicales, de balance et de transport illustrant les expertises sectorielles.</desc>
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#0b3d91" />
-      <stop offset="55%" stop-color="#0f56b5" />
-      <stop offset="100%" stop-color="#ffffff" />
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1a2f6b" />
+      <stop offset="55%" stop-color="#123979" />
+      <stop offset="100%" stop-color="#0b2c66" />
     </linearGradient>
-    <linearGradient id="shine" x1="0" y1="0" x2="1" y2="1">
+    <radialGradient id="glow" cx="75%" cy="30%" r="65%">
       <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25" />
       <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="wave" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2a5fb0" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#1d3d8f" stop-opacity="0" />
     </linearGradient>
-    <filter id="shadow" x="-0.1" y="-0.1" width="1.2" height="1.2">
-      <feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#08275f" flood-opacity="0.25" />
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#08163f" flood-opacity="0.35" />
     </filter>
-    <style>
-      text { font-family: 'Inter', 'Segoe UI', Roboto, sans-serif; letter-spacing: 0; }
-      .title { font-size: 76px; font-weight: 600; fill: #ffffff; }
-      .subtitle { font-size: 32px; fill: rgba(255,255,255,0.85); }
-      .label { font-size: 30px; font-weight: 600; fill: #0b3d91; text-anchor: middle; }
-      .label-sub { font-size: 26px; fill: rgba(11,61,145,0.8); text-anchor: middle; }
-    </style>
   </defs>
-  <rect width="1920" height="1080" fill="url(#bg)" />
-  <rect y="520" width="1920" height="560" fill="#ffffff" />
-  <path d="M0 520 Q320 600 640 560 T1280 560 T1920 640 V1080 H0 Z" fill="#ffffff" opacity="0.35" />
-  <path d="M0 460 Q260 540 620 520 T1300 520 T1920 600" fill="url(#shine)" opacity="0.6" />
-  <g transform="translate(960 280)" text-anchor="middle">
-    <text class="title">Nos expertises sectorielles</text>
-    <text class="subtitle" y="96">Des solutions de transport adaptées à chaque métier, avec des engagements spécifiques et un savoir-faire reconnu.</text>
+  <rect width="1440" height="420" fill="url(#bg)" />
+  <rect width="1440" height="420" fill="url(#glow)" />
+  <path d="M0 260 Q240 320 520 300 T1040 290 T1440 340 V420 H0 Z" fill="#163673" opacity="0.6" />
+  <path d="M0 290 Q220 350 520 340 T1080 330 T1440 360 V420 H0 Z" fill="url(#wave)" />
+  <g fill="none" stroke="#f6f9ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.7">
+    <g transform="translate(180 120) scale(1.05)">
+      <path d="M48 8c13.255 0 24 10.745 24 24s-10.745 24-24 24S24 45.255 24 32 34.745 8 48 8z" />
+      <path d="M24 32C10.745 32 0 21.255 0 8h96c0 13.255-10.745 24-24 24" />
+      <path d="M36 56v12m24-12v12" />
+    </g>
+    <g transform="translate(360 120)">
+      <path d="M64 0v80" />
+      <path d="M32 32h64" />
+      <path d="M16 80h96" />
+      <path d="M32 32L16 80l48-16 48 16-16-48" />
+    </g>
+    <g transform="translate(1180 120)">
+      <rect x="12" y="36" width="92" height="44" rx="12" />
+      <path d="M24 36L50 8h44l-12 28" />
+      <circle cx="44" cy="92" r="16" />
+      <circle cx="92" cy="92" r="16" />
+    </g>
+    <g transform="translate(940 120)">
+      <path d="M24 8h56l24 24-24 24H24z" />
+      <path d="M48 0v64" />
+      <path d="M24 32h80" />
+    </g>
   </g>
-  <g transform="translate(960 760)" filter="url(#shadow)">
-    <rect x="-700" y="-220" width="1400" height="360" rx="48" fill="#ffffff" />
-  </g>
-  <g transform="translate(960 720)">
-    <g transform="translate(-600 0)">
-      <circle cx="0" cy="-120" r="70" fill="#e8f3ff" />
-      <path d="M-32 -132 h64 v24 h24 v48 h-24 v24 h-64 v-24 h-24 v-48 h24z" fill="#0b8f5a" />
-      <path d="M-8 -112 v32 h16 v-32 h-16z" fill="#ffffff" />
-      <path d="M-24 -96 h48" stroke="#ffffff" stroke-width="12" stroke-linecap="round" />
-      <text class="label" y="40">SANTÉ ET MÉDICALE</text>
-    </g>
-    <g transform="translate(-300 0)">
-      <circle cx="0" cy="-120" r="70" fill="#e7f0ff" />
-      <path d="M-54 -120 q12 -40 54 -40 t54 40 q-12 40 -54 40 t-54 -40z" fill="#1b4c94" />
-      <rect x="-36" y="-120" width="72" height="12" rx="6" fill="#ffffff" />
-      <circle cx="-22" cy="-96" r="12" fill="#ffffff" />
-      <circle cx="22" cy="-96" r="12" fill="#ffffff" />
-      <circle cx="-22" cy="-96" r="6" fill="#1b4c94" />
-      <circle cx="22" cy="-96" r="6" fill="#1b4c94" />
-      <text class="label" y="40">OPTIQUE</text>
-    </g>
-    <g transform="translate(0 0)">
-      <circle cx="0" cy="-120" r="70" fill="#eaf0ff" />
-      <path d="M0 -180 l120 70 h-56 v60 h-128 v-60 h-56z" fill="#f8b84a" />
-      <path d="M-32 -70 h64 v90 h-64z" fill="#ffffff" stroke="#f0a227" stroke-width="10" />
-      <path d="M0 -70 v90" stroke="#f0a227" stroke-width="10" />
-      <circle cx="0" cy="40" r="54" fill="#ffffff" stroke="#1b4c94" stroke-width="12" />
-      <path d="M0 40 v-54" stroke="#1b4c94" stroke-width="12" stroke-linecap="round" />
-      <text class="label" y="140">JURIDIQUE</text>
-    </g>
-    <g transform="translate(300 0)">
-      <circle cx="0" cy="-120" r="70" fill="#e6f5ff" />
-      <path d="M0 -190 l46 46 -36 36 42 42 -46 46 -42 -42 -42 42 -46 -46 42 -42 -36 -36 46 -46 36 36z" fill="#2c8ad6" />
-      <circle cx="0" cy="-70" r="26" fill="#ffffff" />
-      <circle cx="0" cy="-70" r="10" fill="#2c8ad6" />
-      <text class="label" y="40">B2B</text>
-    </g>
-    <g transform="translate(600 0)">
-      <circle cx="0" cy="-120" r="70" fill="#f0f0ff" />
-      <path d="M-48 -60 h96 v36 c0 40 -32 72 -72 72s-72 -32 -72 -72v-36z" fill="#fcbc3f" />
-      <path d="M-16 -84 h32 v24 h-32z" fill="#ffffff" />
-      <path d="M-44 -128 h88 v32 h-88z" fill="#2b72d3" />
-      <path d="M0 -168 l28 56 h-56z" fill="#2b72d3" />
-      <circle cx="0" cy="12" r="16" fill="#2b72d3" />
-      <path d="M0 28 v36" stroke="#2b72d3" stroke-width="10" stroke-linecap="round" />
-      <text class="label" y="40">ÉVÉNEMENTIEL</text>
-    </g>
+  <g opacity="0.35" fill="#0c2150">
+    <circle cx="1040" cy="80" r="14" />
+    <circle cx="220" cy="80" r="10" />
+    <circle cx="1260" cy="60" r="8" />
   </g>
 </svg>

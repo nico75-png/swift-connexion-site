@@ -760,7 +760,7 @@ const AdminDrivers = () => {
                     <TableCell>
                       <a
                         href={`tel:${driver.phone}`}
-                        className="flex items-center gap-2 text-primary hover:underline"
+                        className="flex items-center gap-2 text-[#0F3556] hover:underline"
                       >
                         <Phone className="h-3 w-3" aria-hidden />
                         {driver.displayPhone}
@@ -770,7 +770,7 @@ const AdminDrivers = () => {
                       {driver.email ? (
                         <a
                           href={`mailto:${driver.email}`}
-                          className="flex items-center gap-2 text-primary hover:underline"
+                          className="flex items-center gap-2 text-[#0F3556] hover:underline"
                         >
                           <Mail className="h-3 w-3" aria-hidden />
                           {driver.email}
@@ -866,7 +866,7 @@ const AdminDrivers = () => {
           aria-modal="true"
           className="flex max-h-screen w-full max-w-none flex-col overflow-y-auto rounded-none border-none bg-[#F5F7FA] p-0 shadow-2xl focus:outline-none sm:max-h-[95vh] sm:w-[90vw] sm:max-w-2xl sm:rounded-2xl"
         >
-          <DialogHeader className="bg-primary px-6 py-5 text-white">
+          <DialogHeader className="bg-[#0F3556] px-6 py-5 text-white">
             <DialogTitle id="add-driver-title" className="text-2xl font-semibold">
               Ajouter un chauffeur
             </DialogTitle>
@@ -1240,7 +1240,7 @@ const DriverSettingsModal = ({ open, driver, onOpenChange, onSubmit }: DriverSet
         aria-describedby="driver-settings-description"
         className="flex max-h-screen w-full max-w-4xl flex-col overflow-hidden rounded-none border-none bg-[#F5F7FA] p-0 shadow-2xl focus:outline-none sm:rounded-2xl"
       >
-        <DialogHeader className="bg-primary px-6 py-5 text-white">
+        <DialogHeader className="bg-[#0F3556] px-6 py-5 text-white">
           <DialogTitle id="driver-settings-title" className="text-2xl font-semibold">
             Paramètres chauffeur
           </DialogTitle>

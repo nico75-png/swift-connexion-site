@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 360" role="img" aria-labelledby="title desc">
+  <title id="title">Commande sans compte - Bannière</title>
+  <desc id="desc">Bannière de commande sans compte avec gradient bleu orange et skyline stylisée.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0A1A3F" />
+      <stop offset="35%" stop-color="#0D2B7C" />
+      <stop offset="60%" stop-color="#1C4F96" />
+      <stop offset="100%" stop-color="#F47B49" />
+    </linearGradient>
+    <linearGradient id="glow" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  <rect width="1440" height="360" fill="url(#bg)" />
+  <rect width="1440" height="360" fill="url(#glow)" />
+  <g fill="#0F1D3B" opacity="0.45" transform="translate(0,80)">
+    <rect x="40" y="120" width="40" height="160" rx="4" />
+    <rect x="140" y="160" width="32" height="120" rx="4" />
+    <rect x="220" y="100" width="52" height="180" rx="6" />
+    <rect x="320" y="150" width="36" height="130" rx="4" />
+    <rect x="420" y="110" width="60" height="170" rx="6" />
+    <rect x="540" y="140" width="40" height="140" rx="5" />
+    <rect x="620" y="170" width="32" height="110" rx="4" />
+    <rect x="700" y="120" width="50" height="160" rx="6" />
+    <rect x="800" y="150" width="38" height="130" rx="4" />
+    <rect x="900" y="130" width="46" height="150" rx="5" />
+    <rect x="1000" y="160" width="36" height="120" rx="4" />
+    <rect x="1100" y="110" width="60" height="170" rx="6" />
+    <rect x="1220" y="150" width="34" height="130" rx="4" />
+    <rect x="1300" y="130" width="44" height="150" rx="5" />
+  </g>
+  <g fill="#172C59" opacity="0.65" transform="translate(0,60)">
+    <rect x="80" y="140" width="36" height="140" rx="4" />
+    <rect x="180" y="170" width="30" height="110" rx="4" />
+    <rect x="260" y="120" width="48" height="160" rx="6" />
+    <rect x="360" y="160" width="34" height="120" rx="4" />
+    <rect x="460" y="130" width="52" height="150" rx="5" />
+    <rect x="560" y="160" width="36" height="120" rx="4" />
+    <rect x="640" y="190" width="28" height="90" rx="4" />
+    <rect x="720" y="140" width="46" height="140" rx="6" />
+    <rect x="820" y="170" width="32" height="110" rx="4" />
+    <rect x="920" y="150" width="40" height="130" rx="4" />
+    <rect x="1020" y="180" width="28" height="100" rx="4" />
+    <rect x="1100" y="140" width="48" height="140" rx="6" />
+    <rect x="1200" y="170" width="32" height="110" rx="4" />
+    <rect x="1280" y="150" width="38" height="130" rx="4" />
+  </g>
+  <g fill="#1F3E79" opacity="0.85" transform="translate(0,40)">
+    <rect x="120" y="150" width="32" height="120" rx="4" />
+    <rect x="200" y="200" width="24" height="70" rx="4" />
+    <rect x="300" y="150" width="40" height="120" rx="4" />
+    <rect x="380" y="190" width="26" height="80" rx="4" />
+    <rect x="480" y="160" width="36" height="110" rx="4" />
+    <rect x="560" y="190" width="26" height="80" rx="4" />
+    <rect x="640" y="210" width="20" height="60" rx="4" />
+    <rect x="720" y="160" width="34" height="110" rx="4" />
+    <rect x="800" y="200" width="24" height="70" rx="4" />
+    <rect x="880" y="180" width="30" height="90" rx="4" />
+    <rect x="960" y="210" width="20" height="60" rx="4" />
+    <rect x="1040" y="170" width="32" height="100" rx="4" />
+    <rect x="1120" y="200" width="24" height="70" rx="4" />
+    <rect x="1200" y="180" width="28" height="90" rx="4" />
+  </g>
+  <g fill="white" font-family="'Poppins', 'Segoe UI', sans-serif" text-anchor="start">
+    <text x="120" y="150" font-size="64" font-weight="700" letter-spacing="3">COMMANDER</text>
+    <text x="120" y="210" font-size="64" font-weight="700" letter-spacing="6">UNE COURSE</text>
+    <text x="120" y="280" font-size="28" opacity="0.9">remplissez ce formulaire ci-dessous pour obtenir une estimation immédiate</text>
+  </g>
+</svg>

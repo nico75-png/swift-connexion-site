@@ -167,13 +167,19 @@ const Home = () => {
   return (
     <Layout>
       {/* Hero Section */}
-      <section className="relative flex min-h-screen items-center overflow-hidden bg-[#0b2d63] text-white md:h-screen">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute -bottom-32 right-0 h-96 w-96 rounded-full bg-sky-500/20 blur-3xl" />
+      <section
+        className="relative flex min-h-screen items-center overflow-hidden text-white md:h-screen"
+      >
+        <div className="absolute inset-0">
+          <img
+            src="https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=2400&q=80"
+            alt="Vue aérienne de Paris au coucher du soleil"
+            className="h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-950/80 via-slate-900/70 to-slate-900/60" />
         </div>
-        <div className="relative flex w-full flex-col gap-12 px-6 py-16 md:h-full md:flex-row md:items-center md:justify-between md:gap-16 md:px-12">
-          <div className="max-w-3xl space-y-6 md:max-w-xl lg:max-w-3xl">
+        <div className="relative z-10 flex w-full flex-col gap-12 px-6 py-16 md:h-full md:flex-row md:items-center md:justify-between md:gap-16 md:px-12">
+          <div className="max-w-3xl space-y-6 rounded-3xl bg-slate-950/40 p-8 backdrop-blur-sm md:max-w-xl lg:max-w-3xl">
             <div className="inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-medium uppercase tracking-[0.35em]">
               <span className="h-2 w-2 rounded-full bg-cta shadow-[0_0_12px_theme(colors.amber.400/0.8)]" />
               One Connexion Express
@@ -209,7 +215,7 @@ const Home = () => {
             </div>
           </div>
           <div className="relative w-full max-w-xl self-stretch md:max-w-md lg:max-w-lg">
-            <div className="relative h-full overflow-hidden rounded-3xl border border-white/10 bg-white/10 shadow-[0_20px_60px_rgba(8,24,68,0.45)]">
+            <div className="relative h-full overflow-hidden rounded-3xl border border-white/15 bg-white/10 shadow-[0_20px_60px_rgba(8,24,68,0.45)] backdrop-blur">
               <div className="absolute inset-0 bg-gradient-to-tr from-white/15 via-transparent to-transparent" />
               <img
                 src={heroCourier}

@@ -96,25 +96,11 @@ const CommandeSansCompte = () => {
     <Layout>
       {/* Hero */}
       <section className="gradient-hero text-primary-foreground py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid gap-10 items-center lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="text-center lg:text-left space-y-4">
-              <h1 className="text-balance">Commander une course</h1>
-              <p className="text-xl text-primary-foreground/90 max-w-2xl text-balance mx-auto lg:mx-0">
-                Remplissez le formulaire ci-dessous pour obtenir une estimation immédiate.
-                Visualisez votre demande comme si vous l'effectuiez depuis votre smartphone.
-              </p>
-            </div>
-            <div className="relative mx-auto max-w-md">
-              <div className="absolute inset-0 blur-3xl bg-white/15 rounded-full" aria-hidden="true" />
-              <img
-                src="/images/commande-course-hero.svg"
-                alt="Aperçu de la commande d'une course Swift Connexion sur smartphone"
-                className="relative w-full h-auto drop-shadow-2xl"
-                loading="lazy"
-              />
-            </div>
-          </div>
+        <div className="container mx-auto px-4 text-center">
+          <h1 className="mb-4">Commander une course</h1>
+          <p className="text-xl text-primary-foreground/90">
+            Remplissez le formulaire ci-dessous pour obtenir une estimation immédiate
+          </p>
         </div>
       </section>
 

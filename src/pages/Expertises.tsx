@@ -13,18 +13,11 @@ import {
   Truck,
   Award,
   Sparkles,
-  Briefcase,
 } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 
 const Expertises = () => {
-  const heroBadges = [
-    { icon: Stethoscope, label: "Santé & médical", emoji: "🩺" },
-    { icon: Glasses, label: "Optique", emoji: "👓" },
-    { icon: Scale, label: "Juridique", emoji: "⚖️" },
-    { icon: Briefcase, label: "B2B & corporate", emoji: "🤝" },
-    { icon: PartyPopper, label: "Événementiel", emoji: "🎉" },
-  ];
+  const heroIcons = [Stethoscope, Scale, Building2, Truck, Award];
 
   const expertises = [
     {
@@ -133,40 +126,23 @@ const Expertises = () => {
     <Layout>
       {/* Hero */}
       <section className="relative isolate overflow-hidden bg-[#0f2f63] py-20 text-white">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0f2f63] via-[#132c73] to-[#081a45]" />
-        <div className="absolute inset-0 opacity-20">
-          <div className="mx-auto flex h-full w-full max-w-5xl items-center justify-center px-6">
-            <div className="grid w-full max-w-3xl grid-cols-3 gap-6 text-6xl md:text-7xl">
-              {heroBadges.map((badge, index) => (
-                <span
-                  key={index}
-                  className="flex h-24 w-24 items-center justify-center rounded-3xl bg-white/5 shadow-lg shadow-black/10 backdrop-blur"
-                >
-                  {badge.emoji}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
         <div className="absolute inset-0">
-          <div className="pointer-events-none absolute -left-10 top-10 h-44 w-44 rounded-full bg-white/10 blur-3xl" />
-          <div className="pointer-events-none absolute -right-10 bottom-10 h-56 w-56 rounded-full bg-[#4b8bff]/20 blur-3xl" />
+          <img
+            src="/images/expertises-banner.svg"
+            alt="Illustration des expertises sectorielles Swift Connexion"
+            className="h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-[#081a45]/80" />
         </div>
         <div className="relative">
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="grid w-full max-w-md gap-4">
-              {heroBadges.map((badge, index) => (
+            <div className="flex flex-wrap items-center justify-center gap-4 lg:max-w-md lg:justify-start">
+              {heroIcons.map((Icon, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/10 p-4 shadow-soft backdrop-blur"
+                  className="flex h-20 w-20 items-center justify-center rounded-2xl border border-white/20 bg-white/10 backdrop-blur-md"
                 >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-white/20 text-3xl">
-                    {badge.emoji}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm uppercase tracking-widest text-white/70">{badge.label}</span>
-                    <badge.icon className="mt-1 h-6 w-6 text-white" />
-                  </div>
+                  <Icon className="h-10 w-10 text-white" />
                 </div>
               ))}
             </div>

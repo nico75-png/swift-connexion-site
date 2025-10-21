@@ -8,11 +8,6 @@ import {
   Package2,
   PartyPopper,
   CheckCircle2,
-  Stethoscope,
-  Building2,
-  Truck,
-  Award,
-  Briefcase,
 } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 
@@ -124,11 +119,16 @@ const Expertises = () => {
     <Layout>
       {/* Hero */}
       <section className="bg-white">
-        <img
-          src="/images/expertises-banner.svg"
-          alt="Nos expertises sectorielles"
-          className="mx-auto w-full max-w-6xl"
-        />
+        <figure className="mx-auto max-w-7xl">
+          <img
+            src="/images/expertises-banner.svg"
+            alt="Nos expertises sectorielles Swift Connexion"
+            className="h-full w-full object-cover"
+          />
+          <figcaption className="sr-only">
+            Nos expertises sectorielles couvrent la santé, l'optique, le juridique, les services B2B et l'événementiel.
+          </figcaption>
+        </figure>
       </section>
 
       {/* Expertises Sections */}

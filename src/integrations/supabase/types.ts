@@ -213,7 +213,15 @@ export type Database = {
           unit_price?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_invoice_items_invoice"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       invoices: {
         Row: {
@@ -221,6 +229,7 @@ export type Database = {
           created_at: string
           currency: string | null
           customer_id: string
+          deleted_at: string | null
           due_date: string | null
           id: string
           invoice_number: string
@@ -235,6 +244,7 @@ export type Database = {
           created_at?: string
           currency?: string | null
           customer_id: string
+          deleted_at?: string | null
           due_date?: string | null
           id?: string
           invoice_number: string
@@ -249,6 +259,7 @@ export type Database = {
           created_at?: string
           currency?: string | null
           customer_id?: string
+          deleted_at?: string | null
           due_date?: string | null
           id?: string
           invoice_number?: string
@@ -324,7 +335,15 @@ export type Database = {
           thread_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_messages_thread"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "message_threads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -399,6 +418,7 @@ export type Database = {
           currency: string | null
           customer_company: string | null
           customer_id: string
+          deleted_at: string | null
           delivery_address: string
           driver_assigned_at: string | null
           driver_id: string | null
@@ -422,6 +442,7 @@ export type Database = {
           currency?: string | null
           customer_company?: string | null
           customer_id: string
+          deleted_at?: string | null
           delivery_address: string
           driver_assigned_at?: string | null
           driver_id?: string | null
@@ -445,6 +466,7 @@ export type Database = {
           currency?: string | null
           customer_company?: string | null
           customer_id?: string
+          deleted_at?: string | null
           delivery_address?: string
           driver_assigned_at?: string | null
           driver_id?: string | null
@@ -462,7 +484,15 @@ export type Database = {
           volume_m3?: number | null
           weight_kg?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_orders_driver"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -500,6 +530,7 @@ export type Database = {
           created_at: string
           currency: string | null
           customer_id: string
+          deleted_at: string | null
           delivery_address: string
           id: string
           package_note: string | null
@@ -517,6 +548,7 @@ export type Database = {
           created_at?: string
           currency?: string | null
           customer_id: string
+          deleted_at?: string | null
           delivery_address: string
           id?: string
           package_note?: string | null
@@ -534,6 +566,7 @@ export type Database = {
           created_at?: string
           currency?: string | null
           customer_id?: string
+          deleted_at?: string | null
           delivery_address?: string
           id?: string
           package_note?: string | null
@@ -577,12 +610,84 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assert_has_role: {
+        Args: { _role: Database["public"]["Enums"]["app_role"] }
+        Returns: undefined
+      }
+      assert_owner: {
+        Args: { _owner_id: string }
+        Returns: undefined
+      }
+      current_app_user_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      ensure_status_transition: {
+        Args: { _allowed: Json; _current: string; _next: string }
+        Returns: boolean
+      }
+      generate_human_id: {
+        Args: { _at?: string; _resource: string }
+        Returns: string
+      }
+      grant_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: undefined
+      }
+      has_any_role: {
+        Args: {
+          _roles: Database["public"]["Enums"]["app_role"][]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      is_admin: {
+        Args: { _user_id?: string }
+        Returns: boolean
+      }
+      normalize_email: {
+        Args: { _email: string }
+        Returns: string
+      }
+      owns_row: {
+        Args: { _row_user_id: string }
+        Returns: boolean
+      }
+      revoke_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: undefined
+      }
+      soft_delete: {
+        Args: { _id: string; _table: string }
+        Returns: undefined
+      }
+      valid_email: {
+        Args: { _email: string }
+        Returns: boolean
+      }
+      write_audit_log: {
+        Args: {
+          _action: string
+          _after?: Json
+          _before?: Json
+          _entity_id: string
+          _entity_type: string
+          _meta?: Json
+        }
+        Returns: undefined
       }
     }
     Enums: {

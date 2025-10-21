@@ -166,12 +166,9 @@ const Home = () => {
             <div className="absolute -right-6 bottom-16 hidden h-16 w-16 rounded-2xl border border-white/10 bg-white/5 md:block" />
             <div className="relative flex h-full items-center justify-center">
               <div className="relative aspect-square w-full max-w-sm overflow-hidden rounded-[3rem] border border-white/10 bg-white/5 shadow-[0_40px_120px_-40px_rgba(15,23,42,0.9)] backdrop-blur">
-                <img src={heroCourier} alt="Coursier livrant un colis" className="h-full w-full object-cover" />
                 
-                <div className="absolute bottom-6 left-1/2 w-11/12 -translate-x-1/2 rounded-2xl border border-white/20 bg-white/15 p-4 text-center text-sm text-white/90 backdrop-blur">
-                  <p className="font-semibold tracking-wide text-white">45 min en moyenne</p>
-                  <p className="text-xs text-white/70">Coursier dédié et suivi en temps réel</p>
-                </div>
+                
+                
               </div>
             </div>
           </div>

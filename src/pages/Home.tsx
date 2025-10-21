@@ -167,57 +167,55 @@ const Home = () => {
   return (
     <Layout>
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-[#0b2d63] text-white">
+      <section className="relative flex min-h-screen items-center overflow-hidden bg-[#0b2d63] text-white md:h-screen">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -bottom-32 right-0 h-96 w-96 rounded-full bg-sky-500/20 blur-3xl" />
         </div>
-        <div className="container relative mx-auto max-w-4xl px-4 py-12 md:py-16">
-          <div className="grid items-center gap-8 md:grid-cols-2">
-            <div className="space-y-6">
-              <div className="inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-medium uppercase tracking-[0.35em]">
-                <span className="h-2 w-2 rounded-full bg-cta shadow-[0_0_12px_theme(colors.amber.400/0.8)]" />
-                One Connexion Express
-              </div>
-              <div className="space-y-4">
-                <h1 className="text-4xl font-semibold leading-tight md:text-5xl lg:text-6xl">
-                  Livraison urgente et programmée en Île-de-France
-                </h1>
-                <p className="text-lg text-white/80 md:text-xl">
-                  Service professionnel 24/7 pour vos colis urgents. Tarifs transparents, suivi en temps réel et prise en charge immédiate par nos coursiers dédiés.
-                </p>
-              </div>
-              <div className="flex flex-col gap-4 sm:flex-row">
-                <Button variant="cta" size="lg" asChild>
-                  <Link to="/commande-sans-compte">Commander maintenant</Link>
-                </Button>
-                <Button
-                  variant="outline-light"
-                  size="lg"
-                  className="border-white/30 text-white hover:border-white hover:text-[#0b2d63]"
-                  asChild
-                >
-                  <Link to="/tarifs">Voir les tarifs</Link>
-                </Button>
-              </div>
-              <div className="space-y-3 text-base text-white/80">
-                {heroHighlights.map((highlight) => (
-                  <div key={highlight} className="flex items-center gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-cta" />
-                    <span>{highlight}</span>
-                  </div>
-                ))}
-              </div>
+        <div className="relative flex w-full flex-col gap-12 px-6 py-16 md:h-full md:flex-row md:items-center md:justify-between md:gap-16 md:px-12">
+          <div className="max-w-3xl space-y-6 md:max-w-xl lg:max-w-3xl">
+            <div className="inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-medium uppercase tracking-[0.35em]">
+              <span className="h-2 w-2 rounded-full bg-cta shadow-[0_0_12px_theme(colors.amber.400/0.8)]" />
+              One Connexion Express
             </div>
-            <div className="relative">
-              <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/10 shadow-[0_20px_60px_rgba(8,24,68,0.45)]">
-                <div className="absolute inset-0 bg-gradient-to-tr from-white/15 via-transparent to-transparent" />
-                <img
-                  src={heroCourier}
-                  alt="Coursier professionnel One Connexion"
-                  className="h-full w-full object-cover"
-                />
-              </div>
+            <div className="space-y-4">
+              <h1 className="text-4xl font-semibold leading-tight md:text-5xl lg:text-6xl">
+                Livraison urgente et programmée en Île-de-France
+              </h1>
+              <p className="text-lg text-white/80 md:text-xl">
+                Service professionnel 24/7 pour vos colis urgents. Tarifs transparents, suivi en temps réel et prise en charge immédiate par nos coursiers dédiés.
+              </p>
+            </div>
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <Button variant="cta" size="lg" asChild>
+                <Link to="/commande-sans-compte">Commander maintenant</Link>
+              </Button>
+              <Button
+                variant="outline-light"
+                size="lg"
+                className="border-white/30 text-white hover:border-white hover:text-[#0b2d63]"
+                asChild
+              >
+                <Link to="/tarifs">Voir les tarifs</Link>
+              </Button>
+            </div>
+            <div className="space-y-3 text-base text-white/80">
+              {heroHighlights.map((highlight) => (
+                <div key={highlight} className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-cta" />
+                  <span>{highlight}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="relative w-full max-w-xl self-stretch md:max-w-md lg:max-w-lg">
+            <div className="relative h-full overflow-hidden rounded-3xl border border-white/10 bg-white/10 shadow-[0_20px_60px_rgba(8,24,68,0.45)]">
+              <div className="absolute inset-0 bg-gradient-to-tr from-white/15 via-transparent to-transparent" />
+              <img
+                src={heroCourier}
+                alt="Coursier professionnel One Connexion"
+                className="h-full w-full object-cover"
+              />
             </div>
           </div>
         </div>

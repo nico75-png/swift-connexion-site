@@ -1,84 +1,113 @@
 import { Link } from "react-router-dom";
-import { Mail, Phone, MapPin, Clock, Share2 } from "lucide-react";
+import { Package, Mail, Phone, MapPin } from "lucide-react";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-slate-950 text-slate-100">
+    <footer className="bg-primary text-primary-foreground">
       <div className="container mx-auto px-4 py-12">
-        <div className="grid gap-10 md:grid-cols-4">
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Livraison urbaine Île-de-France</h3>
-            <p className="text-sm text-slate-300">
-              Courses express ou programmées, flotte mixte deux-roues / utilitaires, POD numérique et support dispatch 7j/7.
-            </p>
-            <div className="space-y-2 text-sm text-slate-300">
-              <p className="flex items-start gap-2">
-                <MapPin className="mt-1 h-4 w-4" aria-hidden="true" />
-                {{Adresse}}
-              </p>
-              <p className="flex items-start gap-2">
-                <Phone className="mt-1 h-4 w-4" aria-hidden="true" />
-                <a className="hover:underline" href="tel:{{Phone}}">{{Phone}}</a>
-              </p>
-              <p className="flex items-start gap-2">
-                <Mail className="mt-1 h-4 w-4" aria-hidden="true" />
-                <a className="hover:underline" href="mailto:{{EmailSupport}}">{{EmailSupport}}</a>
-              </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+          {/* À propos */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cta">
+                <Package className="h-5 w-5 text-cta-foreground" />
+              </div>
+              <span className="text-lg font-bold">One Connexion</span>
             </div>
+            <p className="text-sm text-primary-foreground/80">
+              Transport B2B express en Île-de-France. Solutions rapides et sécurisées pour tous vos besoins professionnels.
+            </p>
           </div>
 
-          <div className="space-y-4 text-sm">
-            <h4 className="text-base font-semibold">Navigation</h4>
-            <ul className="space-y-2 text-slate-300">
-              <li><a className="hover:text-white" href="/#services">Services</a></li>
-              <li><a className="hover:text-white" href="/#tarifs">Tarifs</a></li>
-              <li><a className="hover:text-white" href="/#zones">Zones couvertes</a></li>
-              <li><a className="hover:text-white" href="/#entreprise">Portail entreprise</a></li>
-              <li><a className="hover:text-white" href="/#avis">Avis & cas</a></li>
-              <li><a className="hover:text-white" href="/#faq">FAQ</a></li>
+          {/* Navigation */}
+          <div>
+            <h3 className="font-semibold mb-4">Navigation</h3>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link to="/" className="text-primary-foreground/80 hover:text-primary-foreground transition-smooth">
+                  Accueil
+                </Link>
+              </li>
+              <li>
+                <Link to="/expertises" className="text-primary-foreground/80 hover:text-primary-foreground transition-smooth">
+                  Expertises
+                </Link>
+              </li>
+              <li>
+                <Link to="/tarifs" className="text-primary-foreground/80 hover:text-primary-foreground transition-smooth">
+                  Tarifs
+                </Link>
+              </li>
+              <li>
+                <Link to="/faq" className="text-primary-foreground/80 hover:text-primary-foreground transition-smooth">
+                  FAQ
+                </Link>
+              </li>
+              <li>
+                <Link to="/contact" className="text-primary-foreground/80 hover:text-primary-foreground transition-smooth">
+                  Contact
+                </Link>
+              </li>
             </ul>
           </div>
 
-          <div className="space-y-4 text-sm">
-            <h4 className="text-base font-semibold">Opérations</h4>
-            <p className="flex items-start gap-2 text-slate-300">
-              <Clock className="mt-1 h-4 w-4" aria-hidden="true" />
-              Dispatch : {{HorairesDispatch}}
-            </p>
-            <p className="text-slate-300">RC Pro &gt; {{RCPro}} · Paiement sécurisé · RGPD</p>
-            <div className="space-y-2 text-slate-300">
-              <p>Réseaux :
-                <span className="ml-2 inline-flex gap-3">
-                  <a className="hover:text-white" href="{{LienLinkedIn}}">LinkedIn</a>
-                  <a className="hover:text-white" href="{{LienInstagram}}">Instagram</a>
-                  <a className="hover:text-white" href="{{LienFacebook}}">Facebook</a>
+          {/* Services */}
+          <div>
+            <h3 className="font-semibold mb-4">Services</h3>
+            <ul className="space-y-2 text-sm text-primary-foreground/80">
+              <li>Livraison médicale</li>
+              <li>Transport optique</li>
+              <li>Coursier juridique</li>
+              <li>B2B Express</li>
+              <li>Événementiel</li>
+            </ul>
+          </div>
+
+          {/* Contact */}
+          <div>
+            <h3 className="font-semibold mb-4">Contact</h3>
+            <ul className="space-y-3 text-sm">
+              <li className="flex items-start gap-2">
+                <Phone className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <a href="tel:+33123456789" className="text-primary-foreground/80 hover:text-primary-foreground transition-smooth">
+                  01 23 45 67 89
+                </a>
+              </li>
+              <li className="flex items-start gap-2">
+                <Mail className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <a href="mailto:contact@oneconnexion.fr" className="text-primary-foreground/80 hover:text-primary-foreground transition-smooth">
+                  contact@oneconnexion.fr
+                </a>
+              </li>
+              <li className="flex items-start gap-2">
+                <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span className="text-primary-foreground/80">
+                  123 Avenue de Paris<br />75001 Paris, France
                 </span>
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-4 text-sm">
-            <h4 className="text-base font-semibold">Ressources</h4>
-            <ul className="space-y-2 text-slate-300">
-              <li><Link className="hover:text-white" to="/mentions-legales">Mentions légales</Link></li>
-              <li><Link className="hover:text-white" to="/cgv">CGV</Link></li>
-              <li><a className="hover:text-white" href="{{LienPolitiqueConfidentialite}}">Politique de confidentialité</a></li>
-              <li><a className="hover:text-white" href="{{LienGestionCookies}}">Gestion des cookies</a></li>
-              <li><a className="hover:text-white" href="{{LienRCPro}}">Attestation RC Pro</a></li>
+              </li>
             </ul>
-            <div className="flex items-center gap-2 text-slate-300">
-              <Share2 className="h-4 w-4" aria-hidden="true" />
-              <span>API & webhooks sécurisés</span>
-            </div>
           </div>
         </div>
 
-        <div className="mt-12 border-t border-slate-800 pt-6 text-sm text-slate-400">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <p>© {currentYear} Service de livraison urbaine Île-de-France. Tous droits réservés.</p>
-            <p>Conformité RGPD · Consentement cookies · Données chiffrées.</p>
+        {/* Bottom Bar */}
+        <div className="pt-8 border-t border-primary-foreground/10">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-primary-foreground/60">
+            <div>
+              © {currentYear} One Connexion. Tous droits réservés.
+            </div>
+            <div className="flex flex-wrap justify-center gap-4">
+              <Link to="/mentions-legales" className="hover:text-primary-foreground transition-smooth">
+                Mentions légales
+              </Link>
+              <Link to="/cgv" className="hover:text-primary-foreground transition-smooth">
+                CGV
+              </Link>
+              <Link to="/cookies" className="hover:text-primary-foreground transition-smooth">
+                Cookies
+              </Link>
+            </div>
           </div>
         </div>
       </div>

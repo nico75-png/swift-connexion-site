@@ -148,17 +148,26 @@ const ClientDashboard = () => {
 
   const formattedNotifications = useMemo(
     () =>
-      notifications.map((notif) => ({
-        id: notif.id,
-        message: notif.message,
-        time: new Intl.DateTimeFormat("fr-FR", {
-          day: "2-digit",
-          month: "long",
-          hour: "2-digit",
-          minute: "2-digit",
-        }).format(new Date(notif.createdAt)),
-        read: notif.read,
-      })),
+      notifications
+        .filter((notif) => notif.createdAt)
+        .map((notif) => {
+          const date = new Date(notif.createdAt);
+          const isValidDate = !isNaN(date.getTime());
+          
+          return {
+            id: notif.id,
+            message: notif.message,
+            time: isValidDate
+              ? new Intl.DateTimeFormat("fr-FR", {
+                  day: "2-digit",
+                  month: "long",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }).format(date)
+              : "Date inconnue",
+            read: notif.read,
+          };
+        }),
     [notifications],
   );
 

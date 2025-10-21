@@ -1,0 +1,31 @@
+<svg width="720" height="480" viewBox="0 0 720 480" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Simulation de commande One Connexion sur smartphone</title>
+  <desc id="desc">Illustration d'un smartphone affichant la page Commander une course avec un aperçu des champs de formulaire et du bouton Valider ma demande.</desc>
+  <rect width="720" height="480" rx="32" fill="#F5F6FA"/>
+  <g filter="url(#shadow)">
+    <rect x="240" y="40" width="240" height="400" rx="36" fill="#0B1B4F"/>
+    <rect x="250" y="60" width="220" height="360" rx="26" fill="#FFFFFF"/>
+    <rect x="320" y="50" width="80" height="6" rx="3" fill="#1F2C5C"/>
+    <circle cx="360" cy="430" r="16" fill="#E8EBF7"/>
+  </g>
+  <text x="360" y="120" text-anchor="middle" font-family="'Inter', 'Helvetica', 'Arial', sans-serif" font-size="20" font-weight="600" fill="#0B1B4F">One Connexion</text>
+  <rect x="270" y="140" width="180" height="24" rx="12" fill="#EFF4FF"/>
+  <text x="360" y="158" text-anchor="middle" font-family="'Inter', 'Helvetica', 'Arial', sans-serif" font-size="14" font-weight="600" fill="#0B1B4F">Commander une course</text>
+  <text x="280" y="190" font-family="'Inter', 'Helvetica', 'Arial', sans-serif" font-size="12" fill="#4F5A8B">Adresse de départ</text>
+  <rect x="270" y="196" width="180" height="32" rx="10" fill="#F4F6FB" stroke="#D6DBF1" stroke-width="1.2"/>
+  <text x="280" y="216" font-family="'Inter', 'Helvetica', 'Arial', sans-serif" font-size="11" fill="#7A84AE">123 Rue de Paris, 75001 Paris</text>
+  <text x="280" y="248" font-family="'Inter', 'Helvetica', 'Arial', sans-serif" font-size="12" fill="#4F5A8B">Adresse d'arrivée</text>
+  <rect x="270" y="254" width="180" height="32" rx="10" fill="#F4F6FB" stroke="#D6DBF1" stroke-width="1.2"/>
+  <text x="280" y="274" font-family="'Inter', 'Helvetica', 'Arial', sans-serif" font-size="11" fill="#7A84AE">45 Avenue Victor Hugo, 92100 Boulogne</text>
+  <rect x="270" y="320" width="180" height="44" rx="12" fill="#FFC24D"/>
+  <text x="360" y="346" text-anchor="middle" font-family="'Inter', 'Helvetica', 'Arial', sans-serif" font-size="14" font-weight="600" fill="#2F2A16">Valider ma demande</text>
+  <defs>
+    <filter id="shadow" x="200" y="20" width="320" height="440" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feGaussianBlur in="BackgroundImageFix" stdDeviation="20"/>
+      <feComposite in2="SourceAlpha" operator="in" result="effect1_backgroundBlur"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_backgroundBlur" result="shape"/>
+      <feDropShadow dx="0" dy="20" stdDeviation="24" flood-color="#0B1B4F" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+</svg>

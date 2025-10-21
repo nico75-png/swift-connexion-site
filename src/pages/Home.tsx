@@ -132,8 +132,8 @@ const Home = () => {
           <img src="https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=2400&q=80" alt="Vue aérienne de Paris au coucher du soleil" className="h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-br from-slate-950/80 via-slate-900/70 to-slate-900/60" />
         </div>
-        <div className="relative z-10 flex w-full max-w-5xl flex-col items-center gap-12 px-6 py-16 text-center md:h-full md:px-12">
-          <div className="max-w-3xl space-y-6 rounded-3xl bg-slate-950/40 p-8 backdrop-blur-sm">
+        <div className="relative z-10 flex w-full max-w-6xl flex-col items-center gap-12 px-6 py-16 text-center md:h-full md:px-12">
+          <div className="w-full space-y-6 rounded-3xl bg-slate-950/40 p-8 backdrop-blur-sm md:p-12">
             <div className="inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-medium uppercase tracking-[0.35em]">
               <span className="h-2 w-2 rounded-full bg-cta shadow-[0_0_12px_theme(colors.amber.400/0.8)]" />
               One Connexion Express
@@ -154,10 +154,10 @@ const Home = () => {
                 <Link to="/tarifs">Voir les tarifs</Link>
               </Button>
             </div>
-            <div className="mx-auto w-full max-w-md space-y-3 text-left text-base text-white/80">
-              {heroHighlights.map(highlight => <div key={highlight} className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-cta" />
-                  <span>{highlight}</span>
+            <div className="mx-auto grid w-full gap-4 text-left text-base text-white/80 sm:grid-cols-2 md:grid-cols-3 md:text-center">
+              {heroHighlights.map(highlight => <div key={highlight} className="flex items-center justify-center gap-3 md:flex-col md:gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-cta md:h-7 md:w-7" />
+                  <span className="max-w-xs md:max-w-none">{highlight}</span>
                 </div>)}
             </div>
           </div>

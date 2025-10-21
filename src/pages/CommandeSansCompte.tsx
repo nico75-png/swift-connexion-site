@@ -95,12 +95,13 @@ const CommandeSansCompte = () => {
   return (
     <Layout>
       {/* Hero */}
-      <section className="gradient-hero text-primary-foreground py-12">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="mb-4">Commander une course</h1>
-          <p className="text-xl text-primary-foreground/90">
-            Remplissez le formulaire ci-dessous pour obtenir une estimation immédiate
-          </p>
+      <section className="py-8">
+        <div className="container mx-auto px-4">
+          <img
+            src="/images/commande-sans-compte-banner.svg"
+            alt="Commander une course - remplissez ce formulaire ci-dessous pour obtenir une estimation immédiate"
+            className="w-full max-w-5xl mx-auto h-auto rounded-2xl shadow-soft"
+          />
         </div>
       </section>
 

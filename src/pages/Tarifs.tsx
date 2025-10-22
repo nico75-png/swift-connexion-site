@@ -1,10 +1,75 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { CheckCircle2, AlertCircle } from "lucide-react";
+import { CheckCircle2, AlertCircle, Check, X } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { Link } from "react-router-dom";
+import { cn } from "@/lib/utils";
+
+type PricingFeature = {
+  label: string;
+  included: boolean;
+};
+
+type PricingPlan = {
+  name: string;
+  price: string;
+  cadence: string;
+  description: string;
+  features: PricingFeature[];
+  buttonLabel: string;
+  badge?: string;
+  highlighted?: boolean;
+};
+
+const pricingPlans: PricingPlan[] = [
+  {
+    name: "Essentiel",
+    price: "0€",
+    cadence: "/mois",
+    description: "Pour les auto-entrepreneurs et petites structures",
+    features: [
+      { label: "Livraison express", included: true },
+      { label: "Suivi en temps réel", included: true },
+      { label: "1 utilisateur", included: true },
+      { label: "Support prioritaire", included: false },
+      { label: "Personnalisation avancée", included: false },
+    ],
+    buttonLabel: "Commencer gratuitement",
+  },
+  {
+    name: "Pro",
+    price: "29€",
+    cadence: "/mois",
+    description: "Pour les PME avec besoins réguliers",
+    features: [
+      { label: "Livraison express", included: true },
+      { label: "Suivi en temps réel", included: true },
+      { label: "Jusqu’à 10 utilisateurs", included: true },
+      { label: "Support prioritaire", included: true },
+      { label: "Personnalisation avancée", included: false },
+    ],
+    buttonLabel: "Choisir le plan Pro",
+    badge: "Le plus populaire",
+    highlighted: true,
+  },
+  {
+    name: "Entreprise",
+    price: "99€",
+    cadence: "/mois",
+    description: "Pour les grandes entreprises",
+    features: [
+      { label: "Livraison express", included: true },
+      { label: "Suivi en temps réel", included: true },
+      { label: "Utilisateurs illimités", included: true },
+      { label: "Support premium", included: true },
+      { label: "Personnalisation avancée", included: true },
+    ],
+    buttonLabel: "Nous contacter",
+  },
+];
 
 const Tarifs = () => {
   const [estimatedPrice, setEstimatedPrice] = useState<{
@@ -104,6 +169,86 @@ const Tarifs = () => {
           <p className="text-xl max-w-3xl mx-auto text-primary-foreground/90">
             Des formules simples, calculées au kilomètre avec suivi GPS et assurance inclus.
           </p>
+        </div>
+      </section>
+
+      {/* Pricing plans */}
+      <section className="relative overflow-hidden bg-[#090f23] py-20 text-white">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-32 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-emerald-500/30 blur-3xl" />
+          <div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-indigo-500/20 blur-3xl" />
+          <div className="absolute bottom-0 right-0 h-64 w-64 rounded-full bg-sky-500/20 blur-3xl" />
+        </div>
+        <div className="container relative z-10 mx-auto px-4">
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="text-3xl font-semibold sm:text-4xl">Des formules adaptées à chaque étape</h2>
+            <p className="mt-4 text-base text-slate-300 sm:text-lg">
+              Choisissez le plan qui correspond à vos besoins et bénéficiez d’un accompagnement premium sur vos livraisons.
+            </p>
+          </div>
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            {pricingPlans.map((plan) => (
+              <div
+                key={plan.name}
+                className={cn(
+                  "relative flex h-full flex-col rounded-3xl border border-white/10 bg-white/5 p-[1px] shadow-[0_25px_50px_-12px_rgba(15,23,42,0.65)] backdrop-blur",
+                  plan.highlighted
+                    ? "bg-gradient-to-br from-emerald-500 via-emerald-400 to-emerald-600 shadow-[0_40px_80px_-24px_rgba(16,185,129,0.55)]"
+                    : ""
+                )}
+              >
+                <div
+                  className={cn(
+                    "flex h-full flex-col rounded-[calc(1.5rem-2px)] bg-[#0d152f]/95 p-8",
+                    plan.highlighted ? "ring-2 ring-emerald-400" : ""
+                  )}
+                >
+                  {plan.badge && (
+                    <Badge className="absolute -top-5 left-1/2 -translate-x-1/2 rounded-full bg-emerald-400 px-4 py-1 text-xs font-semibold uppercase tracking-widest text-emerald-950 shadow-lg">
+                      {plan.badge}
+                    </Badge>
+                  )}
+                  <div>
+                    <h3 className="text-2xl font-semibold text-white">{plan.name}</h3>
+                    <p className="mt-2 text-sm text-slate-300">{plan.description}</p>
+                  </div>
+                  <div className="mt-8 flex items-baseline gap-2 text-white">
+                    <span className="text-5xl font-bold">{plan.price}</span>
+                    <span className="text-sm text-slate-400">{plan.cadence}</span>
+                  </div>
+                  <ul className="mt-8 space-y-4 text-sm">
+                    {plan.features.map((feature) => (
+                      <li key={feature.label} className="flex items-start gap-3">
+                        <span
+                          className={cn(
+                            "flex h-7 w-7 items-center justify-center rounded-full border",
+                            feature.included
+                              ? "border-emerald-400 bg-emerald-400/20 text-emerald-300"
+                              : "border-white/10 bg-white/5 text-slate-500"
+                          )}
+                        >
+                          {feature.included ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                        </span>
+                        <span className={feature.included ? "text-slate-200" : "text-slate-500"}>{feature.label}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-10">
+                    <Button
+                      className={cn(
+                        "w-full rounded-full py-6 text-base font-semibold",
+                        plan.highlighted
+                          ? "bg-white text-emerald-600 hover:bg-slate-100"
+                          : "bg-white/10 text-white hover:bg-white/20"
+                      )}
+                    >
+                      {plan.buttonLabel}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

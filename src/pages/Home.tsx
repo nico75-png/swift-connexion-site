@@ -1,7 +1,9 @@
 import Layout from "@/components/layout/Layout";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { Zap, Lock, Eye, Heart, FileText, ArrowRight, Check, Star, X } from "lucide-react";
 
 const benefits = [
@@ -191,60 +193,62 @@ const Home = () => {
         </div>
       </section>
 
-      <section className="relative overflow-hidden bg-slate-950 py-24">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.25),_transparent_55%)]" />
-        <div className="relative z-10 mx-auto max-w-6xl px-4 text-white">
-          <div className="mx-auto mb-14 max-w-3xl text-center">
-            <h2 className="text-4xl font-bold md:text-5xl">Des formules adaptées à chaque étape</h2>
-            <p className="mt-4 text-lg text-slate-300 md:text-xl">
+      <section className="bg-white py-20">
+        <div className="container mx-auto px-4">
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="text-center">Des formules adaptées à chaque étape</h2>
+            <p className="mt-4 text-base text-muted-foreground sm:text-lg">
               Choisissez le plan qui correspond à vos besoins et bénéficiez d’un accompagnement premium sur vos livraisons.
             </p>
           </div>
-          <div className="grid gap-8 md:grid-cols-3">
+          <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {subscriptionPlans.map((plan) => (
-              <div
+              <Card
                 key={plan.title}
-                className={`relative flex h-full flex-col rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900/80 to-slate-950/80 p-8 shadow-[0_25px_50px_-12px_rgba(15,23,42,0.8)] transition duration-300 hover:-translate-y-2 hover:shadow-[0_35px_60px_-15px_rgba(59,130,246,0.45)] ${
-                  plan.featured ? "border-blue-400/60 ring-2 ring-blue-500/40 shadow-[0_35px_60px_-15px_rgba(59,130,246,0.75)]" : ""
-                }`}
+                className={cn(
+                  "relative flex h-full flex-col rounded-[var(--radius)] border border-border bg-card shadow-soft transition-smooth hover:-translate-y-1 hover:shadow-medium",
+                  plan.featured && "border-primary ring-2 ring-primary/25 hover:shadow-large"
+                )}
               >
                 {plan.badge && (
-                  <div className="absolute right-6 top-6 inline-flex items-center rounded-full bg-blue-500 px-4 py-1 text-sm font-semibold text-white">
+                  <Badge className="absolute -top-4 left-1/2 -translate-x-1/2 border border-primary bg-primary/10 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-primary shadow-soft">
                     {plan.badge}
-                  </div>
+                  </Badge>
                 )}
-                <div className="mb-6 flex items-center justify-between">
-                  <h3 className="text-2xl font-semibold md:text-3xl">{plan.title}</h3>
-                  <span className="text-lg font-medium text-slate-400">{plan.price}</span>
-                </div>
-                <p className="mb-8 text-slate-300">{plan.description}</p>
-                <div className="flex flex-1 flex-col">
+                <CardHeader className="space-y-4 pb-0">
+                  <div className="flex items-start justify-between gap-4">
+                    <CardTitle className="text-2xl font-semibold text-foreground">{plan.title}</CardTitle>
+                    <span className="text-sm font-semibold text-primary md:text-base">{plan.price}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground md:text-base">{plan.description}</p>
+                </CardHeader>
+                <CardContent className="flex flex-1 flex-col gap-6">
                   <ul className="space-y-3 text-sm md:text-base">
                     {plan.features.map((feature) => (
                       <li key={feature.label} className="flex items-start gap-3">
                         {feature.included ? (
-                          <Check className="mt-0.5 h-5 w-5 flex-none text-emerald-400" />
+                          <Check className="mt-1 h-4 w-4 flex-none text-success" />
                         ) : (
-                          <X className="mt-0.5 h-5 w-5 flex-none text-rose-400" />
+                          <X className="mt-1 h-4 w-4 flex-none text-destructive" />
                         )}
-                        <span className={`leading-relaxed ${feature.included ? "text-slate-100" : "text-slate-500"}`}>
+                        <span
+                          className={cn(
+                            "leading-relaxed",
+                            feature.included ? "text-foreground" : "text-muted-foreground"
+                          )}
+                        >
                           {feature.label}
                         </span>
                       </li>
                     ))}
                   </ul>
-                  <Link
-                    to={plan.ctaLink}
-                    className={`mt-10 inline-flex items-center justify-center rounded-full px-6 py-3 text-center text-sm font-semibold transition md:text-base ${
-                      plan.featured
-                        ? "bg-blue-500 text-white shadow-lg shadow-blue-500/30 hover:bg-blue-400"
-                        : "bg-white/10 text-white hover:bg-white/20"
-                    }`}
-                  >
-                    {plan.ctaLabel}
-                  </Link>
-                </div>
-              </div>
+                </CardContent>
+                <CardFooter className="pt-0">
+                  <Button asChild size="lg" className="w-full">
+                    <Link to={plan.ctaLink}>{plan.ctaLabel}</Link>
+                  </Button>
+                </CardFooter>
+              </Card>
             ))}
           </div>
         </div>

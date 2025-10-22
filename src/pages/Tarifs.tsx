@@ -1,11 +1,10 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { CheckCircle2, AlertCircle, Check, X } from "lucide-react";
+import { CheckCircle2, Check, X } from "lucide-react";
 import Layout from "@/components/layout/Layout";
-import { Link } from "react-router-dom";
+import FareEstimatorSection from "@/components/pricing/FareEstimatorSection";
 import { cn } from "@/lib/utils";
 
 type PricingFeature = {
@@ -69,30 +68,6 @@ const pricingPlans: PricingPlan[] = [
 ];
 
 const Tarifs = () => {
-  const [estimatedPrice, setEstimatedPrice] = useState<{
-    base: number;
-    distance: number;
-    options: number;
-    total: number;
-  } | null>(null);
-
-  const handleFullEstimate = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const simulatedDistance = 15;
-    const service = services[0];
-    const basePrice = service.base;
-    const distancePrice = calculatePrice(simulatedDistance, service.base, service.pricePerKm) - basePrice;
-    const optionsPrice = 0;
-    const total = basePrice + distancePrice + optionsPrice;
-
-    setEstimatedPrice({
-      base: basePrice,
-      distance: distancePrice,
-      options: optionsPrice,
-      total: Math.round(total * 100) / 100,
-    });
-  };
 
   const zones = [
     {
@@ -313,141 +288,8 @@ const Tarifs = () => {
         </div>
       </section>
 
-      {/* Simulateur complet */}
-      <section className="py-16 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-center mb-12">Simulateur de tarif complet</h2>
-            <Card className="border-none shadow-large">
-              <CardContent className="p-8">
-                <form onSubmit={handleFullEstimate} className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Type de transport</label>
-                      <select className="w-full h-11 px-4 rounded-lg border border-input bg-background">
-                        <option>Document (enveloppe)</option>
-                        <option>Colis léger (&lt;5kg)</option>
-                        <option>Colis moyen (5-20kg)</option>
-                        <option>Colis volumineux (&gt;20kg)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Secteur d'activité</label>
-                      <select className="w-full h-11 px-4 rounded-lg border border-input bg-background">
-                        <option>Général</option>
-                        <option>Médical / Santé</option>
-                        <option>Optique</option>
-                        <option>Juridique</option>
-                        <option>Événementiel</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Départ (ville ou CP)</label>
-                      <input
-                        type="text"
-                        placeholder="ex: Paris 75001"
-                        className="w-full h-11 px-4 rounded-lg border border-input bg-background"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Arrivée (ville ou CP)</label>
-                      <input
-                        type="text"
-                        placeholder="ex: Boulogne 92100"
-                        className="w-full h-11 px-4 rounded-lg border border-input bg-background"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid md:grid-cols-3 gap-6">
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Poids estimé (kg)</label>
-                      <input
-                        type="number"
-                        placeholder="5"
-                        className="w-full h-11 px-4 rounded-lg border border-input bg-background"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Volume (cm³)</label>
-                      <input
-                        type="text"
-                        placeholder="30x30x30"
-                        className="w-full h-11 px-4 rounded-lg border border-input bg-background"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Créneau</label>
-                      <select className="w-full h-11 px-4 rounded-lg border border-input bg-background">
-                        <option>Aujourd'hui</option>
-                        <option>Demain</option>
-                        <option>Date ultérieure</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium block">Options</label>
-                    <div className="flex items-center gap-2">
-                      <input type="checkbox" id="express" className="h-4 w-4" />
-                      <label htmlFor="express" className="text-sm">Livraison express (+30%)</label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input type="checkbox" id="fragile" className="h-4 w-4" />
-                      <label htmlFor="fragile" className="text-sm">Colis fragile (+15%)</label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input type="checkbox" id="attente" className="h-4 w-4" />
-                      <label htmlFor="attente" className="text-sm">Attente sur place (+10 €/15 min)</label>
-                    </div>
-                  </div>
-
-                  <Button type="submit" variant="cta" size="lg" className="w-full">
-                    Calculer le tarif détaillé
-                  </Button>
-
-                  {estimatedPrice && (
-                    <div className="mt-6 p-6 bg-primary/5 rounded-xl border-2 border-primary/20 animate-scale-in">
-                      <h3 className="text-xl font-semibold mb-4">Détail du tarif</h3>
-                      <div className="space-y-2 mb-4">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Tarif de base (service Standard)</span>
-                          <span className="font-medium">{formatPrice(estimatedPrice.base)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Distance (15 km)</span>
-                          <span className="font-medium">{formatPrice(estimatedPrice.distance)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Options</span>
-                          <span className="font-medium">{formatPrice(estimatedPrice.options)}</span>
-                        </div>
-                        <div className="h-px bg-border my-2" />
-                        <div className="flex justify-between">
-                          <span className="font-semibold text-lg">Total estimé</span>
-                          <span className="font-bold text-2xl text-primary">{formatPrice(estimatedPrice.total)}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2 p-3 bg-info/10 rounded-lg">
-                        <AlertCircle className="h-5 w-5 text-info flex-shrink-0 mt-0.5" />
-                        <p className="text-sm text-muted-foreground">
-                          Tarif indicatif basé sur une estimation de distance. Le tarif définitif sera calculé lors de la commande.
-                        </p>
-                      </div>
-                      <Button variant="cta" size="lg" className="w-full mt-4" asChild>
-                        <Link to="/commande-sans-compte">Commander maintenant</Link>
-                      </Button>
-                    </div>
-                  )}
-                </form>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
+      {/* Estimation express */}
+      <FareEstimatorSection />
 
       {/* FAQ Tarifs */}
       <section className="py-16">

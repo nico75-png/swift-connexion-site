@@ -43,48 +43,6 @@ const expertises = [
   }
 ];
 
-const pricing = [
-  {
-    title: "Standard",
-    description: "Pour vos livraisons programmées du quotidien.",
-    price: "€20 forfait 0 à 10 km",
-    features: [
-      "20 € pour la tranche 0 à 10 km",
-      "1,50 € par kilomètre supplémentaire",
-      "Délai maximum de 3 heures",
-      "Assurance colis et suivi en temps réel"
-    ],
-    link: "/commande-sans-compte"
-  },
-  {
-    title: "Express",
-    description: "La solution rapide pour vos urgences professionnelles.",
-    badge: "Populaire",
-    price: "€26 forfait 0 à 10 km",
-    intro: "Idéal quand chaque minute compte :",
-    features: [
-      "26 € pour la tranche 0 à 10 km",
-      "1,70 € par kilomètre supplémentaire",
-      "Délai garanti sous 2 heures",
-      "Support prioritaire dédié"
-    ],
-    link: "/commande-sans-compte"
-  },
-  {
-    title: "Flash Express",
-    description: "Notre service le plus rapide pour les livraisons critiques.",
-    price: "€32 forfait 0 à 10 km",
-    intro: "Performance maximale :",
-    features: [
-      "32 € pour la tranche 0 à 10 km",
-      "2,00 € par kilomètre supplémentaire",
-      "Délai record de 45 minutes",
-      "Coursier dédié et suivi premium"
-    ],
-    link: "/commande-sans-compte"
-  }
-];
-
 const subscriptionPlans = [
   {
     title: "Essentiel",
@@ -168,13 +126,13 @@ const Home = () => {
           <p className="max-w-2xl text-lg text-white/90">
             Service professionnel 24/7 pour vos colis urgents. Tarifs transparents, suivi en temps réel et prise en charge immédiate par nos coursiers dédiés.
           </p>
-          <div className="flex flex-col gap-4 sm:flex-row">
-            <a
-              href="#tarifs"
-              className="rounded-lg bg-blue-600 px-8 py-4 font-semibold text-white transition-transform duration-300 hover:scale-105 hover:bg-blue-700"
-            >
-              Voir nos tarifs
-            </a>
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <Link
+                to="/tarifs"
+                className="rounded-lg bg-blue-600 px-8 py-4 font-semibold text-white transition-transform duration-300 hover:scale-105 hover:bg-blue-700"
+              >
+                Voir nos tarifs
+              </Link>
             <Link
               to="/commande-sans-compte"
               className="rounded-lg border-2 border-white px-8 py-4 font-semibold text-white transition duration-300 hover:bg-white hover:text-blue-600"
@@ -289,53 +247,6 @@ const Home = () => {
                     {plan.ctaLabel}
                   </Link>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="tarifs" className="bg-gray-50 py-20">
-        <div className="container mx-auto px-4">
-          <h2 className="mb-4 text-center text-4xl font-bold">Des tarifs clairs, sans devis obligatoire</h2>
-          <p className="mx-auto mb-16 max-w-3xl text-center text-xl text-gray-600">
-            Tarification transparente basée sur la zone de livraison
-          </p>
-          <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-3">
-            {pricing.map((plan) => (
-              <div
-                key={plan.title}
-                className={`relative rounded-2xl bg-white p-8 shadow-lg transition duration-300 hover:-translate-y-2 hover:shadow-xl ${
-                  plan.badge ? "border-2 border-blue-500 shadow-xl" : ""
-                }`}
-              >
-                {plan.badge && (
-                  <div className="absolute right-0 top-0 rounded-bl-2xl rounded-tr-2xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white">
-                    {plan.badge}
-                  </div>
-                )}
-                <h3 className="text-2xl font-bold">{plan.title}</h3>
-                <p className="mb-6 text-gray-600">{plan.description}</p>
-                <div className="mb-6 text-3xl font-bold text-blue-600">{plan.price}</div>
-                {plan.intro && <p className="mb-4 text-gray-600">{plan.intro}</p>}
-                <ul className="mb-8 space-y-2 text-gray-600">
-                  {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-center gap-3">
-                      <Check className="h-4 w-4 text-green-500" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  to={plan.link}
-                  className={`block rounded-lg px-6 py-3 text-center font-semibold transition ${
-                    plan.badge
-                      ? "bg-blue-600 text-white hover:bg-blue-700"
-                      : "bg-gray-700 text-white hover:bg-gray-800"
-                  }`}
-                >
-                  Choisir ce plan
-                </Link>
               </div>
             ))}
           </div>

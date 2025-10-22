@@ -45,47 +45,44 @@ const expertises = [
 
 const subscriptionPlans = [
   {
-    title: "Essentiel",
-    price: "0€/mois",
-    description: "Pour les auto-entrepreneurs et petites structures",
+    title: "Standard",
+    price: "20 € forfait 0 à 10 km",
+    description: "Pour vos livraisons programmées du quotidien",
     features: [
-      { label: "Livraison express", included: true },
-      { label: "Suivi en temps réel", included: true },
-      { label: "1 utilisateur", included: true },
-      { label: "Support prioritaire", included: false },
-      { label: "Personnalisation avancée", included: false }
+      { label: "20 € pour la tranche 0 à 10 km", included: true },
+      { label: "1,50 € par kilomètre supplémentaire", included: true },
+      { label: "Délai maximum de 3 heures", included: true },
+      { label: "Assurance colis et suivi en temps réel", included: true }
     ],
-    ctaLabel: "Commencer gratuitement",
-    ctaLink: "/inscription"
+    ctaLabel: "Choisir ce plan",
+    ctaLink: "/contact"
   },
   {
-    title: "Pro",
-    price: "29€/mois",
-    description: "Pour les PME avec besoins réguliers",
+    title: "Express",
+    price: "26 € forfait 0 à 10 km",
+    description: "La solution rapide pour vos urgences professionnelles",
     features: [
-      { label: "Livraison express", included: true },
-      { label: "Suivi en temps réel", included: true },
-      { label: "Jusqu’à 10 utilisateurs", included: true },
-      { label: "Support prioritaire", included: true },
-      { label: "Personnalisation avancée", included: false }
+      { label: "26 € pour la tranche 0 à 10 km", included: true },
+      { label: "1,70 € par kilomètre supplémentaire", included: true },
+      { label: "Délai garanti sous 2 heures", included: true },
+      { label: "Support prioritaire dédié", included: true }
     ],
-    ctaLabel: "Choisir le plan Pro",
+    ctaLabel: "Choisir ce plan",
     ctaLink: "/contact",
-    badge: "Le plus populaire",
+    badge: "Populaire",
     featured: true
   },
   {
-    title: "Entreprise",
-    price: "99€/mois",
-    description: "Pour les grandes entreprises",
+    title: "Flash Express",
+    price: "32 € forfait 0 à 10 km",
+    description: "Notre service le plus rapide pour les livraisons critiques",
     features: [
-      { label: "Livraison express", included: true },
-      { label: "Suivi en temps réel", included: true },
-      { label: "Utilisateurs illimités", included: true },
-      { label: "Support premium", included: true },
-      { label: "Personnalisation avancée", included: true }
+      { label: "32 € pour la tranche 0 à 10 km", included: true },
+      { label: "2,00 € par kilomètre supplémentaire", included: true },
+      { label: "Délai record de 45 minutes", included: true },
+      { label: "Coursier dédié et suivi premium", included: true }
     ],
-    ctaLabel: "Nous contacter",
+    ctaLabel: "Choisir ce plan",
     ctaLink: "/contact"
   }
 ];

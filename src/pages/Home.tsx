@@ -2,7 +2,7 @@ import Layout from "@/components/layout/Layout";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Zap, Lock, Eye, Heart, FileText, ArrowRight, Check, Star } from "lucide-react";
+import { Zap, Lock, Eye, Heart, FileText, ArrowRight, Check, Star, X } from "lucide-react";
 
 const benefits = [
   {
@@ -82,6 +82,53 @@ const pricing = [
       "Coursier dédié et suivi premium"
     ],
     link: "/commande-sans-compte"
+  }
+];
+
+const subscriptionPlans = [
+  {
+    title: "Essentiel",
+    price: "0€/mois",
+    description: "Pour les auto-entrepreneurs et petites structures",
+    features: [
+      { label: "Livraison express", included: true },
+      { label: "Suivi en temps réel", included: true },
+      { label: "1 utilisateur", included: true },
+      { label: "Support prioritaire", included: false },
+      { label: "Personnalisation avancée", included: false }
+    ],
+    ctaLabel: "Commencer gratuitement",
+    ctaLink: "/inscription"
+  },
+  {
+    title: "Pro",
+    price: "29€/mois",
+    description: "Pour les PME avec besoins réguliers",
+    features: [
+      { label: "Livraison express", included: true },
+      { label: "Suivi en temps réel", included: true },
+      { label: "Jusqu’à 10 utilisateurs", included: true },
+      { label: "Support prioritaire", included: true },
+      { label: "Personnalisation avancée", included: false }
+    ],
+    ctaLabel: "Choisir le plan Pro",
+    ctaLink: "/contact",
+    badge: "Le plus populaire",
+    featured: true
+  },
+  {
+    title: "Entreprise",
+    price: "99€/mois",
+    description: "Pour les grandes entreprises",
+    features: [
+      { label: "Livraison express", included: true },
+      { label: "Suivi en temps réel", included: true },
+      { label: "Utilisateurs illimités", included: true },
+      { label: "Support premium", included: true },
+      { label: "Personnalisation avancée", included: true }
+    ],
+    ctaLabel: "Nous contacter",
+    ctaLink: "/contact"
   }
 ];
 
@@ -184,6 +231,65 @@ const Home = () => {
                   </Link>
                 </div>
               </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="relative overflow-hidden bg-slate-950 py-24">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.25),_transparent_55%)]" />
+        <div className="relative z-10 mx-auto max-w-6xl px-4 text-white">
+          <div className="mx-auto mb-14 max-w-3xl text-center">
+            <h2 className="text-4xl font-bold md:text-5xl">Des formules adaptées à chaque étape</h2>
+            <p className="mt-4 text-lg text-slate-300 md:text-xl">
+              Choisissez le plan qui correspond à vos besoins et bénéficiez d’un accompagnement premium sur vos livraisons.
+            </p>
+          </div>
+          <div className="grid gap-8 md:grid-cols-3">
+            {subscriptionPlans.map((plan) => (
+              <div
+                key={plan.title}
+                className={`relative flex h-full flex-col rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900/80 to-slate-950/80 p-8 shadow-[0_25px_50px_-12px_rgba(15,23,42,0.8)] transition duration-300 hover:-translate-y-2 hover:shadow-[0_35px_60px_-15px_rgba(59,130,246,0.45)] ${
+                  plan.featured ? "border-blue-400/60 ring-2 ring-blue-500/40 shadow-[0_35px_60px_-15px_rgba(59,130,246,0.75)]" : ""
+                }`}
+              >
+                {plan.badge && (
+                  <div className="absolute right-6 top-6 inline-flex items-center rounded-full bg-blue-500 px-4 py-1 text-sm font-semibold text-white">
+                    {plan.badge}
+                  </div>
+                )}
+                <div className="mb-6 flex items-center justify-between">
+                  <h3 className="text-2xl font-semibold md:text-3xl">{plan.title}</h3>
+                  <span className="text-lg font-medium text-slate-400">{plan.price}</span>
+                </div>
+                <p className="mb-8 text-slate-300">{plan.description}</p>
+                <div className="flex flex-1 flex-col">
+                  <ul className="space-y-3 text-sm md:text-base">
+                    {plan.features.map((feature) => (
+                      <li key={feature.label} className="flex items-start gap-3">
+                        {feature.included ? (
+                          <Check className="mt-0.5 h-5 w-5 flex-none text-emerald-400" />
+                        ) : (
+                          <X className="mt-0.5 h-5 w-5 flex-none text-rose-400" />
+                        )}
+                        <span className={`leading-relaxed ${feature.included ? "text-slate-100" : "text-slate-500"}`}>
+                          {feature.label}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    to={plan.ctaLink}
+                    className={`mt-10 inline-flex items-center justify-center rounded-full px-6 py-3 text-center text-sm font-semibold transition md:text-base ${
+                      plan.featured
+                        ? "bg-blue-500 text-white shadow-lg shadow-blue-500/30 hover:bg-blue-400"
+                        : "bg-white/10 text-white hover:bg-white/20"
+                    }`}
+                  >
+                    {plan.ctaLabel}
+                  </Link>
+                </div>
+              </div>
             ))}
           </div>
         </div>

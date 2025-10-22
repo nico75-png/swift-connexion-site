@@ -10,6 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { Zap, Lock, Eye, Heart, FileText, ArrowRight, Check, Star, X } from "lucide-react";
+import medicalImage from "@/assets/medical-sector.jpg";
+import opticianImage from "@/assets/optician-sector.jpg";
+import lawyerImage from "@/assets/lawyer-sector.jpg";
 type ServiceType = "Standard" | "Express" | "Flash Express";
 const servicePricing: Record<ServiceType, {
   base: number;
@@ -116,17 +119,20 @@ const expertises = [{
   icon: Heart,
   title: "Santé & Médical",
   description: "Transport sécurisé de dispositifs médicaux et échantillons",
-  gradient: "from-blue-500 to-purple-600"
+  gradient: "from-blue-500 to-purple-600",
+  image: medicalImage
 }, {
   icon: Eye,
   title: "Optique",
   description: "Livraison rapide de montures et verres correcteurs",
-  gradient: "from-green-500 to-emerald-600"
+  gradient: "from-green-500 to-emerald-600",
+  image: opticianImage
 }, {
   icon: FileText,
   title: "Juridique",
   description: "Coursier spécialisé pour documents confidentiels",
-  gradient: "from-gray-600 to-gray-800"
+  gradient: "from-gray-600 to-gray-800",
+  image: lawyerImage
 }];
 const subscriptionPlans = [{
   title: "Standard",
@@ -338,8 +344,9 @@ const Home = () => {
           </p>
           <div className="grid gap-8 md:grid-cols-3">
             {expertises.map(expertise => <article key={expertise.title} className="group overflow-hidden rounded-2xl shadow-lg transition duration-500 hover:-translate-y-1 hover:shadow-2xl">
-                <div className={`flex h-48 items-center justify-center bg-gradient-to-br ${expertise.gradient}`}>
-                  <expertise.icon className="h-12 w-12 text-white" />
+                <div className="relative h-48 overflow-hidden">
+                  <img src={expertise.image} alt={expertise.title} className="h-full w-full object-cover transition duration-500 group-hover:scale-110" />
+                  <div className={`absolute inset-0 bg-gradient-to-br ${expertise.gradient} opacity-20`} />
                 </div>
                 <div className="space-y-4 bg-white p-6">
                   <h3 className="text-xl font-bold">{expertise.title}</h3>

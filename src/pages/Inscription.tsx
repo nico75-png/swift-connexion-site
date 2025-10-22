@@ -105,8 +105,7 @@ const Inscription = () => {
       username: "",
       country: "fr",
       phone: "",
-      password: "",
-      acceptTerms: false
+      password: ""
     },
     mode: "onChange"
   });

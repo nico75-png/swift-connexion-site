@@ -1,8 +1,124 @@
+import { type ChangeEvent, type FormEvent, useState } from "react";
 import Layout from "@/components/layout/Layout";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { Zap, Lock, Eye, Heart, FileText, ArrowRight, Check, Star, X } from "lucide-react";
+
+type ServiceType = "Standard" | "Express" | "Flash Express";
+
+const servicePricing: Record<ServiceType, { base: number; perKm: number; delay: string }> = {
+  Standard: {
+    base: 20,
+    perKm: 1.5,
+    delay: "Jusqu'à 3 h"
+  },
+  Express: {
+    base: 26,
+    perKm: 1.7,
+    delay: "Jusqu'à 2 h"
+  },
+  "Flash Express": {
+    base: 32,
+    perKm: 2,
+    delay: "≈ 45 min"
+  }
+};
+
+const PALIER_KM = 10;
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN as string | undefined;
+const hasMapboxToken = Boolean(MAPBOX_TOKEN);
+
+const FRENCH_HOLIDAYS = [
+  "01-01",
+  "04-01",
+  "05-01",
+  "05-08",
+  "05-09",
+  "07-14",
+  "08-15",
+  "11-01",
+  "11-11",
+  "12-25"
+];
+
+const roundToNearestHalf = (value: number) => Math.round(value * 2) / 2;
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 2 }).format(value);
+
+const isNightTime = (time: string) => {
+  if (!time) return false;
+  const [hours, minutes] = time.split(":").map(Number);
+  if (Number.isNaN(hours) || Number.isNaN(minutes ?? 0)) return false;
+  const decimalHour = hours + (minutes ?? 0) / 60;
+  return decimalHour >= 20 || decimalHour < 6;
+};
+
+const isSundayOrHoliday = (date: string) => {
+  if (!date) return false;
+  const [year, month, day] = date.split("-").map(Number);
+  if (!year || !month || !day) return false;
+  const checkDate = new Date(year, month - 1, day);
+  const isSunday = checkDate.getDay() === 0;
+  const monthDay = `${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  return isSunday || FRENCH_HOLIDAYS.includes(monthDay);
+};
+
+const geocodeAddress = async (address: string): Promise<[number, number] | null> => {
+  if (!MAPBOX_TOKEN) return null;
+  const response = await fetch(
+    `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${MAPBOX_TOKEN}&language=fr&autocomplete=true&limit=1`
+  );
+  if (!response.ok) return null;
+  const data = await response.json();
+  const [longitude, latitude] = data.features?.[0]?.center ?? [];
+  if (typeof longitude !== "number" || typeof latitude !== "number") {
+    return null;
+  }
+  return [longitude, latitude];
+};
+
+const getDistanceFromMapbox = async (origin: string, destination: string): Promise<number | null> => {
+  if (!MAPBOX_TOKEN) return null;
+  const [originCoords, destinationCoords] = await Promise.all([geocodeAddress(origin), geocodeAddress(destination)]);
+  if (!originCoords || !destinationCoords) {
+    return null;
+  }
+  const response = await fetch(
+    `https://api.mapbox.com/directions/v5/mapbox/driving/${originCoords[0]},${originCoords[1]};${destinationCoords[0]},${destinationCoords[1]}?overview=false&access_token=${MAPBOX_TOKEN}`
+  );
+  if (!response.ok) return null;
+  const data = await response.json();
+  const distanceMeters = data.routes?.[0]?.distance;
+  if (typeof distanceMeters !== "number") {
+    return null;
+  }
+  return distanceMeters / 1000;
+};
+
+type EstimateResult = {
+  total: number;
+  totalBeforeRound: number;
+  distance: number;
+  service: ServiceType;
+  baseAmount: number;
+  extraAmount: number;
+  extraKm: number;
+  majorations: { label: string; amount: number }[];
+  isNight: boolean;
+  isSundayOrHoliday: boolean;
+};
 
 const benefits = [
   {
@@ -106,6 +222,103 @@ const testimonials = [
 ];
 
 const Home = () => {
+  const [formValues, setFormValues] = useState({
+    pickupAddress: "",
+    dropoffAddress: "",
+    pickupDate: "",
+    pickupTime: "",
+    service: "Standard" as ServiceType
+  });
+  const [manualDistance, setManualDistance] = useState(8);
+  const [isCalculating, setIsCalculating] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [estimate, setEstimate] = useState<EstimateResult | null>(null);
+
+  const computeEstimate = (distanceKm: number, service: ServiceType, pickupDate: string, pickupTime: string): EstimateResult => {
+    const pricing = servicePricing[service];
+    const extraKm = Math.max(0, distanceKm - PALIER_KM);
+    const baseAmount = pricing.base;
+    const extraAmount = extraKm * pricing.perKm;
+    let runningTotal = baseAmount + extraAmount;
+    const majorations: { label: string; amount: number }[] = [];
+
+    const night = isNightTime(pickupTime);
+    const sundayOrHoliday = isSundayOrHoliday(pickupDate);
+
+    if (night) {
+      const nightAddition = runningTotal * 0.2;
+      majorations.push({ label: "Majoration nuit (+20%)", amount: nightAddition });
+      runningTotal += nightAddition;
+    }
+
+    if (sundayOrHoliday) {
+      const holidayAddition = runningTotal * 0.25;
+      majorations.push({ label: "Majoration dimanche ou jour férié (+25%)", amount: holidayAddition });
+      runningTotal += holidayAddition;
+    }
+
+    const total = roundToNearestHalf(runningTotal);
+
+    return {
+      total,
+      totalBeforeRound: runningTotal,
+      distance: distanceKm,
+      service,
+      baseAmount,
+      extraAmount,
+      extraKm,
+      majorations,
+      isNight: night,
+      isSundayOrHoliday: sundayOrHoliday
+    };
+  };
+
+  const handleFormChange = (field: keyof typeof formValues) =>
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      setFormValues((prev) => ({ ...prev, [field]: value }));
+    };
+
+  const handleEstimate = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsCalculating(true);
+    setErrorMessage(null);
+
+    try {
+      let distanceKm: number | null = null;
+
+      if (hasMapboxToken && formValues.pickupAddress && formValues.dropoffAddress) {
+        distanceKm = await getDistanceFromMapbox(formValues.pickupAddress, formValues.dropoffAddress);
+      }
+
+      if (!hasMapboxToken) {
+        distanceKm = manualDistance;
+      }
+
+      if ((distanceKm === null || Number.isNaN(distanceKm)) && !manualDistance) {
+        setErrorMessage("Définissez une distance estimée pour calculer le tarif.");
+        setEstimate(null);
+        return;
+      }
+
+      if (distanceKm === null || Number.isNaN(distanceKm)) {
+        setErrorMessage(
+          "Impossible de récupérer la distance. Vérifiez vos adresses ou ajustez vos informations, puis réessayez."
+        );
+        setEstimate(null);
+        return;
+      }
+
+      const estimation = computeEstimate(distanceKm, formValues.service, formValues.pickupDate, formValues.pickupTime);
+      setEstimate(estimation);
+    } catch (error) {
+      setErrorMessage("Une erreur est survenue lors du calcul de l'estimation. Merci de réessayer.");
+      setEstimate(null);
+    } finally {
+      setIsCalculating(false);
+    }
+  };
+
   return (
     <Layout>
       <section className="relative flex min-h-[calc(100vh-5rem)] items-center justify-center overflow-hidden bg-gray-950 text-white">
@@ -250,36 +463,225 @@ const Home = () => {
         </div>
       </section>
 
-      <section className="bg-gradient-to-r from-blue-600 to-purple-700 py-20 text-white">
+      <section className="bg-slate-50 py-20">
         <div className="container mx-auto px-4">
-          <h2 className="mb-12 text-center text-4xl font-bold">Estimez votre tarif en quelques clics</h2>
-          <div className="mx-auto max-w-md rounded-2xl bg-white p-8 text-gray-800 shadow-2xl">
-            <form className="space-y-6">
-              <div>
-                <label className="mb-3 block font-semibold text-gray-700">Type de transport</label>
-                <select className="w-full rounded-lg border border-gray-300 p-3 text-gray-700">
-                  <option>Standard</option>
-                  <option>Express</option>
-                  <option>Flash Express</option>
-                </select>
-              </div>
-              <div>
-                <label className="mb-3 block font-semibold text-gray-700">Zone</label>
-                <select className="w-full rounded-lg border border-gray-300 p-3 text-gray-700">
-                  <option>Paris Intra-muros</option>
-                  <option>Petite Couronne</option>
-                  <option>Grande Couronne</option>
-                </select>
-              </div>
-              <label className="flex items-center text-gray-700">
-                <input type="checkbox" className="mr-3 rounded" />
-                Livraison express (+30%)
-              </label>
-              <Button className="w-full bg-blue-600 text-white hover:bg-blue-700" type="button">
-                Calculer le tarif
-              </Button>
-            </form>
+          <div className="mx-auto mb-12 max-w-2xl text-center">
+            <h2 className="text-4xl font-bold">Estimez votre tarif en quelques clics</h2>
+            <p className="mt-4 text-lg text-gray-600">
+              Renseignez votre trajet et obtenez une estimation instantanée basée sur notre grille tarifaire officielle.
+            </p>
           </div>
+          <div className="grid gap-8 lg:grid-cols-2">
+            <Card className="order-2 rounded-3xl border-transparent bg-white shadow-xl lg:order-1">
+              <CardHeader className="border-b border-slate-100 pb-6">
+                <CardTitle className="text-2xl font-semibold text-slate-900">Récapitulatif de votre course</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {estimate ? (
+                  <div className="space-y-6">
+                    <div className="rounded-2xl bg-blue-50 p-6 text-center">
+                      <p className="text-sm font-medium uppercase text-blue-600">Estimation TTC</p>
+                      <p className="mt-2 text-4xl font-bold text-slate-900">{formatCurrency(estimate.total)}</p>
+                      <p className="mt-1 text-sm text-slate-500">(Arrondi au 0,50 € le plus proche)</p>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="flex items-start gap-3 rounded-2xl border border-slate-100 p-4">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                          <Check className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-500">Distance estimée</p>
+                          <p className="text-lg font-semibold text-slate-900">{estimate.distance.toFixed(1)} km</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 rounded-2xl border border-slate-100 p-4">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                          <Check className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-500">Service choisi</p>
+                          <p className="text-lg font-semibold text-slate-900">{estimate.service}</p>
+                          <p className="text-sm text-slate-500">Délai estimé : {servicePricing[estimate.service].delay}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-100 p-6">
+                      <h3 className="text-lg font-semibold text-slate-900">Détails du calcul</h3>
+                      <ul className="mt-4 space-y-3 text-sm text-slate-600">
+                        <li className="flex items-center justify-between">
+                          <span>Base forfaitaire ({PALIER_KM} km inclus)</span>
+                          <span className="font-semibold text-slate-900">{formatCurrency(estimate.baseAmount)}</span>
+                        </li>
+                        <li className="flex items-center justify-between">
+                          <span>
+                            Kilomètres supplémentaires ({estimate.extraKm.toFixed(1)} km × {formatCurrency(servicePricing[estimate.service].perKm)} / km)
+                          </span>
+                          <span className="font-semibold text-slate-900">{formatCurrency(estimate.extraAmount)}</span>
+                        </li>
+                        {estimate.majorations.map((majoration) => (
+                          <li key={majoration.label} className="flex items-center justify-between">
+                            <span>{majoration.label}</span>
+                            <span className="font-semibold text-slate-900">{formatCurrency(majoration.amount)}</span>
+                          </li>
+                        ))}
+                        <li className="flex items-center justify-between border-t border-slate-200 pt-3 text-base font-semibold text-slate-900">
+                          <span>Total avant arrondi</span>
+                          <span>{formatCurrency(estimate.totalBeforeRound)}</span>
+                        </li>
+                        <li className="flex items-center justify-between text-base font-semibold text-blue-600">
+                          <span>Total TTC</span>
+                          <span>{formatCurrency(estimate.total)}</span>
+                        </li>
+                      </ul>
+                    </div>
+
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <Button className="flex-1" asChild>
+                        <Link to="/commande-sans-compte">Commander cette course</Link>
+                      </Button>
+                      <Button className="flex-1" variant="outline" asChild>
+                        <Link to="/contact">Parler à un conseiller</Link>
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="rounded-2xl bg-slate-100 p-6 text-center text-slate-600">
+                      <p className="text-lg font-semibold text-slate-700">Préparez votre estimation</p>
+                      <p className="mt-2 text-sm">
+                        Complétez le formulaire pour afficher une estimation personnalisée selon votre itinéraire et le service choisi.
+                      </p>
+                    </div>
+                    <ul className="space-y-3 text-sm text-slate-600">
+                      <li className="flex items-center gap-3">
+                        <Check className="h-5 w-5 text-blue-600" />
+                        Base forfaitaire incluse sur les 10 premiers kilomètres.
+                      </li>
+                      <li className="flex items-center gap-3">
+                        <Check className="h-5 w-5 text-blue-600" />
+                        Majoration automatique selon l'heure et les jours fériés.
+                      </li>
+                      <li className="flex items-center gap-3">
+                        <Check className="h-5 w-5 text-blue-600" />
+                        Délai estimé en fonction du service sélectionné.
+                      </li>
+                    </ul>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="order-1 rounded-3xl border-transparent bg-white shadow-xl lg:order-2">
+              <CardHeader className="border-b border-slate-100 pb-6">
+                <CardTitle className="text-2xl font-semibold text-slate-900">Renseignez votre trajet</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <form className="space-y-6" onSubmit={handleEstimate}>
+                  <div className="space-y-2">
+                    <Label htmlFor="pickup-address" className="text-sm font-semibold text-slate-700">
+                      Adresse d’enlèvement
+                    </Label>
+                    <Input
+                      id="pickup-address"
+                      placeholder="Ex. 10 rue de Rivoli, Paris"
+                      autoComplete="street-address"
+                      value={formValues.pickupAddress}
+                      onChange={handleFormChange("pickupAddress")}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dropoff-address" className="text-sm font-semibold text-slate-700">
+                      Adresse de destination
+                    </Label>
+                    <Input
+                      id="dropoff-address"
+                      placeholder="Ex. 25 avenue Victor Hugo, Paris"
+                      autoComplete="street-address"
+                      value={formValues.dropoffAddress}
+                      onChange={handleFormChange("dropoffAddress")}
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="pickup-date" className="text-sm font-semibold text-slate-700">
+                        Date d’enlèvement
+                      </Label>
+                      <Input
+                        id="pickup-date"
+                        type="date"
+                        value={formValues.pickupDate}
+                        onChange={handleFormChange("pickupDate")}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pickup-time" className="text-sm font-semibold text-slate-700">
+                        Heure souhaitée
+                      </Label>
+                      <Input
+                        id="pickup-time"
+                        type="time"
+                        value={formValues.pickupTime}
+                        onChange={handleFormChange("pickupTime")}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold text-slate-700">Type de service</Label>
+                    <Select
+                      value={formValues.service}
+                      onValueChange={(value) =>
+                        setFormValues((prev) => ({ ...prev, service: value as ServiceType }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionnez un service" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Standard">Standard</SelectItem>
+                        <SelectItem value="Express">Express</SelectItem>
+                        <SelectItem value="Flash Express">Flash Express</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {!hasMapboxToken && (
+                    <div className="space-y-3 rounded-2xl bg-slate-100 p-4">
+                      <div className="flex items-center justify-between text-sm font-semibold text-slate-700">
+                        <span>Distance estimée</span>
+                        <span>{manualDistance.toFixed(1)} km</span>
+                      </div>
+                      <Slider
+                        value={[manualDistance]}
+                        min={1}
+                        max={80}
+                        step={0.5}
+                        onValueChange={(value) => setManualDistance(value[0] ?? 0)}
+                        aria-label="Distance estimée en kilomètres"
+                      />
+                      <p className="text-xs text-slate-500">
+                        Ajustez la distance estimée si aucune clé de géolocalisation n’est configurée.
+                      </p>
+                    </div>
+                  )}
+
+                  {errorMessage && <p className="text-sm text-rose-600">{errorMessage}</p>}
+
+                  <Button className="w-full" size="lg" type="submit" disabled={isCalculating}>
+                    {isCalculating ? "Calcul en cours..." : "Estimer le tarif"}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+          <p className="mt-8 text-center text-sm text-slate-500">
+            Estimation indicative, calculée à partir des informations saisies.
+          </p>
         </div>
       </section>
 

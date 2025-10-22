@@ -10,16 +10,18 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import heroVisual from "@/assets/hero-courier.jpg"; // Remplacez ce visuel par votre image de panneau si nécessaire.
+import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { useAuthProfile } from "@/providers/AuthProvider";
+import { toast } from "sonner";
 
-const rememberEmailStorageKey = "auth:remember-email";
+const heroVisual = "{image_url}"; // Remplacez {image_url} par l'URL fournie pour le visuel de la colonne droite.
+
+const rememberIdentifierStorageKey = "auth:remember-identifier";
 const forgotPasswordRoute = "/mot-de-passe-oublie"; // Ajustez cette route selon votre configuration.
 
 const signInSchema = z.object({
-  email: z.string().trim().min(1, "Email requis").email("Email invalide"),
+  identifier: z.string().trim().min(1, "Identifiant requis"),
   password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères"),
   rememberMe: z.boolean().default(false),
 });
@@ -44,15 +46,15 @@ const Connexion = () => {
 
   const form = useForm<SignInValues>({
     resolver: zodResolver(signInSchema),
-    defaultValues: { email: "", password: "", rememberMe: false },
+    defaultValues: { identifier: "", password: "", rememberMe: false },
     mode: "onChange",
     reValidateMode: "onChange",
   });
 
   useEffect(() => {
-    const storedEmail = localStorage.getItem(rememberEmailStorageKey);
-    if (storedEmail) {
-      form.setValue("email", storedEmail);
+    const storedIdentifier = localStorage.getItem(rememberIdentifierStorageKey);
+    if (storedIdentifier) {
+      form.setValue("identifier", storedIdentifier);
       form.setValue("rememberMe", true);
     }
   }, [form]);
@@ -61,20 +63,31 @@ const Connexion = () => {
 
   const handleSubmit = async (values: SignInValues) => {
     setIsSubmitting(true);
+    const identifier = values.identifier.trim();
+
+    if (!identifier.includes("@")) {
+      form.setError("identifier", {
+        type: "manual",
+        message: "Veuillez saisir l'adresse e-mail associée à votre compte.",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email: values.email,
+        email: identifier,
         password: values.password,
-      }); // Remplacez cette méthode si vous utilisez un autre provider d'authentification.
+      }); // Branchez ici l'action de connexion si vous utilisez un autre provider d'authentification.
 
       if (error) {
         throw error;
       }
 
       if (values.rememberMe) {
-        localStorage.setItem(rememberEmailStorageKey, values.email);
+        localStorage.setItem(rememberIdentifierStorageKey, identifier);
       } else {
-        localStorage.removeItem(rememberEmailStorageKey);
+        localStorage.removeItem(rememberIdentifierStorageKey);
       }
 
       await refreshProfile();
@@ -113,36 +126,58 @@ const Connexion = () => {
   return (
     <AuthLayout
       visual={{
-        label: "A WISE QUOTE",
-        headline: "Orchestrez vos livraisons avec sérénité",
-        description: "Planifiez, suivez et optimisez vos transports en temps réel grâce à la plateforme One Connexion.",
+        label: "SHARP. FAST.",
+        headline: "Gardez une longueur d'avance sur chaque tournée",
+        description: "Supervisez vos équipes et vos flux en temps réel avec une interface pensée pour les opérations critiques.",
         imageUrl: heroVisual,
-        imageAlt: "Livreur stylisé sur fond lumineux",
+        imageAlt: "Joueuse de tennis concentrée sur un service puissant",
       }}
     >
-      <div className="mx-auto w-full max-w-md space-y-10">
+      <div className="space-y-8">
         <div className="space-y-3 text-left">
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">Heureux de vous revoir</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">Se connecter</h1>
           <p className="text-base text-muted-foreground">
-            Entrez votre email et votre mot de passe pour accéder à votre espace client sécurisé.
+            Retrouvons-nous pour piloter vos opérations logistiques en toute sérénité.
           </p>
         </div>
 
         <Form {...form}>
-          <form className="space-y-8" onSubmit={form.handleSubmit(handleSubmit)} noValidate>
+          <form className="space-y-6" onSubmit={form.handleSubmit(handleSubmit)} noValidate>
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="w-full justify-center gap-2"
+              onClick={handleGoogleSignIn}
+              disabled={isSubmitting || isGoogleLoading}
+            >
+              {isGoogleLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <GoogleIcon />
+              )}
+              <span>Se connecter avec Google</span>
+            </Button>
+
+            <div className="flex items-center gap-4">
+              <Separator className="h-px flex-1" />
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">ou</span>
+              <Separator className="h-px flex-1" />
+            </div>
+
             <FormField
               control={form.control}
-              name="email"
+              name="identifier"
               render={({ field }) => (
                 <FormItem className="space-y-2">
-                  <FormLabel className="text-sm font-semibold text-foreground">Email</FormLabel>
+                  <FormLabel className="text-sm font-semibold text-foreground">Email ou Nom d&apos;utilisateur</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
-                      type="email"
+                      type="text"
                       inputMode="email"
-                      autoComplete="email"
-                      placeholder="vous@entreprise.fr"
+                      autoComplete="username"
+                      placeholder="vous@entreprise.fr ou pseudo"
                     />
                   </FormControl>
                   <FormMessage className="text-sm font-medium" />
@@ -155,15 +190,7 @@ const Connexion = () => {
               name="password"
               render={({ field }) => (
                 <FormItem className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <FormLabel className="text-sm font-semibold text-foreground">Mot de passe</FormLabel>
-                    <Link
-                      to={forgotPasswordRoute}
-                      className="text-sm font-semibold text-primary transition-smooth hover:text-primary-dark hover:underline"
-                    >
-                      Mot de passe oublié ?
-                    </Link>
-                  </div>
+                  <FormLabel className="text-sm font-semibold text-foreground">Mot de passe</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Input
@@ -177,6 +204,7 @@ const Connexion = () => {
                         onClick={() => setIsPasswordVisible((previous) => !previous)}
                         className="absolute inset-y-0 right-3 flex items-center text-muted-foreground transition-smooth hover:text-foreground"
                         aria-label={isPasswordVisible ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                        aria-pressed={isPasswordVisible}
                       >
                         {isPasswordVisible ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
                       </button>
@@ -192,7 +220,7 @@ const Connexion = () => {
                 control={form.control}
                 name="rememberMe"
                 render={({ field }) => (
-                  <FormItem className="flex items-center space-x-3 space-y-0">
+                  <FormItem className="flex items-center gap-3 space-y-0">
                     <FormControl>
                       <Checkbox
                         id="rememberMe"
@@ -206,6 +234,13 @@ const Connexion = () => {
                   </FormItem>
                 )}
               />
+
+              <Link
+                to={forgotPasswordRoute}
+                className="text-sm font-semibold text-primary transition-smooth hover:text-primary-dark hover:underline"
+              >
+                Mot de passe oublié ?
+              </Link>
             </div>
 
             <Button
@@ -224,36 +259,11 @@ const Connexion = () => {
                 "Se connecter"
               )}
             </Button>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                <span className="w-full border-t border-border" />
-              </div>
-              <div className="relative flex justify-center text-xs font-semibold uppercase text-muted-foreground">
-                <span className="bg-card px-3">ou</span>
-              </div>
-            </div>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              className="w-full"
-              onClick={handleGoogleSignIn}
-              disabled={isSubmitting || isGoogleLoading}
-            >
-              {isGoogleLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <GoogleIcon />
-              )}
-              <span className="ml-2">Se connecter avec Google</span>
-            </Button>
           </form>
         </Form>
 
         <p className="text-center text-sm text-muted-foreground">
-          Vous n&apos;avez pas encore de compte ?{" "}
+          Nouveau ?{" "}
           <Link
             to="/inscription"
             className="font-semibold text-primary transition-smooth hover:text-primary-dark hover:underline"

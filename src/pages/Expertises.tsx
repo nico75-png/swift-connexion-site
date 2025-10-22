@@ -9,6 +9,7 @@ import {
   Heart,
   ShieldCheck,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 const expertisesSections = [
@@ -289,6 +290,22 @@ const Expertises = () => {
                 </div>
               </div>
             </section>
+          </div>
+        </section>
+        <section className="bg-primary-dark text-primary-foreground">
+          <div className="container mx-auto flex max-w-4xl flex-col items-center gap-6 px-4 py-16 text-center sm:gap-8">
+            <h2 className="text-2xl font-bold sm:text-3xl">
+              Votre secteur n'est pas listé ?
+            </h2>
+            <p className="text-base text-primary-foreground/90 sm:text-lg">
+              Contactez-nous pour discuter de vos besoins spécifiques. Nous adaptons nos services à votre activité.
+            </p>
+            <Link
+              to="/contact"
+              className="inline-flex items-center justify-center rounded-full bg-primary px-8 py-3 text-base font-semibold text-primary-foreground shadow-lg transition-transform duration-300 hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-foreground/80"
+            >
+              Nous contacter
+            </Link>
           </div>
         </section>
       </div>

@@ -2,11 +2,13 @@ import { type ChangeEvent, type FormEvent, useState } from "react";
 import Layout from "@/components/layout/Layout";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { cn } from "@/lib/utils";
 import { Zap, Lock, Eye, Heart, FileText, ArrowRight, Check, Star, X } from "lucide-react";
 type ServiceType = "Standard" | "Express" | "Flash Express";
 const servicePricing: Record<ServiceType, {
@@ -352,39 +354,63 @@ const Home = () => {
         </div>
       </section>
 
-      <section className="relative overflow-hidden bg-slate-950 py-24">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.25),_transparent_55%)]" />
-        <div className="relative z-10 mx-auto max-w-6xl px-4 text-white">
-          <div className="mx-auto mb-14 max-w-3xl text-center">
-            <h2 className="text-4xl font-bold md:text-5xl">Des formules adaptées à chaque étape</h2>
-            <p className="mt-4 text-lg text-slate-300 md:text-xl">
+      <section className="bg-muted py-24">
+        <div className="container mx-auto px-4">
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="text-4xl font-semibold text-foreground md:text-5xl">Des formules adaptées à chaque étape</h2>
+            <p className="mt-4 text-lg text-muted-foreground md:text-xl">
               Choisissez le plan qui correspond à vos besoins et bénéficiez d’un accompagnement premium sur vos livraisons.
             </p>
           </div>
-          <div className="grid gap-8 md:grid-cols-3">
-            {subscriptionPlans.map(plan => <div key={plan.title} className={`relative flex h-full flex-col rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900/80 to-slate-950/80 p-8 shadow-[0_25px_50px_-12px_rgba(15,23,42,0.8)] transition duration-300 hover:-translate-y-2 hover:shadow-[0_35px_60px_-15px_rgba(59,130,246,0.45)] ${plan.featured ? "border-blue-400/60 ring-2 ring-blue-500/40 shadow-[0_35px_60px_-15px_rgba(59,130,246,0.75)]" : ""}`}>
-                {plan.badge && <div className="absolute right-6 top-6 inline-flex items-center rounded-full bg-blue-500 px-4 py-1 text-sm font-semibold text-white">
+          <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {subscriptionPlans.map(plan => <Card
+                key={plan.title}
+                className={cn(
+                  "relative flex h-full flex-col overflow-hidden rounded-3xl border border-border/70 bg-card p-8 text-left shadow-soft transition-smooth hover:-translate-y-1 hover:shadow-medium focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-background",
+                  plan.featured
+                    ? "border-transparent bg-gradient-to-br from-primary to-primary-dark text-primary-foreground shadow-large hover:shadow-large focus-within:ring-cta/70"
+                    : "focus-within:ring-ring"
+                )}
+              >
+                {plan.badge && <Badge
+                    className={cn(
+                      "absolute right-6 top-6 rounded-full border-transparent px-4 py-1 text-xs font-semibold uppercase tracking-wide shadow-medium",
+                      plan.featured ? "bg-cta text-cta-foreground" : "bg-primary text-primary-foreground"
+                    )}
+                  >
                     {plan.badge}
-                  </div>}
-                <div className="mb-6 flex items-center justify-between">
-                  <h3 className="text-2xl font-semibold md:text-3xl">{plan.title}</h3>
-                  <span className="text-lg font-medium text-slate-400">{plan.price}</span>
-                </div>
-                <p className="mb-8 text-slate-300">{plan.description}</p>
+                  </Badge>}
                 <div className="flex flex-1 flex-col">
-                  <ul className="space-y-3 text-sm md:text-base">
+                  <div className="flex items-start justify-between gap-4">
+                    <h3 className={cn("text-2xl font-semibold text-foreground", plan.featured && "text-primary-foreground")}>{plan.title}</h3>
+                    <span className={cn("text-sm font-semibold text-muted-foreground", plan.featured && "text-primary-foreground/80")}>{plan.price}</span>
+                  </div>
+                  <p className={cn("mt-4 text-sm text-muted-foreground", plan.featured && "text-primary-foreground/90")}>{plan.description}</p>
+                  <ul className="mt-8 flex flex-col gap-4 text-sm">
                     {plan.features.map(feature => <li key={feature.label} className="flex items-start gap-3">
-                        {feature.included ? <Check className="mt-0.5 h-5 w-5 flex-none text-emerald-400" /> : <X className="mt-0.5 h-5 w-5 flex-none text-rose-400" />}
-                        <span className={`leading-relaxed ${feature.included ? "text-slate-100" : "text-slate-500"}`}>
-                          {feature.label}
+                        <span
+                          className={cn(
+                            "flex h-9 w-9 items-center justify-center rounded-full border border-primary/20 bg-primary/5 text-primary",
+                            plan.featured && "border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground"
+                          )}
+                        >
+                          {feature.included ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
                         </span>
+                        <span className={cn("flex-1 text-sm font-medium text-foreground/80", plan.featured && "text-primary-foreground/90")}>{feature.label}</span>
                       </li>)}
                   </ul>
-                  <Link to={plan.ctaLink} className={`mt-10 inline-flex items-center justify-center rounded-full px-6 py-3 text-center text-sm font-semibold transition md:text-base ${plan.featured ? "bg-blue-500 text-white shadow-lg shadow-blue-500/30 hover:bg-blue-400" : "bg-white/10 text-white hover:bg-white/20"}`}>
-                    {plan.ctaLabel}
-                  </Link>
+                  <div className="mt-10">
+                    <Button
+                      asChild
+                      size="lg"
+                      variant={plan.featured ? "cta" : "outline"}
+                      className={cn("w-full", plan.featured ? "text-cta-foreground" : "")}
+                    >
+                      <Link to={plan.ctaLink}>{plan.ctaLabel}</Link>
+                    </Button>
+                  </div>
                 </div>
-              </div>)}
+              </Card>)}
           </div>
         </div>
       </section>

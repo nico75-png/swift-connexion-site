@@ -122,7 +122,7 @@ const Inscription = () => {
       } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/espace-client`
+          redirectTo: `${window.location.origin}/onboarding/expertise`
         }
       });
       if (error) {
@@ -174,7 +174,7 @@ const Inscription = () => {
         }
       }
       toast.success("Compte créé avec succès ! Bienvenue chez One Connexion");
-      navigate("/espace-client");
+      navigate("/onboarding/expertise");
     } catch (error) {
       const message = error instanceof Error ? error.message : "La création du compte a échoué.";
       toast.error(message);

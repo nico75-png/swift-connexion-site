@@ -497,28 +497,40 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          delivery_objects: string[] | null
+          delivery_other_note: string | null
           display_name: string | null
+          expertise: string | null
           first_name: string | null
           id: string
           last_name: string | null
+          onboarding_step: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          delivery_objects?: string[] | null
+          delivery_other_note?: string | null
           display_name?: string | null
+          expertise?: string | null
           first_name?: string | null
           id?: string
           last_name?: string | null
+          onboarding_step?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
+          delivery_objects?: string[] | null
+          delivery_other_note?: string | null
           display_name?: string | null
+          expertise?: string | null
           first_name?: string | null
           id?: string
           last_name?: string | null
+          onboarding_step?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -614,14 +626,8 @@ export type Database = {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
         Returns: undefined
       }
-      assert_owner: {
-        Args: { _owner_id: string }
-        Returns: undefined
-      }
-      current_app_user_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      assert_owner: { Args: { _owner_id: string }; Returns: undefined }
+      current_app_user_id: { Args: never; Returns: string }
       ensure_status_transition: {
         Args: { _allowed: Json; _current: string; _next: string }
         Returns: boolean
@@ -651,18 +657,9 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_admin: {
-        Args: { _user_id?: string }
-        Returns: boolean
-      }
-      normalize_email: {
-        Args: { _email: string }
-        Returns: string
-      }
-      owns_row: {
-        Args: { _row_user_id: string }
-        Returns: boolean
-      }
+      is_admin: { Args: { _user_id?: string }; Returns: boolean }
+      normalize_email: { Args: { _email: string }; Returns: string }
+      owns_row: { Args: { _row_user_id: string }; Returns: boolean }
       revoke_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -670,14 +667,8 @@ export type Database = {
         }
         Returns: undefined
       }
-      soft_delete: {
-        Args: { _id: string; _table: string }
-        Returns: undefined
-      }
-      valid_email: {
-        Args: { _email: string }
-        Returns: boolean
-      }
+      soft_delete: { Args: { _id: string; _table: string }; Returns: undefined }
+      valid_email: { Args: { _email: string }; Returns: boolean }
       write_audit_log: {
         Args: {
           _action: string

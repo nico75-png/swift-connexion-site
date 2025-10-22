@@ -38,6 +38,9 @@ import AdminInvoices from "./pages/admin/Invoices";
 import AdminStats from "./pages/admin/Stats";
 import AdminMessages from "./pages/admin/Messages";
 import AdminSettings from "./pages/admin/Settings";
+import OnboardingExpertise from "./pages/onboarding/Expertise";
+import OnboardingDeliveryObjects from "./pages/onboarding/DeliveryObjects";
+import OnboardingAddress from "./pages/onboarding/Address";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +61,9 @@ const App = () => (
               <Route path="/inscription" element={<Inscription />} />
               <Route path="/connexion" element={<Connexion />} />
               <Route path="/commande-sans-compte" element={<CommandeSansCompte />} />
+              <Route path="/onboarding/expertise" element={<OnboardingExpertise />} />
+              <Route path="/onboarding/delivery-objects" element={<OnboardingDeliveryObjects />} />
+              <Route path="/onboarding/address" element={<OnboardingAddress />} />
               <Route path="/espace-client" element={<ClientDashboard />} />
               <Route path="/espace-client/commandes" element={<ClientOrders />} />
               <Route path="/espace-client/commandes/:id" element={<ClientOrderDetail />} />

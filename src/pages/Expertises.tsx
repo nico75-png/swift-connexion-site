@@ -174,6 +174,13 @@ const Expertises = () => {
                         {section.description}
                       </h2>
 
+                      <Link
+                        to="#"
+                        className="inline-flex items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-transform duration-300 hover:scale-[1.02] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                      >
+                        Commander pour ce secteur
+                      </Link>
+
                       <div className="grid gap-8 md:grid-cols-2">
                         <div>
                           <h3 className="text-lg font-semibold text-gray-800">

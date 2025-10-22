@@ -362,31 +362,31 @@ const Home = () => {
               Choisissez le plan qui correspond à vos besoins et bénéficiez d’un accompagnement premium sur vos livraisons.
             </p>
           </div>
-          <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             {subscriptionPlans.map(plan => <Card
                 key={plan.title}
                 className={cn(
-                  "relative flex h-full flex-col overflow-hidden rounded-3xl border border-border/70 bg-card p-8 text-left shadow-soft transition-smooth hover:-translate-y-1 hover:shadow-medium focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-background",
+                  "relative flex h-full flex-col overflow-hidden rounded-3xl border border-border/70 bg-card px-7 py-6 text-left shadow-soft transition-smooth hover:-translate-y-1 hover:shadow-medium focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-background sm:px-8 sm:py-7 min-h-[clamp(520px,60vh,640px)]",
                   plan.featured
                     ? "border-transparent bg-gradient-to-br from-primary to-primary-dark text-primary-foreground shadow-large hover:shadow-large focus-within:ring-cta/70"
                     : "focus-within:ring-ring"
                 )}
               >
-                {plan.badge && <Badge
-                    className={cn(
-                      "absolute right-6 top-6 rounded-full border-transparent px-4 py-1 text-xs font-semibold uppercase tracking-wide shadow-medium",
-                      plan.featured ? "bg-cta text-cta-foreground" : "bg-primary text-primary-foreground"
-                    )}
-                  >
-                    {plan.badge}
-                  </Badge>}
                 <div className="flex flex-1 flex-col">
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex flex-col items-center gap-3 text-center">
+                    {plan.badge && <Badge
+                        className={cn(
+                          "rounded-full border-transparent px-4 py-1 text-xs font-semibold uppercase tracking-wide shadow-medium",
+                          plan.featured ? "bg-cta text-cta-foreground" : "bg-primary text-primary-foreground"
+                        )}
+                      >
+                        {plan.badge}
+                      </Badge>}
                     <h3 className={cn("text-2xl font-semibold text-foreground", plan.featured && "text-primary-foreground")}>{plan.title}</h3>
-                    <span className={cn("text-sm font-semibold text-muted-foreground", plan.featured && "text-primary-foreground/80")}>{plan.price}</span>
+                    <p className={cn("text-base font-semibold text-muted-foreground", plan.featured && "text-primary-foreground/80")}>{plan.price}</p>
                   </div>
-                  <p className={cn("mt-4 text-sm text-muted-foreground", plan.featured && "text-primary-foreground/90")}>{plan.description}</p>
-                  <ul className="mt-8 flex flex-col gap-4 text-sm">
+                  <p className={cn("mt-4 text-center text-sm text-muted-foreground", plan.featured && "text-primary-foreground/90")}>{plan.description}</p>
+                  <ul className="mt-8 flex flex-1 flex-col gap-4 text-sm">
                     {plan.features.map(feature => <li key={feature.label} className="flex items-start gap-3">
                         <span
                           className={cn(

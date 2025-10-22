@@ -48,7 +48,7 @@ const AuthLayout = ({
           <div className={cn("relative min-h-[260px] bg-primary text-primary-foreground", isContentLeft ? "order-2" : "order-1", isContentLeft ? "lg:order-2" : "lg:order-1")}>
             
             
-            <div aria-hidden="true" className="absolute inset-5 rounded-[36px] border border-white/50 opacity-60 sm:inset-8 sm:rounded-[44px]" />
+            
 
             
           </div>

@@ -1,76 +1,198 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { z } from "zod";
+
+import AuthLayout from "@/components/auth/AuthLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle2, X } from "lucide-react";
-import Layout from "@/components/layout/Layout";
-import { toast } from "sonner";
-import { SECTOR_LABELS, type Sector } from "@/lib/packageTaxonomy";
-import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { upsertProfile } from "@/lib/api/profiles";
 import { useAuthProfile } from "@/providers/AuthProvider";
+import { toast } from "sonner";
+
+const heroVisual = "{image_url}"; // Remplacez {image_url} par l'URL finale du visuel côté marketing.
+
+const phoneCountries = [
+  { code: "FR", name: "France", dialCode: "+33", mask: "## ## ## ## ##", placeholder: "06 12 34 56 78" },
+  { code: "BE", name: "Belgique", dialCode: "+32", mask: "### ## ## ##", placeholder: "0470 12 34 56" },
+  { code: "CH", name: "Suisse", dialCode: "+41", mask: "## ### ## ##", placeholder: "079 123 45 67" },
+  { code: "LU", name: "Luxembourg", dialCode: "+352", mask: "### ### ###", placeholder: "621 123 456" },
+  { code: "DE", name: "Allemagne", dialCode: "+49", mask: "#### #######", placeholder: "0151 1234567" },
+] as const;
+
+const defaultCountryCode = phoneCountries[0].code;
+
+const usernameRegex = /^[a-z0-9._-]{3,}$/i;
+
+const signUpSchema = z
+  .object({
+    fullName: z
+      .string()
+      .trim()
+      .min(1, "Nom complet requis")
+      .refine((value) => value.trim().split(/\s+/).length >= 2, "Indiquez vos prénom et nom"),
+    email: z.string().trim().min(1, "Email requis").email("Adresse email invalide"),
+    username: z
+      .string()
+      .trim()
+      .min(3, "Nom d'utilisateur trop court")
+      .max(24, "Nom d'utilisateur trop long")
+      .regex(usernameRegex, "Caractères autorisés : lettres, chiffres, ., -, _"),
+    country: z.string().min(1, "Sélectionnez un indicatif"),
+    phone: z
+      .string()
+      .trim()
+      .min(1, "Numéro requis")
+      .refine((value) => value.replace(/\D/g, "").length >= 6, "Numéro de téléphone invalide"),
+    password: z.string().min(8, "Minimum 8 caractères"),
+    acceptPolicies: z.literal(true, {
+      errorMap: () => ({ message: "Vous devez accepter les conditions pour continuer" }),
+    }),
+  })
+  .superRefine(({ phone, country }, ctx) => {
+    const countryOption = phoneCountries.find((option) => option.code === country);
+    if (!countryOption) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Sélectionnez un indicatif", path: ["country"] });
+      return;
+    }
+
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length < 6) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Numéro de téléphone invalide", path: ["phone"] });
+    }
+  });
+
+type SignUpValues = z.infer<typeof signUpSchema>;
+
+type PhoneCountry = (typeof phoneCountries)[number];
+
+const GoogleIcon = () => (
+  <svg viewBox="0 0 24 24" role="img" aria-hidden="true" className="h-5 w-5">
+    <path
+      fill="#4285F4"
+      d="M21.805 10.023h-9.18v3.955h5.273c-.227 1.23-1.25 3.61-5.273 3.61-3.175 0-5.763-2.626-5.763-5.86 0-3.234 2.588-5.86 5.763-5.86 1.806 0 3.02.77 3.71 1.436l2.53-2.46C17.165 3.316 15.093 2.4 12.352 2.4 6.903 2.4 2.4 6.85 2.4 12.2c0 5.35 4.503 9.8 9.952 9.8 5.745 0 9.545-4.04 9.545-9.74 0-.653-.07-1.147-.192-1.737Z"
+    />
+  </svg>
+);
+
+const formatPhoneWithMask = (value: string, mask: PhoneCountry["mask"]) => {
+  const digits = value.replace(/\D/g, "");
+  let formatted = "";
+  let digitIndex = 0;
+
+  for (const char of mask) {
+    if (char === "#") {
+      if (digitIndex >= digits.length) {
+        break;
+      }
+      formatted += digits[digitIndex];
+      digitIndex += 1;
+    } else {
+      if (digitIndex === 0 && formatted.length === 0) {
+        continue;
+      }
+      formatted += char;
+    }
+  }
+
+  if (digitIndex < digits.length) {
+    formatted += digits.slice(digitIndex);
+  }
+
+  return formatted;
+};
+
+const splitFullName = (fullName: string) => {
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) {
+    return { firstName: parts[0], lastName: parts[0] };
+  }
+  const firstName = parts.slice(0, -1).join(" ");
+  const lastName = parts.slice(-1).join(" ");
+  return { firstName, lastName };
+};
 
 const Inscription = () => {
   const navigate = useNavigate();
-  const [password, setPassword] = useState("");
-  const [sector, setSector] = useState<Sector | "">("");
-  const [acceptedCGU, setAcceptedCGU] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { refreshProfile } = useAuthProfile();
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  const passwordRequirements = [
-    { label: "Au moins 8 caractères", test: (p: string) => p.length >= 8 },
-    { label: "Une lettre majuscule", test: (p: string) => /[A-Z]/.test(p) },
-    { label: "Une lettre minuscule", test: (p: string) => /[a-z]/.test(p) },
-    { label: "Un chiffre", test: (p: string) => /\d/.test(p) },
-    { label: "Un caractère spécial", test: (p: string) => /[!@#$%^&*]/.test(p) },
-  ];
+  const form = useForm<SignUpValues>({
+    resolver: zodResolver(signUpSchema),
+    defaultValues: {
+      fullName: "",
+      email: "",
+      username: "",
+      country: defaultCountryCode,
+      phone: "",
+      password: "",
+      acceptPolicies: false,
+    },
+    mode: "onChange",
+    reValidateMode: "onChange",
+  });
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const isFormValid = form.formState.isValid;
+  const countryCode = form.watch("country");
+  const selectedCountry = useMemo<PhoneCountry>(() => {
+    return phoneCountries.find((option) => option.code === countryCode) ?? phoneCountries[0];
+  }, [countryCode]);
 
-    if (!sector) {
-      toast.error("Veuillez sélectionner votre secteur d'activité");
-      return;
-    }
-    
-    if (!acceptedCGU) {
-      toast.error("Veuillez accepter les CGU pour continuer");
-      return;
-    }
-
-    const allRequirementsMet = passwordRequirements.every(req => req.test(password));
-    if (!allRequirementsMet) {
-      toast.error("Le mot de passe ne respecte pas tous les critères");
-      return;
-    }
-
-    const formData = new FormData(event.currentTarget);
-    const firstName = String(formData.get("first_name") ?? "").trim();
-    const lastName = String(formData.get("last_name") ?? "").trim();
-    const email = String(formData.get("email") ?? "").trim();
-    const phone = String(formData.get("phone") ?? "").trim();
-    const company = String(formData.get("company") ?? "").trim();
-    const siret = String(formData.get("siret") ?? "").trim();
-
-    setIsSubmitting(true);
-
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
     try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/espace-client`,
+        },
+      }); // Branchez ici votre fournisseur OAuth si différent.
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Impossible de continuer avec Google.";
+      toast.error(message);
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
+  const handleSubmit = async (values: SignUpValues) => {
+    setIsSubmitting(true);
+    try {
+      const countryOption = phoneCountries.find((option) => option.code === values.country) ?? phoneCountries[0];
+      const normalizedPhone = `${countryOption.dialCode}${values.phone.replace(/\D/g, "")}`;
+      const { firstName, lastName } = splitFullName(values.fullName);
+
       const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
+        email: values.email,
+        password: values.password,
         options: {
           data: {
-            first_name: firstName,
-            last_name: lastName,
-            phone,
-            company,
-            siret,
-            sector,
+            full_name: values.fullName,
+            username: values.username,
+            phone: normalizedPhone,
+            phone_country: countryOption.code,
           },
         },
-      });
+      }); // Branchez ici votre action d'inscription si vous n'utilisez pas Supabase.
 
       if (error) {
         throw error;
@@ -91,7 +213,7 @@ const Inscription = () => {
         }
       }
 
-      toast.success("Compte créé avec succès ! Bienvenue chez One Connexion");
+      toast.success("Compte créé avec succès ! Redirection en cours…");
       navigate("/espace-client");
     } catch (error) {
       const message = error instanceof Error ? error.message : "La création du compte a échoué.";
@@ -102,217 +224,226 @@ const Inscription = () => {
   };
 
   return (
-    <Layout>
-      <section className="py-16 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="max-w-2xl mx-auto">
-            <div className="text-center mb-8">
-              <h1 className="mb-4">Créer un compte professionnel</h1>
-              <p className="text-lg text-muted-foreground">
-                Gérez toutes vos livraisons depuis un seul espace
-              </p>
-            </div>
+    <AuthLayout
+      contentPosition="left"
+      visual={{
+        label: "SHARP. FAST.",
+        headline: "Un compte unique pour piloter vos livraisons",
+        description: "Rejoignez la plateforme One Connexion et planifiez vos transports professionnels en un clin d'œil.",
+        imageUrl: heroVisual,
+        imageAlt: "Athlète concentrée en plein service.",
+      }}
+    >
+      <div className="mx-auto w-full max-w-md space-y-10">
+        <div className="space-y-3 text-left">
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">Créer un compte</h1>
+          <p className="text-base text-muted-foreground">
+            Démarrez en quelques secondes pour accéder à tous vos services One Connexion.
+          </p>
+        </div>
 
-            <Card className="border-none shadow-large">
-              <CardContent className="p-8">
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* Informations personnelles */}
-                  <div>
-                    <h3 className="text-xl font-semibold mb-4">Informations personnelles</h3>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Nom *</label>
+        <div className="space-y-8">
+          <Button
+            type="button"
+            onClick={handleGoogleSignIn}
+            variant="outline"
+            className="w-full justify-center gap-3 rounded-xl border-border/70 py-3 text-base font-semibold"
+            disabled={isGoogleLoading}
+          >
+            {isGoogleLoading ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : <GoogleIcon />}
+            Continuer avec Google
+          </Button>
+
+          <div className="relative flex items-center">
+            <Separator className="bg-border" />
+            <span className="absolute inset-x-0 mx-auto w-fit bg-card px-3 text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+              ou remplissez le formulaire…
+            </span>
+          </div>
+
+          <Form {...form}>
+            <form className="space-y-6" onSubmit={form.handleSubmit(handleSubmit)} noValidate>
+              <FormField
+                control={form.control}
+                name="fullName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nom complet</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="text" autoComplete="name" placeholder="Prénom Nom" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Adresse email</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="email" inputMode="email" autoComplete="email" placeholder="vous@entreprise.fr" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nom d'utilisateur</FormLabel>
+                    <FormControl>
+                      <div className="flex items-center rounded-md border border-input bg-background px-3 py-2 text-base focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 md:text-sm">
+                        <span className="mr-2 text-muted-foreground" aria-hidden="true">
+                          @
+                        </span>
                         <input
+                          {...field}
                           type="text"
-                          required
-                          name="last_name"
-                          className="w-full h-11 px-4 rounded-lg border border-input bg-background"
-                          placeholder="Nom"
+                          className="flex-1 bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground"
+                          autoComplete="username"
+                          placeholder="votre.identifiant"
                         />
                       </div>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Prénom *</label>
-                        <input
-                          type="text"
-                          required
-                          name="first_name"
-                          className="w-full h-11 px-4 rounded-lg border border-input bg-background"
-                          placeholder="Prénom"
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Téléphone</FormLabel>
+                    <FormControl>
+                      <div className="flex gap-3">
+                        <Select
+                          value={form.watch("country")}
+                          onValueChange={(value) => {
+                            const countryOption = phoneCountries.find((option) => option.code === value) ?? phoneCountries[0];
+                            const reformatted = formatPhoneWithMask(form.getValues("phone"), countryOption.mask);
+                            form.setValue("country", value, { shouldValidate: true, shouldDirty: true });
+                            form.setValue("phone", reformatted, { shouldValidate: true, shouldDirty: true });
+                          }}
+                        >
+                          <SelectTrigger
+                            className="w-[140px] rounded-md border border-input bg-background text-sm font-semibold"
+                            aria-label="Indicatif pays"
+                            aria-invalid={form.formState.errors.country ? "true" : "false"}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {phoneCountries.map((option) => (
+                              <SelectItem key={option.code} value={option.code}>
+                                {option.name} ({option.dialCode})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          {...field}
+                          type="tel"
+                          inputMode="tel"
+                          autoComplete="tel"
+                          placeholder={selectedCountry.placeholder}
+                          onChange={(event) => {
+                            const formatted = formatPhoneWithMask(event.target.value, selectedCountry.mask);
+                            event.target.value = formatted;
+                            field.onChange(formatted);
+                          }}
                         />
                       </div>
-                    </div>
-                  </div>
+                    </FormControl>
+                    <FormMessage />
+                    {form.formState.errors.country ? (
+                      <p className="text-sm font-medium text-destructive">{form.formState.errors.country.message}</p>
+                    ) : null}
+                  </FormItem>
+                )}
+              />
 
-                  {/* Informations entreprise */}
-                  <div>
-                    <h3 className="text-xl font-semibold mb-4">Informations entreprise</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Entreprise *</label>
-                        <input
-                          type="text"
-                          required
-                          name="company"
-                          className="w-full h-11 px-4 rounded-lg border border-input bg-background"
-                          placeholder="Nom de l'entreprise"
-                        />
-                      </div>
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-sm font-medium mb-2 block">SIRET *</label>
-                          <input
-                            type="text"
-                            required
-                            pattern="[0-9]{14}"
-                            name="siret"
-                            className="w-full h-11 px-4 rounded-lg border border-input bg-background"
-                            placeholder="14 chiffres"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium mb-2 block">Secteur d'activité *</label>
-                          <div className="space-y-3">
-                            <p className="text-xs text-muted-foreground">
-                              Ce choix personnalise définitivement vos types de transport.
-                            </p>
-                            <div className="grid gap-3 sm:grid-cols-2">
-                              {Object.entries(SECTOR_LABELS).map(([key, label]) => {
-                                const value = key as Sector;
-                                const isSelected = sector === value;
-                                return (
-                                  <button
-                                    key={key}
-                                    type="button"
-                                    onClick={() => setSector(value)}
-                                    className={cn(
-                                      "w-full rounded-xl border px-4 py-3 text-left transition",
-                                      "hover:border-primary/70 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-                                      isSelected
-                                        ? "border-primary bg-primary/5 text-primary"
-                                        : "border-border bg-background"
-                                    )}
-                                  >
-                                    <span className="block text-sm font-semibold">{label}</span>
-                                    <span className="mt-1 block text-xs text-muted-foreground">
-                                      Sélection unique — contactez notre support pour changer.
-                                    </span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                          <input type="hidden" name="sector" value={sector} required />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Contact */}
-                  <div>
-                    <h3 className="text-xl font-semibold mb-4">Contact et connexion</h3>
-                    <div className="space-y-4">
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-sm font-medium mb-2 block">Email *</label>
-                          <input
-                            type="email"
-                            required
-                            name="email"
-                            className="w-full h-11 px-4 rounded-lg border border-input bg-background"
-                            placeholder="email@entreprise.fr"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium mb-2 block">Téléphone *</label>
-                          <input
-                            type="tel"
-                            required
-                            name="phone"
-                            className="w-full h-11 px-4 rounded-lg border border-input bg-background"
-                            placeholder="01 23 45 67 89"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Mot de passe *</label>
-                        <input
-                          type="password"
-                          required
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          name="password"
-                          className="w-full h-11 px-4 rounded-lg border border-input bg-background"
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mot de passe</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          {...field}
+                          type={isPasswordVisible ? "text" : "password"}
+                          autoComplete="new-password"
                           placeholder="••••••••"
                         />
-                        
-                        {/* Password Requirements */}
-                        {password && (
-                          <div className="mt-3 p-4 bg-muted/50 rounded-lg space-y-2">
-                            <p className="text-sm font-medium mb-2">Critères du mot de passe :</p>
-                            {passwordRequirements.map((req, index) => (
-                              <div key={index} className="flex items-center gap-2 text-sm">
-                                {req.test(password) ? (
-                                  <CheckCircle2 className="h-4 w-4 text-success" />
-                                ) : (
-                                  <X className="h-4 w-4 text-destructive" />
-                                )}
-                                <span className={req.test(password) ? "text-success" : "text-muted-foreground"}>
-                                  {req.label}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => setIsPasswordVisible((previous) => !previous)}
+                          className="absolute inset-y-0 right-3 flex items-center text-muted-foreground transition-smooth hover:text-foreground"
+                          aria-label={isPasswordVisible ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                        >
+                          {isPasswordVisible ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
+                        </button>
                       </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="acceptPolicies"
+                render={({ field }) => (
+                  <FormItem className="flex items-start gap-3 rounded-xl bg-muted/20 p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={(checked) => field.onChange(checked === true)}
+                        className="mt-1"
+                        id="acceptPolicies"
+                      />
+                    </FormControl>
+                    <div className="space-y-1 text-sm">
+                      <FormLabel htmlFor="acceptPolicies" className="text-sm font-medium leading-snug">
+                        J'accepte la <Link to="/mentions-legales" className="text-primary underline-offset-4 hover:underline">Politique de confidentialité</Link> et les{" "}
+                        <Link to="/cgv" className="text-primary underline-offset-4 hover:underline">Conditions d'utilisation</Link>.
+                      </FormLabel>
+                      <FormMessage />
                     </div>
-                  </div>
+                  </FormItem>
+                )}
+              />
 
-                  {/* CGU */}
-                  <div className="flex items-start gap-3 p-4 bg-muted/30 rounded-lg">
-                    <input
-                      type="checkbox"
-                      id="cgu"
-                      checked={acceptedCGU}
-                      onChange={(e) => setAcceptedCGU(e.target.checked)}
-                      className="h-4 w-4 mt-0.5"
-                      required
-                    />
-                    <label htmlFor="cgu" className="text-sm text-muted-foreground">
-                      J'ai lu et j'accepte les{" "}
-                      <Link to="/cgv" className="text-primary hover:underline">
-                        Conditions Générales de Vente
-                      </Link>{" "}
-                      et les{" "}
-                      <Link to="/mentions-legales" className="text-primary hover:underline">
-                        Mentions Légales
-                      </Link>
-                    </label>
-                  </div>
+              <Button
+                type="submit"
+                variant="cta"
+                size="lg"
+                className="w-full rounded-xl text-base"
+                disabled={!isFormValid || isSubmitting}
+              >
+                {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : "Continuer"}
+              </Button>
+            </form>
+          </Form>
 
-                  <Button
-                    type="submit"
-                    variant="cta"
-                    size="lg"
-                    className="w-full"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? "Création en cours…" : "Créer mon compte"}
-                  </Button>
-
-                  <p className="text-center text-sm text-muted-foreground">
-                    Vous avez déjà un compte ?{" "}
-                    <Link to="/connexion" className="text-primary font-semibold hover:underline">
-                      Se connecter
-                    </Link>
-                  </p>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
+          <p className="text-center text-sm text-muted-foreground">
+            Déjà inscrit ?{" "}
+            <Link to="/connexion" className="font-semibold text-primary hover:underline">
+              Se connecter
+            </Link>
+          </p>
         </div>
-      </section>
-    </Layout>
+      </div>
+    </AuthLayout>
   );
 };
 

@@ -17,9 +17,19 @@ export interface AuthLayoutProps {
   brandHref?: string;
   brand?: ReactNode;
   className?: string;
+  contentPosition?: "left" | "right";
 }
 
-const AuthLayout = ({ children, visual, brand, brandHref = "/", className }: AuthLayoutProps) => {
+const AuthLayout = ({
+  children,
+  visual,
+  brand,
+  brandHref = "/",
+  className,
+  contentPosition = "right",
+}: AuthLayoutProps) => {
+  const isContentLeft = contentPosition === "left";
+
   return (
     <div className={cn("relative flex min-h-screen flex-col bg-background", className)}>
       <div
@@ -44,20 +54,41 @@ const AuthLayout = ({ children, visual, brand, brandHref = "/", className }: Aut
           )}
         </div>
 
-        <div className="grid min-h-[640px] flex-1 overflow-hidden rounded-[42px] border border-border/60 bg-card shadow-large sm:rounded-[48px] md:grid-cols-[0.4fr_0.6fr] lg:grid-cols-[0.45fr_0.55fr]">
-          <div className="relative min-h-[220px] bg-primary text-primary-foreground sm:min-h-[260px]">
+        <div className="grid min-h-[640px] flex-1 overflow-hidden rounded-[48px] border border-border/60 bg-card shadow-large sm:rounded-[56px] lg:grid-cols-[0.4fr_0.6fr] xl:grid-cols-[1fr_1fr]">
+          <div
+            className={cn(
+              "flex flex-col justify-center bg-card px-6 py-8 sm:px-10 sm:py-12",
+              isContentLeft ? "order-1" : "order-2",
+              isContentLeft ? "lg:order-1" : "lg:order-2",
+            )}
+          >
+            {children}
+          </div>
+
+          <div
+            className={cn(
+              "relative min-h-[260px] bg-primary text-primary-foreground",
+              isContentLeft ? "order-2" : "order-1",
+              isContentLeft ? "lg:order-2" : "lg:order-1",
+            )}
+          >
             <img
               src={visual.imageUrl}
               alt={visual.imageAlt}
               className="absolute inset-0 h-full w-full object-cover"
             />
             <div aria-hidden="true" className="absolute inset-0 bg-primary/70 mix-blend-multiply" />
-            <div aria-hidden="true" className="absolute inset-4 rounded-[32px] border border-white/50 opacity-60 sm:inset-6 sm:rounded-[36px]" />
+            <div
+              aria-hidden="true"
+              className="absolute inset-5 rounded-[36px] border border-white/50 opacity-60 sm:inset-8 sm:rounded-[44px]"
+            />
 
-            <div className="relative z-10 flex h-full flex-col justify-between px-6 py-8 sm:px-10 sm:py-12">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.5em] text-white/70">
-                {visual.label}
-              </span>
+            <div className="relative z-10 flex h-full flex-col justify-between px-6 pb-8 pt-6 sm:px-10 sm:pb-12 sm:pt-8">
+              <div className="flex justify-end">
+                <span className="inline-flex items-center rounded-full bg-white/15 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.55em] text-white/90">
+                  {visual.label}
+                </span>
+              </div>
 
               <div className="space-y-4 text-white">
                 <h2 className="text-3xl font-semibold leading-tight sm:text-4xl lg:text-5xl">
@@ -69,8 +100,6 @@ const AuthLayout = ({ children, visual, brand, brandHref = "/", className }: Aut
               </div>
             </div>
           </div>
-
-          <div className="flex flex-col justify-center bg-card px-6 py-8 sm:px-10 sm:py-12">{children}</div>
         </div>
       </div>
     </div>

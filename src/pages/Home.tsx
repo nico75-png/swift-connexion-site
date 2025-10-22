@@ -1,366 +1,318 @@
+import Layout from "@/components/layout/Layout";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Zap, Shield, Activity, Heart, Glasses, Scale, Package2, PartyPopper, ArrowRight, Star, CheckCircle2 } from "lucide-react";
-import Layout from "@/components/layout/Layout";
-import heroCourier from "@/assets/hero-courier.jpg";
-import { useState } from "react";
-import { cn } from "@/lib/utils";
-const Home = () => {
-  const [estimatedPrice, setEstimatedPrice] = useState<number | null>(null);
-  const handleQuickEstimate = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Simple front-end calculation
-    const basePrice = 20;
-    setEstimatedPrice(basePrice);
-  };
-  const heroHighlights = ["Service professionnel 24/7", "Coursiers dédiés et assurés", "Suivi en temps réel de vos colis"];
-  const advantages = [{
+import { Card } from "@/components/ui/card";
+import { Zap, Lock, Eye, Heart, FileText, ArrowRight, Check, Star } from "lucide-react";
+
+const benefits = [
+  {
     icon: Zap,
     title: "Rapidité garantie",
     description: "Livraison express en moins de 2h en Île-de-France"
-  }, {
-    icon: Shield,
+  },
+  {
+    icon: Lock,
     title: "Sécurité maximale",
     description: "Colis assuré et suivi GPS en temps réel"
-  }, {
-    icon: Activity,
+  },
+  {
+    icon: Eye,
     title: "Suivi en temps réel",
     description: "Tracez votre commande de l'enlèvement à la livraison"
-  }];
-  const expertises = [{
+  }
+];
+
+const expertises = [
+  {
     icon: Heart,
     title: "Santé & Médical",
     description: "Transport sécurisé de dispositifs médicaux et échantillons",
-    color: "text-red-500"
-  }, {
-    icon: Glasses,
+    gradient: "from-blue-500 to-purple-600"
+  },
+  {
+    icon: Eye,
     title: "Optique",
     description: "Livraison rapide de montures et verres correcteurs",
-    color: "text-blue-500"
-  }, {
-    icon: Scale,
+    gradient: "from-green-500 to-emerald-600"
+  },
+  {
+    icon: FileText,
     title: "Juridique",
     description: "Coursier spécialisé pour documents confidentiels",
-    color: "text-amber-600"
-  }, {
-    icon: Package2,
-    title: "B2B Express",
-    description: "Solutions sur-mesure pour entreprises",
-    color: "text-green-600"
-  }, {
-    icon: PartyPopper,
-    title: "Événementiel",
-    description: "Logistique événementielle rapide et fiable",
-    color: "text-purple-600"
-  }];
-  const pricingPlans = [{
+    gradient: "from-gray-600 to-gray-800"
+  }
+];
+
+const pricing = [
+  {
     title: "Standard",
     description: "Pour vos livraisons programmées du quotidien.",
-    price: "20",
-    currency: "€",
-    frequency: "forfait 0 à 10 km",
-    featuresLabel: "INCLUS",
-    featuresIntro: "Comprend notamment :",
-    features: ["20 € pour la tranche 0 à 10 km", "1,50 € par kilomètre supplémentaire", "Délai maximum de 3 heures", "Assurance colis et suivi en temps réel"],
-    primaryCta: {
-      label: "Commander",
-      href: "/inscription"
-    },
-    secondaryCta: {
-      label: "Contacter un expert",
-      href: "/contact"
-    }
-  }, {
+    price: "€20 forfait 0 à 10 km",
+    features: [
+      "20 € pour la tranche 0 à 10 km",
+      "1,50 € par kilomètre supplémentaire",
+      "Délai maximum de 3 heures",
+      "Assurance colis et suivi en temps réel"
+    ],
+    link: "/commande-sans-compte"
+  },
+  {
     title: "Express",
     description: "La solution rapide pour vos urgences professionnelles.",
     badge: "Populaire",
-    price: "26",
-    currency: "€",
-    frequency: "forfait 0 à 10 km",
-    featuresLabel: "INCLUS",
-    featuresIntro: "Idéal quand chaque minute compte :",
-    features: ["26 € pour la tranche 0 à 10 km", "1,70 € par kilomètre supplémentaire", "Délai garanti sous 2 heures", "Support prioritaire dédié"],
-    primaryCta: {
-      label: "Commander",
-      href: "/inscription"
-    },
-    secondaryCta: {
-      label: "Contacter un expert",
-      href: "/contact"
-    },
-    popular: true
-  }, {
+    price: "€26 forfait 0 à 10 km",
+    intro: "Idéal quand chaque minute compte :",
+    features: [
+      "26 € pour la tranche 0 à 10 km",
+      "1,70 € par kilomètre supplémentaire",
+      "Délai garanti sous 2 heures",
+      "Support prioritaire dédié"
+    ],
+    link: "/commande-sans-compte"
+  },
+  {
     title: "Flash Express",
     description: "Notre service le plus rapide pour les livraisons critiques.",
-    price: "32",
-    currency: "€",
-    frequency: "forfait 0 à 10 km",
-    featuresLabel: "INCLUS",
-    featuresIntro: "Performance maximale :",
-    features: ["32 € pour la tranche 0 à 10 km", "2,00 € par kilomètre supplémentaire", "Délai record de 45 minutes", "Coursier dédié et suivi premium"],
-    primaryCta: {
-      label: "Commander",
-      href: "/inscription"
-    },
-    secondaryCta: {
-      label: "Contacter un expert",
-      href: "/contact"
-    }
-  }];
-  const testimonials = [{
+    price: "€32 forfait 0 à 10 km",
+    intro: "Performance maximale :",
+    features: [
+      "32 € pour la tranche 0 à 10 km",
+      "2,00 € par kilomètre supplémentaire",
+      "Délai record de 45 minutes",
+      "Coursier dédié et suivi premium"
+    ],
+    link: "/commande-sans-compte"
+  }
+];
+
+const testimonials = [
+  {
     name: "Marie L.",
     company: "Laboratoire Médical",
-    text: "Service impeccable ! Nos échantillons arrivent toujours à temps.",
-    rating: 5
-  }, {
+    quote: "Service impeccable ! Nos échantillons arrivent toujours à temps."
+  },
+  {
     name: "Thomas D.",
     company: "Cabinet d'Avocats",
-    text: "Ponctualité et discrétion. Parfait pour nos documents sensibles.",
-    rating: 5
-  }, {
+    quote: "Ponctualité et discrétion. Parfait pour nos documents sensibles."
+  },
+  {
     name: "Sophie M.",
     company: "Opticien",
-    text: "Des tarifs transparents et un suivi en temps réel. Je recommande !",
-    rating: 5
-  }];
-  return <Layout>
-      {/* Hero Section */}
-      <section className="relative flex min-h-screen items-center justify-center overflow-hidden text-white md:h-screen">
+    quote: "Des tarifs transparents et un suivi en temps réel. Je recommande !"
+  }
+];
+
+const Home = () => {
+  return (
+    <Layout>
+      <section className="relative flex min-h-[calc(100vh-5rem)] items-center justify-center overflow-hidden bg-gray-950 text-white">
         <div className="absolute inset-0">
-          <img src="https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=2400&q=80" alt="Vue aérienne de Paris au coucher du soleil" className="h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-950/80 via-slate-900/70 to-slate-900/60" />
+          <img
+            src="https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=2400&q=80"
+            alt="Vue aérienne de Paris au coucher du soleil"
+            className="h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/60" />
         </div>
-        <div className="relative z-10 flex w-full max-w-6xl flex-col items-center gap-12 px-6 py-16 text-center md:h-full md:px-12">
-          <div className="w-full space-y-6 rounded-3xl bg-slate-950/40 p-8 backdrop-blur-sm md:p-12">
-            <div className="inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-medium uppercase tracking-[0.35em]">
-              <span className="h-2 w-2 rounded-full bg-cta shadow-[0_0_12px_theme(colors.amber.400/0.8)]" />
-              One Connexion Express
-            </div>
-            <div className="space-y-4">
-              <h1 className="text-4xl font-semibold leading-tight md:text-5xl lg:text-6xl">
-                Livraison urgente et programmée en Île-de-France
-              </h1>
-              <p className="text-lg text-white/80 md:text-xl">
-                Service professionnel 24/7 pour vos colis urgents. Tarifs transparents, suivi en temps réel et prise en charge immédiate par nos coursiers dédiés.
-              </p>
-            </div>
-            <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-              <Button variant="cta" size="lg" asChild>
-                <Link to="/commande-sans-compte">Commander maintenant</Link>
-              </Button>
-              <Button variant="outline-light" size="lg" className="border-white/30 text-white hover:border-white hover:text-[#0b2d63]" asChild>
-                <Link to="/tarifs">Voir les tarifs</Link>
-              </Button>
-            </div>
-            <div className="mx-auto grid w-full gap-4 text-left text-base text-white/80 sm:grid-cols-2 md:grid-cols-3 md:text-center">
-              {heroHighlights.map(highlight => <div key={highlight} className="flex items-center justify-center gap-3 md:flex-col md:gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-cta md:h-7 md:w-7" />
-                  <span className="max-w-xs md:max-w-none">{highlight}</span>
-                </div>)}
-            </div>
+        <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-col items-center gap-8 px-6 py-24 text-center">
+          <h1 className="text-4xl font-bold md:text-6xl">One Connexion Express</h1>
+          <p className="text-xl md:text-2xl">Livraison urgente et programmée en Île-de-France</p>
+          <p className="max-w-2xl text-lg text-white/90">
+            Service professionnel 24/7 pour vos colis urgents. Tarifs transparents, suivi en temps réel et prise en charge immédiate par nos coursiers dédiés.
+          </p>
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <a
+              href="#tarifs"
+              className="rounded-lg bg-blue-600 px-8 py-4 font-semibold text-white transition-transform duration-300 hover:scale-105 hover:bg-blue-700"
+            >
+              Voir nos tarifs
+            </a>
+            <Link
+              to="/commande-sans-compte"
+              className="rounded-lg border-2 border-white px-8 py-4 font-semibold text-white transition duration-300 hover:bg-white hover:text-blue-600"
+            >
+              Commander maintenant
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* Advantages Section */}
-      <section className="py-16 md:py-24">
+      <section className="bg-gradient-to-br from-blue-50 to-indigo-100 py-20">
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-8">
-            {advantages.map((advantage, index) => <Card key={index} className="border-none shadow-medium hover:shadow-large transition-smooth">
-                <CardContent className="p-6">
-                  <advantage.icon className="h-12 w-12 text-secondary mb-4" />
-                  <h3 className="mb-2">{advantage.title}</h3>
-                  <p className="text-muted-foreground">{advantage.description}</p>
-                </CardContent>
-              </Card>)}
+          <div className="grid gap-8 md:grid-cols-3">
+            {benefits.map((benefit) => (
+              <Card
+                key={benefit.title}
+                className="rounded-2xl border-none bg-white p-8 shadow-lg transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+              >
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
+                  <benefit.icon className="h-6 w-6 text-blue-600" />
+                </div>
+                <h3 className="mb-3 text-xl font-bold">{benefit.title}</h3>
+                <p className="text-gray-600">{benefit.description}</p>
+              </Card>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Expertises Section */}
-      <section className="py-16 md:py-24 bg-muted/30">
+      <section className="bg-white py-20">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="mb-4">Nos expertises sectorielles</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Des solutions de transport adaptées à chaque secteur professionnel
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {expertises.map((expertise, index) => <Card key={index} className="border-none shadow-soft hover:shadow-medium transition-smooth group cursor-pointer">
-                <CardContent className="p-6">
-                  <expertise.icon className={`h-10 w-10 mb-4 ${expertise.color} group-hover:scale-110 transition-smooth`} />
-                  <h3 className="text-xl mb-2">{expertise.title}</h3>
-                  <p className="text-muted-foreground mb-4">{expertise.description}</p>
-                  <Link to="/expertises" className="text-primary font-semibold inline-flex items-center gap-1 hover:gap-2 transition-smooth">
-                    En savoir plus <ArrowRight className="h-4 w-4" />
+          <h2 className="mb-6 text-center text-4xl font-bold">Nos expertises sectorielles</h2>
+          <p className="mx-auto mb-12 max-w-2xl text-center text-xl text-gray-600">
+            Des solutions de transport adaptées à chaque secteur professionnel
+          </p>
+          <div className="grid gap-8 md:grid-cols-3">
+            {expertises.map((expertise) => (
+              <article
+                key={expertise.title}
+                className="group overflow-hidden rounded-2xl shadow-lg transition duration-500 hover:-translate-y-1 hover:shadow-2xl"
+              >
+                <div className={`flex h-48 items-center justify-center bg-gradient-to-br ${expertise.gradient}`}>
+                  <expertise.icon className="h-12 w-12 text-white" />
+                </div>
+                <div className="space-y-4 bg-white p-6">
+                  <h3 className="text-xl font-bold">{expertise.title}</h3>
+                  <p className="text-gray-600">{expertise.description}</p>
+                  <Link
+                    to="/expertises"
+                    className="inline-flex items-center font-semibold text-blue-600 transition hover:text-blue-700"
+                  >
+                    En savoir plus
+                    <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
-                </CardContent>
-              </Card>)}
-          </div>
-          <div className="text-center mt-8">
-            <Button variant="default" size="lg" asChild>
-              <Link to="/expertises">Découvrir toutes nos expertises</Link>
-            </Button>
+                </div>
+              </article>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Pricing Preview Section */}
-      <section className="py-16 md:py-24 bg-slate-50">
+      <section id="tarifs" className="bg-gray-50 py-20">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="mb-4">Des tarifs clairs, sans devis obligatoire</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Tarification transparente basée sur la zone de livraison
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6 mb-12">
-            {pricingPlans.map(plan => {
-            const isPopular = plan.popular;
-            return <Card key={plan.title} className={cn("relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-1 shadow-soft transition-all hover:shadow-large", isPopular && "border-transparent bg-slate-950 text-white shadow-2xl hover:shadow-2xl")}>
-                  {plan.badge && <div className="absolute left-1/2 top-6 -translate-x-1/2">
-                      <Badge className={cn("rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-wide", isPopular ? "bg-emerald-400 text-slate-950" : "bg-slate-900/5 text-slate-900")}>
-                        {plan.badge}
-                      </Badge>
-                    </div>}
-                  <CardContent className={cn("flex h-full flex-col gap-8 rounded-[22px] bg-white p-10 pt-14 text-left", isPopular && "bg-transparent")}>
-                    <div className="space-y-4 text-center">
-                      <h3 className="text-2xl font-semibold tracking-tight">{plan.title}</h3>
-                      <p className={cn("text-sm text-muted-foreground", isPopular && "text-white/80")}>
-                        {plan.description}
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <div className="flex items-baseline justify-center gap-2">
-                        <span className="text-5xl font-bold">
-                          {plan.currency}
-                          {plan.price}
-                        </span>
-                        <span className={cn("text-sm text-muted-foreground", isPopular && "text-white/80")}>
-                          {plan.frequency}
-                        </span>
-                      </div>
-                    </div>
-                    <div className={cn("rounded-2xl bg-slate-100/60 p-6 text-left", isPopular && "bg-white/5")}>
-                      <p className={cn("text-xs font-semibold tracking-[0.3em] text-slate-500", isPopular && "text-white/70")}>
-                        {plan.featuresLabel}
-                      </p>
-                      <p className={cn("mt-3 text-sm font-medium text-slate-700", isPopular && "text-white")}>
-                        {plan.featuresIntro}
-                      </p>
-                      <ul className="mt-4 space-y-3">
-                        {plan.features.map(feature => <li key={feature} className={cn("flex items-start gap-3 text-sm text-slate-600", isPopular && "text-white/80")}>
-                            <CheckCircle2 className={cn("mt-0.5 h-5 w-5 flex-shrink-0", isPopular ? "text-emerald-400" : "text-emerald-500")} />
-                            <span>{feature}</span>
-                          </li>)}
-                      </ul>
-                    </div>
-                    <div className="mt-auto space-y-3">
-                      <Button size="lg" className={cn("w-full rounded-xl bg-emerald-400 text-slate-950 shadow-md hover:bg-emerald-300", isPopular && "shadow-lg")} asChild>
-                        <Link to={plan.primaryCta.href}>{plan.primaryCta.label}</Link>
-                      </Button>
-                      <Button variant="ghost" size="lg" className={cn("w-full rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900", isPopular && "border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white")} asChild>
-                        <Link to={plan.secondaryCta.href}>{plan.secondaryCta.label}</Link>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>;
-          })}
-          </div>
-          <div className="text-center">
-            <Button variant="secondary" size="lg" asChild>
-              <Link to="/tarifs">Voir tous les tarifs et options</Link>
-            </Button>
+          <h2 className="mb-4 text-center text-4xl font-bold">Des tarifs clairs, sans devis obligatoire</h2>
+          <p className="mx-auto mb-16 max-w-3xl text-center text-xl text-gray-600">
+            Tarification transparente basée sur la zone de livraison
+          </p>
+          <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-3">
+            {pricing.map((plan) => (
+              <div
+                key={plan.title}
+                className={`relative rounded-2xl bg-white p-8 shadow-lg transition duration-300 hover:-translate-y-2 hover:shadow-xl ${
+                  plan.badge ? "border-2 border-blue-500 shadow-xl" : ""
+                }`}
+              >
+                {plan.badge && (
+                  <div className="absolute right-0 top-0 rounded-bl-2xl rounded-tr-2xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white">
+                    {plan.badge}
+                  </div>
+                )}
+                <h3 className="text-2xl font-bold">{plan.title}</h3>
+                <p className="mb-6 text-gray-600">{plan.description}</p>
+                <div className="mb-6 text-3xl font-bold text-blue-600">{plan.price}</div>
+                {plan.intro && <p className="mb-4 text-gray-600">{plan.intro}</p>}
+                <ul className="mb-8 space-y-2 text-gray-600">
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="flex items-center gap-3">
+                      <Check className="h-4 w-4 text-green-500" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  to={plan.link}
+                  className={`block rounded-lg px-6 py-3 text-center font-semibold transition ${
+                    plan.badge
+                      ? "bg-blue-600 text-white hover:bg-blue-700"
+                      : "bg-gray-700 text-white hover:bg-gray-800"
+                  }`}
+                >
+                  Choisir ce plan
+                </Link>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Quick Estimator */}
-      <section className="py-16 md:py-24 bg-muted/30">
+      <section className="bg-gradient-to-r from-blue-600 to-purple-700 py-20 text-white">
         <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto">
-            <Card className="border-none shadow-large">
-              <CardContent className="p-8">
-                <h2 className="text-center mb-6">Estimez votre tarif en quelques clics</h2>
-                <form onSubmit={handleQuickEstimate} className="space-y-4">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Type de transport</label>
-                      <select className="w-full h-11 px-4 rounded-lg border border-input bg-background">
-                        <option>Document</option>
-                        <option>Colis léger (&lt;5kg)</option>
-                        <option>Colis moyen (5-20kg)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Zone</label>
-                      <select className="w-full h-11 px-4 rounded-lg border border-input bg-background">
-                        <option>Intra-Paris</option>
-                        <option>Petite Couronne</option>
-                        <option>Grande Couronne</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input type="checkbox" id="express" className="h-4 w-4" />
-                    <label htmlFor="express" className="text-sm">Livraison express (+30%)</label>
-                  </div>
-                  <Button type="submit" variant="cta" size="lg" className="w-full">
-                    Calculer le tarif
-                  </Button>
-                  {estimatedPrice && <div className="text-center p-4 bg-primary/10 rounded-lg animate-scale-in">
-                      <p className="text-sm text-muted-foreground mb-1">Tarif estimé</p>
-                      <p className="text-3xl font-bold text-primary">{estimatedPrice}€</p>
-                      <p className="text-xs text-muted-foreground mt-2">Tarif indicatif, hors options</p>
-                    </div>}
-                </form>
-              </CardContent>
-            </Card>
+          <h2 className="mb-12 text-center text-4xl font-bold">Estimez votre tarif en quelques clics</h2>
+          <div className="mx-auto max-w-md rounded-2xl bg-white p-8 text-gray-800 shadow-2xl">
+            <form className="space-y-6">
+              <div>
+                <label className="mb-3 block font-semibold text-gray-700">Type de transport</label>
+                <select className="w-full rounded-lg border border-gray-300 p-3 text-gray-700">
+                  <option>Standard</option>
+                  <option>Express</option>
+                  <option>Flash Express</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-3 block font-semibold text-gray-700">Zone</label>
+                <select className="w-full rounded-lg border border-gray-300 p-3 text-gray-700">
+                  <option>Paris Intra-muros</option>
+                  <option>Petite Couronne</option>
+                  <option>Grande Couronne</option>
+                </select>
+              </div>
+              <label className="flex items-center text-gray-700">
+                <input type="checkbox" className="mr-3 rounded" />
+                Livraison express (+30%)
+              </label>
+              <Button className="w-full bg-blue-600 text-white hover:bg-blue-700" type="button">
+                Calculer le tarif
+              </Button>
+            </form>
           </div>
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="py-16 md:py-24">
+      <section className="bg-white py-20">
         <div className="container mx-auto px-4">
-          <h2 className="text-center mb-12">Ils nous font confiance</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            {testimonials.map((testimonial, index) => <Card key={index} className="border-none shadow-soft">
-                <CardContent className="p-6">
-                  <div className="flex gap-1 mb-4">
-                    {[...Array(testimonial.rating)].map((_, i) => <Star key={i} className="h-5 w-5 fill-cta text-cta" />)}
-                  </div>
-                  <p className="text-muted-foreground mb-4 italic">"{testimonial.text}"</p>
-                  <div>
-                    <p className="font-semibold">{testimonial.name}</p>
-                    <p className="text-sm text-muted-foreground">{testimonial.company}</p>
-                  </div>
-                </CardContent>
-              </Card>)}
+          <h2 className="mb-12 text-center text-4xl font-bold">Ils nous font confiance</h2>
+          <div className="grid gap-8 md:grid-cols-3">
+            {testimonials.map((testimonial) => (
+              <Card key={testimonial.name} className="rounded-2xl border-none bg-gray-50 p-8 shadow-sm">
+                <div className="mb-4 text-yellow-400">
+                  {[...Array(5)].map((_, index) => (
+                    <Star key={index} className="inline h-5 w-5 fill-yellow-400 text-yellow-400" />
+                  ))}
+                </div>
+                <p className="mb-6 italic text-gray-600">"{testimonial.quote}"</p>
+                <div className="font-semibold text-gray-800">{testimonial.name}</div>
+                <div className="text-sm text-gray-500">{testimonial.company}</div>
+              </Card>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="py-16 md:py-24 gradient-hero text-primary-foreground">
+      <section id="commander" className="bg-gradient-to-br from-gray-900 to-blue-900 py-20 text-white">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="mb-6">Prêt à commander ?</h2>
-          <p className="text-xl mb-8 text-primary-foreground/90">
+          <h2 className="mb-6 text-4xl font-bold">Prêt à commander ?</h2>
+          <p className="mx-auto mb-12 max-w-2xl text-xl text-white/90">
             Commencez dès maintenant ou créez un compte pour gérer toutes vos livraisons
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button variant="cta" size="lg" asChild>
-              <Link to="/commande-sans-compte">Commander une course</Link>
-            </Button>
-            <Button variant="outline-light" size="lg" asChild>
-              <Link to="/inscription">Créer mon compte</Link>
-            </Button>
+          <div className="flex flex-col justify-center gap-4 sm:flex-row">
+            <Link
+              to="/commande-sans-compte"
+              className="rounded-lg bg-blue-600 px-8 py-4 font-semibold text-white transition-transform duration-300 hover:scale-105 hover:bg-blue-700"
+            >
+              Commander maintenant
+            </Link>
+            <Link
+              to="/inscription"
+              className="rounded-lg border-2 border-white px-8 py-4 font-semibold text-white transition duration-300 hover:bg-white hover:text-blue-600"
+            >
+              Créer un compte
+            </Link>
           </div>
         </div>
       </section>
-    </Layout>;
+    </Layout>
+  );
 };
+
 export default Home;

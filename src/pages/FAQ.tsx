@@ -7,37 +7,37 @@ const faqItems = [
   {
     question: "Comment fonctionne la tarification selon la distance ?",
     answer:
-      "Nous calculons nos tarifs en fonction du kilométrage réel entre le point d’enlèvement et le point de livraison. Chaque demande reçoit un devis instantané incluant la prise en charge, la distance parcourue et, le cas échéant, les options complémentaires choisies.",
+      "Nous appliquons un tarif de base incluant l’enlèvement, auquel s’ajoute un coût par kilomètre réellement parcouru. Le devis tient aussi compte du trafic estimé et des contraintes d’accès pour garantir un prix juste avant validation.",
   },
   {
     question: "Quels sont vos délais moyens de livraison ?",
     answer:
-      "En Île-de-France, une livraison express est généralement effectuée en 60 à 90 minutes. Pour les trajets plus longs ou les tournées multi-points, nous ajustons le délai tout en vous communiquant une estimation précise lors de la commande.",
+      "Sur Paris et sa région, une course express est livrée en 60 à 90 minutes, ce qui maintient le tarif standard. Pour les trajets inter-régions, nous proposons des créneaux dédiés dont le prix reflète la distance et les temps de conduite réglementaires.",
   },
   {
     question: "Proposez-vous un service en soirée ou le week-end ?",
     answer:
-      "Oui, notre réseau de chauffeurs dédiés couvre les besoins en soirée, le week-end et les jours fériés sur simple demande. Il vous suffit de préciser le créneau souhaité lors de la réservation pour que nous mobilisions une équipe adaptée.",
+      "Oui, des équipes d’astreinte assurent les livraisons tardives, le week-end et les jours fériés. Une majoration transparente est appliquée au devis pour couvrir la mobilisation spécifique des chauffeurs et garantir la continuité du service.",
   },
   {
     question: "Puis-je suivre mon colis en temps réel ?",
     answer:
-      "Chaque mission bénéficie d’un suivi GPS accessible depuis votre espace client. Vous visualisez en direct la position du coursier, recevez les notifications d’étapes clés et obtenez la preuve de livraison dès la remise au destinataire.",
+      "Un lien de suivi GPS est inclus dans chaque commande sans surcoût pour que vous visualisiez l’avancée du coursier. Les statuts de prise en charge, d’acheminement et de remise sont horodatés pour faciliter vos reporting internes.",
   },
   {
     question: "Est-ce que je peux planifier une livraison à l’avance ?",
     answer:
-      "Absolument. Vous pouvez planifier une course ponctuelle ou récurrente plusieurs jours, voire semaines, à l’avance. Nous bloquons alors le créneau et affectons le chauffeur idéal pour respecter vos engagements auprès de vos clients.",
+      "Bien sûr, vous pouvez réserver une course plusieurs jours ou semaines en avance directement depuis l’espace client. Le tarif est verrouillé dès la validation et nous confirmons la disponibilité du chauffeur choisi pour le créneau.",
   },
   {
     question: "Quels types de marchandises transportez-vous ?",
     answer:
-      "Nous prenons en charge la majorité des marchandises professionnelles : documents confidentiels, pièces détachées, matériel médical, prototypes, produits high-tech ou colis fragiles nécessitant un soin particulier.",
+      "Nous transportons dossiers confidentiels, pièces industrielles, matériel médical ou high-tech avec emballage adapté. Certaines matières dangereuses sont exclues mais nous proposons des options de manutention spécifique facturées sur devis.",
   },
   {
     question: "Que se passe-t-il si un colis est perdu ou endommagé ?",
     answer:
-      "Nos livraisons sont couvertes par une assurance professionnelle. En cas d’incident, nous ouvrons immédiatement un dossier de prise en charge, coordonnons les démarches avec vous et organisons si besoin une nouvelle expédition prioritaire.",
+      "Toutes nos courses sont couvertes par une assurance professionnelle intégrée dans le prix. En cas d’incident, nous déclenchons une indemnisation selon la valeur déclarée et, si besoin, réexpédions la marchandise en priorité.",
   },
 ];
 
@@ -47,9 +47,9 @@ const FAQ = () => {
       <section className="bg-white py-16 sm:py-24">
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-12 px-4 sm:px-6 lg:px-8">
           <header className="text-center">
-            <h1 className="text-3xl font-semibold text-gray-900 sm:text-4xl">Foire aux questions</h1>
+            <h1 className="text-3xl font-semibold text-gray-900 sm:text-4xl">Foire aux questions – Tarifs</h1>
             <p className="mt-4 text-base text-gray-600 sm:text-lg">
-              Toutes les réponses à vos questions sur notre service de livraison express B2B
+              Retrouvez ici toutes les réponses liées à notre système de tarification pour la livraison express B2B
             </p>
           </header>
 

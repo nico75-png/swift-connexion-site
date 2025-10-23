@@ -287,16 +287,14 @@ const CommandeSansCompte = () => {
     [selectedSectorConfig],
   );
 
-  const [summarySectorLabel, setSummarySectorLabel] = useState<string>(selectedSectorConfig?.label ?? "—");
-  const [summarySectorDescription, setSummarySectorDescription] = useState<string>(
-    selectedSectorConfig?.description ?? "",
-  );
-  const [summaryPackageLabel, setSummaryPackageLabel] = useState<string>(() => {
+  const summarySectorLabel = selectedSectorConfig?.label ?? "—";
+  const summarySectorDescription = selectedSectorConfig?.description ?? "";
+  const summaryPackageLabel = useMemo(() => {
     if (selectedSectorConfig && watchedValues.packageType) {
       return getPackageTypeLabel(selectedSectorConfig.id, watchedValues.packageType);
     }
     return "—";
-  });
+  }, [selectedSectorConfig, watchedValues.packageType]);
 
   const previousSectorRef = useRef<GuestSectorKey | null>(null);
 
@@ -430,21 +428,6 @@ const CommandeSansCompte = () => {
     watchedValues.widthCm,
     watchedValues.deliveryDate,
   ]);
-
-  useEffect(() => {
-    setSummarySectorLabel(selectedSectorConfig?.label ?? "—");
-    setSummarySectorDescription(selectedSectorConfig?.description ?? "");
-
-    if (
-      selectedSectorConfig &&
-      watchedValues.packageType &&
-      selectedSectorConfig.packageTypes.some((option) => option.value === watchedValues.packageType)
-    ) {
-      setSummaryPackageLabel(getPackageTypeLabel(selectedSectorConfig.id, watchedValues.packageType));
-    } else {
-      setSummaryPackageLabel("—");
-    }
-  }, [selectedSectorConfig, watchedValues.packageType, watchedValues.sector]);
 
   useEffect(() => {
     if (!readyForEstimate) {
@@ -777,10 +760,6 @@ const CommandeSansCompte = () => {
                                 <Select
                                   onValueChange={(value) => {
                                     field.onChange(value as GuestSectorKey);
-                                    previousSectorRef.current = value as GuestSectorKey;
-                                    form.resetField("packageType", { defaultValue: "" });
-                                    form.resetField("otherPackage", { defaultValue: "" });
-                                    form.clearErrors(["packageType", "otherPackage"]);
                                   }}
                                   value={field.value}
                                 >

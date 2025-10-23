@@ -145,6 +145,16 @@ const guestOrderSchema = z
     heightCm: z.coerce
       .number({ invalid_type_error: "Hauteur requise" })
       .min(1, "Hauteur minimum 1 cm"),
+    pickupTime: z
+      .string()
+      .trim()
+      .optional()
+      .or(z.literal("")),
+    deliveryTime: z
+      .string()
+      .trim()
+      .optional()
+      .or(z.literal("")),
     deliveryDate: z.date({ required_error: "Date de livraison requise" }),
     formula: z.enum(["standard", "express", "eco"]),
   })
@@ -175,6 +185,8 @@ const defaultValues: Partial<GuestOrderFormValues> = {
   lengthCm: 30,
   widthCm: 20,
   heightCm: 15,
+  pickupTime: "",
+  deliveryTime: "",
   deliveryDate: undefined,
   formula: "standard",
 };
@@ -486,14 +498,29 @@ const CommandeSansCompte = () => {
   const deliveryDateDisplay = watchedValues.deliveryDate
     ? format(watchedValues.deliveryDate, "PPP", { locale: fr })
     : "—";
+  const pickupTimeDisplay = watchedValues.pickupTime?.trim()
+    ? watchedValues.pickupTime
+    : "—";
+  const deliveryTimeDisplay = watchedValues.deliveryTime?.trim()
+    ? watchedValues.deliveryTime
+    : "—";
   const totalDisplay = estimate
     ? `${estimate.total.toFixed(2)} €`
     : estimateLoading
       ? "Calcul en cours…"
       : "100 €";
 
-  const sectorSummaryText =
-    selectedSectorConfig?.description ?? "Transport sécurisé de produits médicaux et sensibles.";
+  const sectorLabel = selectedSectorConfig?.label ?? "—";
+  const packageLabel = watchedValues.packageType
+    ? getPackageTypeLabel(watchedValues.sector, watchedValues.packageType)
+    : "—";
+  const fullNameDisplay = watchedValues.fullName?.trim() || "—";
+  const companyDisplay = watchedValues.company?.trim() || "—";
+  const siretDisplay = watchedValues.siret?.trim() || "—";
+  const emailDisplay = watchedValues.email?.trim() || "—";
+  const phoneDisplay = watchedValues.phone?.trim() || "—";
+  const pickupAddressDisplay = watchedValues.pickupAddress?.trim() || "—";
+  const dropoffAddressDisplay = watchedValues.dropoffAddress?.trim() || "—";
 
   return (
     <Layout>
@@ -594,7 +621,7 @@ const CommandeSansCompte = () => {
                           name="sector"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Choisir votre secteur *</FormLabel>
+                              <FormLabel>Secteur *</FormLabel>
                               <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
                                   <SelectTrigger className="rounded-2xl border-slate-200 bg-white text-slate-700">
@@ -657,7 +684,7 @@ const CommandeSansCompte = () => {
                           name="pickupAddress"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Adresse de départ *</FormLabel>
+                              <FormLabel>Adresse complète du lieu d’enlèvement *</FormLabel>
                               <FormControl>
                                 <Input
                                   {...field}
@@ -674,7 +701,7 @@ const CommandeSansCompte = () => {
                           name="dropoffAddress"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Adresse d'arrivée *</FormLabel>
+                              <FormLabel>Adresse complète du lieu de livraison *</FormLabel>
                               <FormControl>
                                 <Input
                                   {...field}
@@ -742,12 +769,40 @@ const CommandeSansCompte = () => {
                             />
                           </div>
                         </div>
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <FormField
+                            control={form.control}
+                            name="pickupTime"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Heure prévue d’enlèvement</FormLabel>
+                                <FormControl>
+                                  <Input {...field} type="time" placeholder="08:30" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="deliveryTime"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Heure prévue de livraison</FormLabel>
+                                <FormControl>
+                                  <Input {...field} type="time" placeholder="12:00" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
                         <FormField
                           control={form.control}
                           name="deliveryDate"
                           render={({ field }) => (
                             <FormItem className="flex flex-col">
-                              <FormLabel>Date souhaitée de livraison *</FormLabel>
+                              <FormLabel>Date souhaitée *</FormLabel>
                               <Popover>
                                 <PopoverTrigger asChild>
                                   <FormControl>
@@ -826,60 +881,115 @@ const CommandeSansCompte = () => {
                           </div>
                           <div>
                             <CardTitle className="text-xl font-semibold text-slate-900">✅ Récapitulatif instantané</CardTitle>
-                            <p className="text-sm text-slate-500">Visualisez vos choix avant validation.</p>
+                            <p className="text-sm text-slate-500">Visualisez vos informations avant validation.</p>
                           </div>
                         </div>
                       </CardHeader>
-                      <CardContent className="space-y-5 text-sm text-slate-600">
-                        <div className="rounded-2xl bg-slate-50 p-5">
-                          <p className="text-xs uppercase tracking-wide text-slate-500">Secteur choisi</p>
-                          <p className="mt-1 text-lg font-semibold text-slate-900">
-                            {selectedSectorConfig?.label ?? "—"}
-                          </p>
-                          <p className="mt-2 text-sm text-slate-500">{sectorSummaryText}</p>
-                        </div>
-                        <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-5">
-                          <div className="flex items-center justify-between">
-                            <span>Type de colis</span>
-                            <span className="font-semibold text-slate-900">
-                              {watchedValues.packageType
-                                ? getPackageTypeLabel(watchedValues.sector, watchedValues.packageType)
-                                : "—"}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span>Poids</span>
-                            <span className="font-semibold text-slate-900">{weightDisplay}</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span>Dimensions</span>
-                            <span className="font-semibold text-slate-900">{dimensionsDisplay}</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span>Formule</span>
-                            <span className="font-semibold text-slate-900">{selectedFormula?.title ?? "—"}</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span>Date de livraison</span>
-                            <span className="font-semibold text-slate-900">{deliveryDateDisplay}</span>
+                      <CardContent className="space-y-6 text-sm text-slate-600">
+                        <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+                            <span aria-hidden="true">🏢</span>
+                            Informations de l’entreprise
+                          </h3>
+                          <div className="grid gap-4">
+                            <div className="space-y-1">
+                              <p className="text-xs uppercase tracking-wide text-slate-500">Nom complet</p>
+                              <p className="font-semibold text-slate-900">{fullNameDisplay}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs uppercase tracking-wide text-slate-500">Nom de la société</p>
+                              <p className="font-semibold text-slate-900">{companyDisplay}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs uppercase tracking-wide text-slate-500">Numéro de SIRET</p>
+                              <p className="font-semibold text-slate-900">{siretDisplay}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs uppercase tracking-wide text-slate-500">Email</p>
+                              <p className="font-semibold text-slate-900">{emailDisplay}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs uppercase tracking-wide text-slate-500">Téléphone</p>
+                              <p className="font-semibold text-slate-900">{phoneDisplay}</p>
+                            </div>
                           </div>
                         </div>
-                        <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/70 p-5 text-slate-700">
+
+                        <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+                            <span aria-hidden="true">📍</span>
+                            Adresses
+                          </h3>
+                          <div className="grid gap-4">
+                            <div className="space-y-1">
+                              <p className="text-xs uppercase tracking-wide text-slate-500">Lieu d’enlèvement</p>
+                              <p className="font-semibold text-slate-900">{pickupAddressDisplay}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs uppercase tracking-wide text-slate-500">Lieu de livraison</p>
+                              <p className="font-semibold text-slate-900">{dropoffAddressDisplay}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+                            <span aria-hidden="true">📦</span>
+                            Détails logistiques
+                          </h3>
+                          <div className="grid gap-4">
+                            <div className="space-y-1">
+                              <p className="text-xs uppercase tracking-wide text-slate-500">Secteur</p>
+                              <p className="font-semibold text-slate-900">{sectorLabel}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs uppercase tracking-wide text-slate-500">Type de colis</p>
+                              <p className="font-semibold text-slate-900">{packageLabel}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs uppercase tracking-wide text-slate-500">Poids</p>
+                              <p className="font-semibold text-slate-900">{weightDisplay}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs uppercase tracking-wide text-slate-500">Dimensions</p>
+                              <p className="font-semibold text-slate-900">{dimensionsDisplay}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs uppercase tracking-wide text-slate-500">Formule choisie</p>
+                              <p className="font-semibold text-slate-900">{selectedFormula?.title ?? "—"}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs uppercase tracking-wide text-slate-500">Heure d’enlèvement prévue</p>
+                              <p className="font-semibold text-slate-900">{pickupTimeDisplay}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs uppercase tracking-wide text-slate-500">Heure de livraison prévue</p>
+                              <p className="font-semibold text-slate-900">{deliveryTimeDisplay}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs uppercase tracking-wide text-slate-500">Date souhaitée</p>
+                              <p className="font-semibold text-slate-900">{deliveryDateDisplay}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3 rounded-3xl border border-emerald-200 bg-emerald-50/80 p-5 text-slate-700">
                           <p className="text-xs uppercase tracking-wide text-emerald-600">TOTAL ESTIMÉ</p>
-                          <p className="mt-2 text-2xl font-bold text-emerald-700">{totalDisplay}</p>
-                          <p className="mt-2 text-sm">
-                            Estimation indicative incluant les informations renseignées. Le tarif final sera confirmé par nos équipes.
+                          <p className="text-2xl font-bold text-emerald-700">{totalDisplay}</p>
+                          <p className="text-sm">
+                            Estimation indicative basée sur les informations renseignées. Le tarif final sera confirmé par nos équipes.
                           </p>
                           {estimateError ? (
-                            <p className="mt-3 text-sm text-red-500">{estimateError}</p>
+                            <p className="text-sm text-red-500">{estimateError}</p>
                           ) : null}
                           {estimateLoading ? (
-                            <div className="mt-3 space-y-2">
+                            <div className="space-y-2">
                               <Skeleton className="h-3 w-3/4" />
                               <Skeleton className="h-3 w-1/2" />
                             </div>
                           ) : null}
                         </div>
+
                         <Button
                           type="submit"
                           disabled={isSubmitting}

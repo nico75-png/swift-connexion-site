@@ -270,7 +270,12 @@ const CommandeSansCompte = () => {
     mode: "onBlur",
   });
 
-  const watchedValues = useWatch({ control: form.control });
+  const formWatchValues = useWatch({ control: form.control }) as Partial<GuestOrderFormValues> | undefined;
+
+  const watchedValues = useMemo(
+    () => ({ ...defaultValues, ...(formWatchValues ?? {}) }),
+    [formWatchValues],
+  );
 
   const selectedSectorConfig = useMemo(
     () => getGuestSectorConfig(watchedValues.sector),
@@ -281,6 +286,17 @@ const CommandeSansCompte = () => {
     () => selectedSectorConfig?.packageTypes ?? [],
     [selectedSectorConfig],
   );
+
+  const [summarySectorLabel, setSummarySectorLabel] = useState<string>(selectedSectorConfig?.label ?? "—");
+  const [summarySectorDescription, setSummarySectorDescription] = useState<string>(
+    selectedSectorConfig?.description ?? "",
+  );
+  const [summaryPackageLabel, setSummaryPackageLabel] = useState<string>(() => {
+    if (selectedSectorConfig && watchedValues.packageType) {
+      return getPackageTypeLabel(selectedSectorConfig.id, watchedValues.packageType);
+    }
+    return "—";
+  });
 
   const previousSectorRef = useRef<GuestSectorKey | null>(null);
 
@@ -412,6 +428,21 @@ const CommandeSansCompte = () => {
     watchedValues.widthCm,
     watchedValues.deliveryDate,
   ]);
+
+  useEffect(() => {
+    setSummarySectorLabel(selectedSectorConfig?.label ?? "—");
+    setSummarySectorDescription(selectedSectorConfig?.description ?? "");
+
+    if (
+      selectedSectorConfig &&
+      watchedValues.packageType &&
+      selectedSectorConfig.packageTypes.some((option) => option.value === watchedValues.packageType)
+    ) {
+      setSummaryPackageLabel(getPackageTypeLabel(selectedSectorConfig.id, watchedValues.packageType));
+    } else {
+      setSummaryPackageLabel("—");
+    }
+  }, [selectedSectorConfig, watchedValues.packageType, watchedValues.sector]);
 
   useEffect(() => {
     if (!readyForEstimate) {
@@ -627,11 +658,9 @@ const CommandeSansCompte = () => {
       ? "Calcul en cours…"
       : "100 €";
 
-  const sectorLabel = selectedSectorConfig?.label ?? "—";
-  const sectorDescription = selectedSectorConfig?.description ?? "";
-  const packageLabel = watchedValues.packageType
-    ? getPackageTypeLabel(watchedValues.sector, watchedValues.packageType)
-    : "—";
+  const sectorLabel = summarySectorLabel;
+  const sectorDescription = summarySectorDescription;
+  const packageLabel = summaryPackageLabel;
   const fullNameDisplay = watchedValues.fullName?.trim() || "—";
   const companyDisplay = watchedValues.company?.trim() || "—";
   const siretDisplay = watchedValues.siret?.trim() || "—";

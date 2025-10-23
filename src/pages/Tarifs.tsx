@@ -5,19 +5,19 @@ import { PricingRateTable } from "@/components/pricing/PricingRateTable";
 const Tarifs = () => {
   const faqs = [{
     question: "Comment sont calculés les tarifs ?",
-    answer: "Nos tarifs reposent sur la zone de prise en charge, la formule choisie (Standard, Express, Flash Express) et la distance réelle parcourue : base pour 0–10 km, puis prix au kilomètre au-delà. Aucun frais caché."
+    answer: "Les tarifs sont calculés en fonction de la distance, du poids du colis, et de l’urgence de la livraison."
   }, {
     question: "Y a-t-il des frais supplémentaires cachés ?",
-    answer: "Non, nos tarifs sont totalement transparents. Le prix affiché dans le simulateur est le prix final, sauf si vous ajoutez des options complémentaires."
+    answer: "Non, tous les frais sont détaillés avant validation de la commande. Aucune surprise."
   }, {
     question: "Proposez-vous des tarifs dégressifs ?",
-    answer: "Oui, pour les entreprises avec volume régulier (> 20 courses/mois), nous proposons des tarifs préférentiels sur devis. Contactez notre équipe commerciale."
+    answer: "Oui, des remises sont proposées en fonction du volume mensuel ou d’un contrat régulier."
   }, {
     question: "Comment puis-je payer mes courses ?",
-    answer: "Paiement par carte bancaire à la commande pour les courses ponctuelles. Facturation mensuelle disponible pour les comptes professionnels."
+    answer: "Le paiement peut s’effectuer par carte bancaire, virement ou facturation mensuelle selon votre profil."
   }, {
-    question: "Les tarifs incluent-ils l'assurance ?",
-    answer: "Oui, une assurance de base jusqu'à 500 € est incluse. Pour les colis de valeur supérieure, une assurance renforcée est disponible à 2 % de la valeur déclarée."
+    question: "Les tarifs incluent-ils l’assurance ?",
+    answer: "Oui, une assurance de base est incluse. Des options complémentaires sont disponibles selon la valeur déclarée."
   }];
   return <Layout>
       {/* Hero */}
@@ -38,7 +38,10 @@ const Tarifs = () => {
       <section className="py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto">
-            <h2 className="text-center mb-12">Questions fréquentes sur les tarifs</h2>
+            <h2 className="text-center mb-4">Foire aux questions – Tarifs</h2>
+            <p className="text-center text-muted-foreground mb-12">
+              Retrouvez ici toutes les réponses liées à notre système de tarification pour la livraison express B2B
+            </p>
             <Accordion type="single" collapsible className="space-y-4">
               {faqs.map((faq, index) => <AccordionItem key={index} value={`item-${index}`} className="border border-border rounded-lg px-6">
                   <AccordionTrigger className="text-left font-semibold hover:no-underline">

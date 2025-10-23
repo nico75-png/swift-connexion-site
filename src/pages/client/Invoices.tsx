@@ -17,11 +17,14 @@ import { getNotifications } from "@/lib/stores/driversOrders.store";
 import type { NotificationEntry } from "@/lib/stores/driversOrders.store";
 import { useInvoices } from "@/hooks/useInvoices";
 
-const formatDate = (dateString: string | null) => {
+const formatDate = (dateString: string | null | undefined) => {
   if (!dateString) return "N/A";
   try {
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) return "Date invalide";
+    // Vérifie si la date est valide
+    if (!date || isNaN(date.getTime()) || date.getTime() === 0) {
+      return "Date invalide";
+    }
     return format(date, "dd/MM/yyyy", { locale: fr });
   } catch {
     return "Date invalide";

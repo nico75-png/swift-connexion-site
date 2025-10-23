@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -274,6 +274,8 @@ const CommandeSansCompte = () => {
     [selectedSectorConfig],
   );
 
+  const previousSectorRef = useRef<GuestSectorKey | null>(null);
+
   const selectedFormula = shippingFormulas.find((item) => item.id === watchedValues.formula);
 
   const readyForEstimate = useMemo(() => {
@@ -429,6 +431,19 @@ const CommandeSansCompte = () => {
     }
   }, [success]);
 
+  useEffect(() => {
+    const currentSector = watchedValues.sector;
+    if (!currentSector) return;
+
+    if (previousSectorRef.current && previousSectorRef.current !== currentSector) {
+      form.resetField("packageType", { defaultValue: "" });
+      form.resetField("otherPackage", { defaultValue: "" });
+      form.clearErrors(["packageType", "otherPackage"]);
+    }
+
+    previousSectorRef.current = currentSector;
+  }, [form, watchedValues.sector]);
+
   if (success && submittedPayload) {
     const sectorLabel = getGuestSectorConfig(submittedPayload.secteur)?.label ?? submittedPayload.secteur;
     const packageLabel = getPackageTypeLabel(submittedPayload.secteur, submittedPayload.type_colis);
@@ -512,7 +527,6 @@ const CommandeSansCompte = () => {
     : "—";
   const fullNameDisplay = watchedValues.fullName?.trim() || "—";
   const companyDisplay = watchedValues.company?.trim() || "—";
-  const hasCompany = Boolean(watchedValues.company?.trim());
   const siretDisplay = watchedValues.siret?.trim() || "—";
   const pickupAddressDisplay = watchedValues.pickupAddress?.trim() || "—";
   const dropoffAddressDisplay = watchedValues.dropoffAddress?.trim() || "—";
@@ -622,7 +636,16 @@ const CommandeSansCompte = () => {
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel>Secteur *</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
+                                <Select
+                                  onValueChange={(value) => {
+                                    field.onChange(value as GuestSectorKey);
+                                    previousSectorRef.current = value as GuestSectorKey;
+                                    form.resetField("packageType", { defaultValue: "" });
+                                    form.resetField("otherPackage", { defaultValue: "" });
+                                    form.clearErrors(["packageType", "otherPackage"]);
+                                  }}
+                                  value={field.value}
+                                >
                                   <FormControl>
                                     <SelectTrigger className="rounded-2xl border-slate-200 bg-white text-slate-700 shadow-sm">
                                       <SelectValue placeholder="Sélectionnez un secteur" />
@@ -865,7 +888,7 @@ const CommandeSansCompte = () => {
                     </div>
                   </div>
 
-                  <aside className="xl:sticky xl:top-24 xl:self-start">
+                  <aside className="xl:sticky xl:top-5 xl:self-start">
                     <div className="w-full rounded-3xl border border-slate-200/80 bg-white/95 p-3.5 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.45)] transition-all duration-300 xl:max-w-[420px] xl:min-w-[360px]">
                       <div className="space-y-0.5">
                         <h2 className="text-base font-semibold text-slate-900">✅ Récapitulatif instantané</h2>
@@ -877,12 +900,10 @@ const CommandeSansCompte = () => {
                             <p className="text-[11px] uppercase tracking-wide text-slate-500">Nom complet</p>
                             <p className="font-medium text-slate-900">{fullNameDisplay}</p>
                           </div>
-                          {hasCompany ? (
-                            <div className="space-y-0.5">
-                              <p className="text-[11px] uppercase tracking-wide text-slate-500">Nom de la société</p>
-                              <p className="font-medium text-slate-900">{companyDisplay}</p>
-                            </div>
-                          ) : null}
+                          <div className="space-y-0.5">
+                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Nom de la société</p>
+                            <p className="font-medium text-slate-900">{companyDisplay}</p>
+                          </div>
                           <div className="space-y-0.5">
                             <p className="text-[11px] uppercase tracking-wide text-slate-500">Numéro de SIRET</p>
                             <p className="font-medium text-slate-900">{siretDisplay}</p>
@@ -937,7 +958,7 @@ const CommandeSansCompte = () => {
                         <div className="space-y-1.5 rounded-3xl border border-emerald-200 bg-emerald-50/80 p-2.5 text-slate-700">
                           <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-600">TOTAL ESTIMÉ</p>
                           <p className="text-2xl font-bold text-emerald-700">{totalDisplay}</p>
-                          <p className="text-xs">Estimation indicative selon vos informations. Le tarif final vous sera confirmé par nos équipes.</p>
+                          <p className="text-xs">Estimation indicative selon vos informations. Le tarif final sera confirmé par nos équipes.</p>
                           {estimateError ? <p className="text-sm text-red-500">{estimateError}</p> : null}
                           {estimateLoading ? (
                             <div className="space-y-2">

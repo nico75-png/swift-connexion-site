@@ -866,13 +866,13 @@ const CommandeSansCompte = () => {
                   </div>
 
                   <aside className="xl:sticky xl:top-24 xl:self-start">
-                    <div className="w-full rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.45)] transition-all duration-300 xl:max-w-[320px]">
-                      <div className="space-y-1">
+                    <div className="w-full rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.45)] transition-all duration-300 xl:max-w-[320px]">
+                      <div className="space-y-0.5">
                         <h2 className="text-base font-semibold text-slate-900">✅ Récapitulatif instantané</h2>
                         <p className="text-xs text-slate-500">Visualisez vos informations avant validation.</p>
                       </div>
-                      <div className="mt-5 space-y-4 text-sm text-slate-600">
-                        <div className="space-y-2">
+                      <div className="mt-4 space-y-3 text-sm text-slate-600">
+                        <div className="space-y-1.5">
                           <div className="space-y-0.5">
                             <p className="text-[11px] uppercase tracking-wide text-slate-500">Nom complet</p>
                             <p className="font-medium text-slate-900">{fullNameDisplay}</p>
@@ -889,7 +889,7 @@ const CommandeSansCompte = () => {
                           </div>
                         </div>
                         <div className="h-px bg-slate-200" />
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                           <div className="space-y-0.5">
                             <p className="text-[11px] uppercase tracking-wide text-slate-500">Lieu d’enlèvement</p>
                             <p className="font-medium text-slate-900">{pickupAddressDisplay}</p>
@@ -900,7 +900,7 @@ const CommandeSansCompte = () => {
                           </div>
                         </div>
                         <div className="h-px bg-slate-200" />
-                        <div className="grid gap-2">
+                        <div className="grid gap-1.5">
                           <div className="space-y-0.5">
                             <p className="text-[11px] uppercase tracking-wide text-slate-500">Secteur choisi</p>
                             <p className="font-medium text-slate-900">{sectorLabel}</p>
@@ -934,7 +934,7 @@ const CommandeSansCompte = () => {
                             <p className="font-medium text-slate-900">{deliveryDateDisplay}</p>
                           </div>
                         </div>
-                        <div className="space-y-2.5 rounded-3xl border border-emerald-200 bg-emerald-50/80 p-4 text-slate-700">
+                        <div className="space-y-2 rounded-3xl border border-emerald-200 bg-emerald-50/80 p-3 text-slate-700">
                           <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-600">TOTAL ESTIMÉ</p>
                           <p className="text-2xl font-bold text-emerald-700">{totalDisplay}</p>
                           <p className="text-xs">Estimation indicative selon vos informations. Le tarif final vous sera confirmé par nos équipes.</p>

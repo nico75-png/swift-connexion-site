@@ -628,6 +628,7 @@ const CommandeSansCompte = () => {
       : "100 €";
 
   const sectorLabel = selectedSectorConfig?.label ?? "—";
+  const sectorDescription = selectedSectorConfig?.description ?? "";
   const packageLabel = watchedValues.packageType
     ? getPackageTypeLabel(watchedValues.sector, watchedValues.packageType)
     : "—";
@@ -758,9 +759,9 @@ const CommandeSansCompte = () => {
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent className="rounded-2xl border border-slate-200 bg-white">
-                                    {Object.entries(GUEST_SECTORS).map(([key, value]) => (
-                                      <SelectItem key={key} value={key}>
-                                        {value.label}
+                                    {GUEST_SECTORS.map((sector) => (
+                                      <SelectItem key={sector.id} value={sector.id}>
+                                        {sector.label}
                                       </SelectItem>
                                     ))}
                                   </SelectContent>
@@ -1071,6 +1072,9 @@ const CommandeSansCompte = () => {
                           <div className="space-y-0.5">
                             <p className="text-[11px] uppercase tracking-wide text-slate-500">Secteur choisi</p>
                             <p className="font-medium text-slate-900">{sectorLabel}</p>
+                            {sectorDescription ? (
+                              <p className="text-xs text-slate-500">{sectorDescription}</p>
+                            ) : null}
                           </div>
                           <div className="space-y-0.5">
                             <p className="text-[11px] uppercase tracking-wide text-slate-500">Type de colis</p>

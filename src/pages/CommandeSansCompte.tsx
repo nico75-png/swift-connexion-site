@@ -492,9 +492,12 @@ const CommandeSansCompte = () => {
       ? "Calcul en cours…"
       : "100 €";
 
+  const sectorSummaryText =
+    selectedSectorConfig?.description ?? "Transport sécurisé de produits médicaux et sensibles.";
+
   return (
     <Layout>
-      <section className="bg-slate-100 py-16">
+      <section className="bg-[#f6f8fa] py-16">
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-6xl">
             <div className="mb-10 text-center">
@@ -508,10 +511,10 @@ const CommandeSansCompte = () => {
                 Renseignez vos informations, obtenez un récapitulatif clair puis confirmez en un clic.
               </p>
             </div>
-            <div className="grid gap-8 xl:grid-cols-[1.75fr_1fr]">
-              <div className="order-1 space-y-6 xl:order-1">
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" noValidate>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
+                <div className="grid gap-8 xl:grid-cols-[1.75fr_1fr]">
+                  <div className="space-y-6">
                     <div className="space-y-6 rounded-3xl bg-white p-6 shadow-xl ring-1 ring-slate-200/60 sm:p-8">
                       <h2 className="text-2xl font-semibold text-slate-900">🧍 Vos informations</h2>
                       <div className="grid gap-4 md:grid-cols-2">
@@ -584,80 +587,65 @@ const CommandeSansCompte = () => {
                     </div>
 
                     <div className="space-y-6 rounded-3xl bg-white p-6 shadow-xl ring-1 ring-slate-200/60 sm:p-8">
-                      <div className="flex flex-col gap-2">
-                        <h2 className="text-2xl font-semibold text-slate-900">🚚 Détails du transport</h2>
-                        <p className="text-sm text-slate-500">
-                          Précisez votre secteur et les informations logistiques pour une estimation optimale.
-                        </p>
-                      </div>
-                      <div className="grid gap-4">
-                        <div className="grid gap-4 md:grid-cols-2">
-                          <FormField
-                            control={form.control}
-                            name="sector"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Choisir votre secteur *</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger className="bg-white">
-                                      <SelectValue placeholder="Sélectionnez votre secteur" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {GUEST_SECTORS.map((option) => (
-                                      <SelectItem key={option.id} value={option.id}>
-                                        {option.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="packageType"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Type de colis *</FormLabel>
-                                <Select
-                                  onValueChange={field.onChange}
-                                  value={field.value}
-                                  disabled={!packageOptions.length}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger className="bg-white">
-                                      <SelectValue
-                                        placeholder={
-                                          packageOptions.length ? "Sélectionnez un type" : "Choisissez un secteur d’abord"
-                                        }
-                                      />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {packageOptions.map((option) => (
-                                      <SelectItem key={option.value} value={option.value}>
-                                        {option.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
+                      <h2 className="text-2xl font-semibold text-slate-900">🚚 Détails du transport</h2>
+                      <div className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="sector"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Choisir votre secteur *</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger className="rounded-2xl border-slate-200 bg-white text-slate-700">
+                                    <SelectValue placeholder="Sélectionnez un secteur" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent className="rounded-2xl border-slate-200 bg-white">
+                                  {GUEST_SECTORS.map((sector) => (
+                                    <SelectItem key={sector.key} value={sector.key}>
+                                      {sector.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="packageType"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Type de colis *</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger className="rounded-2xl border-slate-200 bg-white text-slate-700">
+                                    <SelectValue placeholder="Sélectionnez un type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent className="rounded-2xl border-slate-200 bg-white">
+                                  {packageOptions.map((option) => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                         {watchedValues.packageType === "autre" ? (
                           <FormField
                             control={form.control}
                             name="otherPackage"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Précisez votre colis *</FormLabel>
+                                <FormLabel>Précisez le type de colis</FormLabel>
                                 <FormControl>
-                                  <Input {...field} maxLength={50} placeholder="Ex : documents confidentiels" />
+                                  <Input {...field} placeholder="Décrivez votre colis" />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -671,7 +659,11 @@ const CommandeSansCompte = () => {
                             <FormItem>
                               <FormLabel>Adresse de départ *</FormLabel>
                               <FormControl>
-                                <Input {...field} autoComplete="street-address" placeholder="123 Rue de Paris, 75001 Paris" />
+                                <Input
+                                  {...field}
+                                  autoComplete="street-address"
+                                  placeholder="123 Rue de Paris, 75001 Paris"
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -682,9 +674,13 @@ const CommandeSansCompte = () => {
                           name="dropoffAddress"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Adresse d’arrivée *</FormLabel>
+                              <FormLabel>Adresse d'arrivée *</FormLabel>
                               <FormControl>
-                                <Input {...field} autoComplete="street-address" placeholder="45 Avenue Victor Hugo, 92100 Boulogne" />
+                                <Input
+                                  {...field}
+                                  autoComplete="street-address"
+                                  placeholder="45 Avenue Victor Hugo, 92100 Boulogne"
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -819,72 +815,75 @@ const CommandeSansCompte = () => {
                         />
                       </div>
                     </div>
+                  </div>
 
-                    <div className="space-y-6 rounded-3xl bg-white p-6 shadow-xl ring-1 ring-slate-200/60 sm:p-8">
-                      <h2 className="text-2xl font-semibold text-slate-900">🧾 Récapitulatif de la commande</h2>
-                      <p className="text-sm text-slate-500">
-                        Vérifiez les informations avant d’envoyer votre demande. Vous pouvez modifier chaque section à tout moment.
-                      </p>
-                      <div className="grid gap-3 rounded-2xl bg-slate-50 p-6 text-sm text-slate-600">
-                        <div className="flex items-center justify-between">
-                          <span>Secteur</span>
-                          <span className="font-semibold text-slate-900">
-                            {selectedSectorConfig?.label ?? "—"}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>Type de colis</span>
-                          <span className="font-semibold text-slate-900">
-                            {watchedValues.packageType
-                              ? getPackageTypeLabel(watchedValues.sector, watchedValues.packageType)
-                              : "—"}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>Poids et dimensions</span>
-                          <span className="text-right font-semibold text-slate-900">
-                            {weightDisplay}
-                            <br />
-                            {dimensionsDisplay}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>Date souhaitée</span>
-                          <span className="font-semibold text-slate-900">{deliveryDateDisplay}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>Formule</span>
-                          <span className="font-semibold text-slate-900">{selectedFormula?.title ?? "—"}</span>
-                        </div>
-                        <div className="border-t border-dashed border-slate-300 pt-3 text-left">
-                          <p className="text-xs uppercase tracking-wide text-slate-500">Adresses</p>
-                          <p className="font-semibold text-slate-900">Départ</p>
-                          <p>{watchedValues.pickupAddress || "—"}</p>
-                          <p className="mt-2 font-semibold text-slate-900">Arrivée</p>
-                          <p>{watchedValues.dropoffAddress || "—"}</p>
-                        </div>
-                        <div className="flex items-center justify-between rounded-2xl bg-white px-4 py-3 text-base font-semibold text-slate-900 shadow-inner">
-                          <span>Total estimé</span>
-                          <span>{totalDisplay}</span>
-                        </div>
-                        {estimateError ? (
-                          <p className="text-sm text-red-500">{estimateError}</p>
-                        ) : null}
-                        {estimateLoading ? (
-                          <div className="space-y-2">
-                            <Skeleton className="h-3 w-3/4" />
-                            <Skeleton className="h-3 w-1/2" />
+                  <aside className="xl:sticky xl:top-24">
+                    <Card className="rounded-3xl border-none bg-white/95 shadow-2xl">
+                      <CardHeader className="flex flex-col gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                            <CheckCircle2 className="h-6 w-6" aria-hidden="true" />
                           </div>
-                        ) : null}
-                      </div>
-                      <div className="flex flex-col items-center gap-3 pt-2">
-                        <p className="text-sm text-slate-500">
-                          Aucune création de compte n’est nécessaire. Vous recevrez un récapitulatif par email.
-                        </p>
+                          <div>
+                            <CardTitle className="text-xl font-semibold text-slate-900">✅ Récapitulatif instantané</CardTitle>
+                            <p className="text-sm text-slate-500">Visualisez vos choix avant validation.</p>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-5 text-sm text-slate-600">
+                        <div className="rounded-2xl bg-slate-50 p-5">
+                          <p className="text-xs uppercase tracking-wide text-slate-500">Secteur choisi</p>
+                          <p className="mt-1 text-lg font-semibold text-slate-900">
+                            {selectedSectorConfig?.label ?? "—"}
+                          </p>
+                          <p className="mt-2 text-sm text-slate-500">{sectorSummaryText}</p>
+                        </div>
+                        <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-5">
+                          <div className="flex items-center justify-between">
+                            <span>Type de colis</span>
+                            <span className="font-semibold text-slate-900">
+                              {watchedValues.packageType
+                                ? getPackageTypeLabel(watchedValues.sector, watchedValues.packageType)
+                                : "—"}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span>Poids</span>
+                            <span className="font-semibold text-slate-900">{weightDisplay}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span>Dimensions</span>
+                            <span className="font-semibold text-slate-900">{dimensionsDisplay}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span>Formule</span>
+                            <span className="font-semibold text-slate-900">{selectedFormula?.title ?? "—"}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span>Date de livraison</span>
+                            <span className="font-semibold text-slate-900">{deliveryDateDisplay}</span>
+                          </div>
+                        </div>
+                        <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/70 p-5 text-slate-700">
+                          <p className="text-xs uppercase tracking-wide text-emerald-600">TOTAL ESTIMÉ</p>
+                          <p className="mt-2 text-2xl font-bold text-emerald-700">{totalDisplay}</p>
+                          <p className="mt-2 text-sm">
+                            Estimation indicative incluant les informations renseignées. Le tarif final sera confirmé par nos équipes.
+                          </p>
+                          {estimateError ? (
+                            <p className="mt-3 text-sm text-red-500">{estimateError}</p>
+                          ) : null}
+                          {estimateLoading ? (
+                            <div className="mt-3 space-y-2">
+                              <Skeleton className="h-3 w-3/4" />
+                              <Skeleton className="h-3 w-1/2" />
+                            </div>
+                          ) : null}
+                        </div>
                         <Button
                           type="submit"
                           disabled={isSubmitting}
-                          className="mx-auto w-full max-w-sm rounded-full bg-yellow-400 px-8 py-6 text-base font-semibold text-slate-900 shadow-lg transition hover:bg-yellow-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-2"
+                          className="w-full rounded-full bg-yellow-400 px-8 py-5 text-base font-semibold text-slate-900 shadow-lg transition hover:bg-yellow-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-2"
                         >
                           {isSubmitting ? (
                             <span className="flex items-center justify-center gap-2">
@@ -895,75 +894,15 @@ const CommandeSansCompte = () => {
                             "Valider ma commande"
                           )}
                         </Button>
-                      </div>
-                    </div>
-                  </form>
-                </Form>
-              </div>
-
-              <aside className="order-2 xl:order-2">
-                <Card className="rounded-3xl border-none bg-white/95 shadow-2xl xl:sticky xl:top-24">
-                  <CardHeader className="flex flex-col gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-                        <CheckCircle2 className="h-6 w-6" aria-hidden="true" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-xl font-semibold text-slate-900">Récapitulatif instantané</CardTitle>
-                        <p className="text-sm text-slate-500">Visualisez vos choix avant validation.</p>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4 text-sm text-slate-600">
-                    <div className="rounded-2xl bg-slate-50 p-5">
-                      <p className="text-xs uppercase tracking-wide text-slate-500">Secteur choisi</p>
-                      <p className="mt-1 text-lg font-semibold text-slate-900">
-                        {selectedSectorConfig?.label ?? "—"}
-                      </p>
-                      <p className="mt-2 text-sm text-slate-500">
-                        {selectedSectorConfig?.description ?? "Sélectionnez un secteur pour obtenir une estimation adaptée."}
-                      </p>
-                    </div>
-                    <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-5">
-                      <div className="flex items-center justify-between">
-                        <span>Type de colis</span>
-                        <span className="font-semibold text-slate-900">
-                          {watchedValues.packageType
-                            ? getPackageTypeLabel(watchedValues.sector, watchedValues.packageType)
-                            : "—"}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span>Poids</span>
-                        <span className="font-semibold text-slate-900">{weightDisplay}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span>Dimensions</span>
-                        <span className="font-semibold text-slate-900">{dimensionsDisplay}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span>Formule</span>
-                        <span className="font-semibold text-slate-900">{selectedFormula?.title ?? "—"}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span>Date</span>
-                        <span className="font-semibold text-slate-900">{deliveryDateDisplay}</span>
-                      </div>
-                    </div>
-                    <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/70 p-5 text-slate-700">
-                      <p className="text-xs uppercase tracking-wide text-emerald-600">Total estimé</p>
-                      <p className="mt-2 text-2xl font-bold text-emerald-700">{totalDisplay}</p>
-                      <p className="mt-2 text-sm">
-                        Estimation indicative incluant les informations renseignées. Le tarif final vous sera confirmé par nos équipes.
-                      </p>
-                    </div>
-                    <div className="rounded-2xl bg-slate-50 p-5 text-xs text-slate-500">
-                      Pas de mot de passe, pas d’inscription : vous êtes recontacté(e) dès validation de la demande.
-                    </div>
-                  </CardContent>
-                </Card>
-              </aside>
-            </div>
+                        <p className="text-center text-xs text-slate-500">
+                          Pas de mot de passe, pas d’inscription : vous serez recontacté(e) dès validation de la demande.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </aside>
+                </div>
+              </form>
+            </Form>
           </div>
         </div>
       </section>

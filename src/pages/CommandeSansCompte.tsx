@@ -133,7 +133,7 @@ const guestOrderSchema = z
     dropoffAddress: z
       .string()
       .trim()
-      .min(5, "Adresse d’arrivée requise"),
+      .min(5, "Adresse d'arrivée requise"),
     weightKg: z.coerce
       .number({ invalid_type_error: "Poids requis" })
       .min(0.1, "Poids minimum 0,1 kg"),
@@ -156,7 +156,6 @@ const guestOrderSchema = z
       .trim()
       .optional()
       .or(z.literal("")),
-    deliveryDelay: z.enum(["none", "60", "90"]),
     deliveryDate: z.date({ required_error: "Date de livraison requise" }),
     formula: z.enum(["standard", "express", "eco", "flash"]),
   })
@@ -189,7 +188,6 @@ const defaultValues: Partial<GuestOrderFormValues> = {
   heightCm: 15,
   pickupTime: "",
   deliveryTime: "",
-  deliveryDelay: "none",
   deliveryDate: undefined,
   formula: "standard",
 };
@@ -198,7 +196,7 @@ const shippingFormulas: Array<{ id: ShippingFormula; title: string; description:
   {
     id: "flash",
     title: "Flash Express",
-    description: "Livraison éclair en moins d’une heure",
+    description: "Livraison éclair en moins d'une heure",
   },
   {
     id: "standard",
@@ -303,15 +301,43 @@ const CommandeSansCompte = () => {
     (defaultValues.formula as ManualShippingFormula | undefined) ?? "standard",
   );
 
+  const timeDifferenceMinutes = useMemo<number | null>(() => {
+    const pickupTime = watchedValues.pickupTime?.trim();
+    const deliveryTime = watchedValues.deliveryTime?.trim();
+    
+    if (!pickupTime || !deliveryTime) {
+      return null;
+    }
+
+    const [pickupHour, pickupMinute] = pickupTime.split(":").map(Number);
+    const [deliveryHour, deliveryMinute] = deliveryTime.split(":").map(Number);
+
+    if (
+      isNaN(pickupHour) || isNaN(pickupMinute) ||
+      isNaN(deliveryHour) || isNaN(deliveryMinute)
+    ) {
+      return null;
+    }
+
+    const pickupTotalMinutes = pickupHour * 60 + pickupMinute;
+    const deliveryTotalMinutes = deliveryHour * 60 + deliveryMinute;
+
+    const diff = deliveryTotalMinutes - pickupTotalMinutes;
+    return diff > 0 ? diff : null;
+  }, [watchedValues.pickupTime, watchedValues.deliveryTime]);
+
   const enforcedFormula = useMemo<ShippingFormula | null>(() => {
-    if (watchedValues.deliveryDelay === "60") {
+    if (timeDifferenceMinutes === null) {
+      return null;
+    }
+    if (timeDifferenceMinutes <= 60) {
       return "flash";
     }
-    if (watchedValues.deliveryDelay === "90") {
+    if (timeDifferenceMinutes <= 90) {
       return "express";
     }
     return null;
-  }, [watchedValues.deliveryDelay]);
+  }, [timeDifferenceMinutes]);
 
   useEffect(() => {
     const currentFormula = watchedValues.formula;
@@ -341,14 +367,14 @@ const CommandeSansCompte = () => {
 
   const isFormulaLocked = Boolean(enforcedFormula);
   const formulaLockMessage = useMemo(() => {
-    if (watchedValues.deliveryDelay === "60") {
-      return "Formule Flash Express imposée pour garantir une livraison en moins d’une heure.";
+    if (enforcedFormula === "flash" && timeDifferenceMinutes !== null) {
+      return `Formule Flash Express automatiquement appliquée (délai de ${timeDifferenceMinutes} min).`;
     }
-    if (watchedValues.deliveryDelay === "90") {
-      return "Formule Express imposée pour respecter votre délai de 90 minutes.";
+    if (enforcedFormula === "express" && timeDifferenceMinutes !== null) {
+      return `Formule Express automatiquement appliquée (délai de ${timeDifferenceMinutes} min).`;
     }
     return null;
-  }, [watchedValues.deliveryDelay]);
+  }, [enforcedFormula, timeDifferenceMinutes]);
 
   const formulasToDisplay = useMemo(() => {
     if (selectedFormula?.id === "flash") {
@@ -363,19 +389,24 @@ const CommandeSansCompte = () => {
         return {
           className: "bg-red-100 text-red-700",
           label: "⚡ Flash Express",
-          detail: watchedValues.deliveryDelay === "60" ? "(délai de 1h)" : null,
+          detail: timeDifferenceMinutes !== null ? `(livraison sous ${timeDifferenceMinutes} min)` : null,
         };
       case "express":
         return {
           className: "bg-orange-100 text-orange-700",
-          label: "Express",
-          detail: watchedValues.deliveryDelay === "90" ? "(délai ≤ 90 min)" : null,
+          label: "🚀 Express",
+          detail: timeDifferenceMinutes !== null && timeDifferenceMinutes <= 90 ? `(livraison sous ${timeDifferenceMinutes} min)` : null,
         };
       case "standard":
+        return {
+          className: "bg-emerald-100 text-emerald-700",
+          label: "💼 Standard",
+          detail: null,
+        };
       case "eco":
         return {
           className: "bg-emerald-100 text-emerald-700",
-          label: selectedFormula?.title ?? "—",
+          label: "🌱 Éco",
           detail: null,
         };
       default:
@@ -385,20 +416,20 @@ const CommandeSansCompte = () => {
           detail: null,
         };
     }
-  }, [selectedFormula?.id, selectedFormula?.title, watchedValues.deliveryDelay]);
+  }, [selectedFormula?.id, timeDifferenceMinutes]);
 
   const formulaSummaryText = useMemo(() => {
     if (!selectedFormula) {
       return "—";
     }
-    if (selectedFormula.id === "flash") {
-      return "⚡ Flash Express" + (watchedValues.deliveryDelay === "60" ? " (délai de 1h)" : "");
+    if (selectedFormula.id === "flash" && timeDifferenceMinutes !== null) {
+      return `Livraison en moins d'une heure (${timeDifferenceMinutes} min)`;
     }
-    if (selectedFormula.id === "express" && watchedValues.deliveryDelay === "90") {
-      return `${selectedFormula.title} (délai ≤ 90 min)`;
+    if (selectedFormula.id === "express" && timeDifferenceMinutes !== null && timeDifferenceMinutes <= 90) {
+      return `Livraison en moins de 90 minutes (${timeDifferenceMinutes} min)`;
     }
     return selectedFormula.title;
-  }, [selectedFormula, watchedValues.deliveryDelay]);
+  }, [selectedFormula, timeDifferenceMinutes]);
 
   const readyForEstimate = useMemo(() => {
     const hasAddresses =
@@ -453,14 +484,14 @@ const CommandeSansCompte = () => {
         });
 
         if (!response.ok) {
-          throw new Error("Impossible d’obtenir l’estimation");
+          throw new Error("Impossible d'obtenir l'estimation");
         }
 
         const data = (await response.json()) as EstimateResponse;
         setEstimate(data);
       } catch (error) {
         if ((error as Error).name === "AbortError") return;
-        setEstimateError("Le calcul d’estimation a échoué. Réessayez.");
+        setEstimateError("Le calcul d'estimation a échoué. Réessayez.");
         setEstimate(null);
       } finally {
         setEstimateLoading(false);
@@ -529,7 +560,7 @@ const CommandeSansCompte = () => {
         });
 
         if (!response.ok) {
-          throw new Error("La commande n’a pas pu être validée");
+          throw new Error("La commande n'a pas pu être validée");
         }
 
         const data = (await response.json()) as Partial<GuestOrderSuccess> & { reference?: string };
@@ -582,7 +613,7 @@ const CommandeSansCompte = () => {
                   </div>
                   <CardTitle className="text-3xl font-semibold">Commande envoyée avec succès !</CardTitle>
                   <p className="text-base text-slate-600">
-                    Nous finalisons la planification. Vous recevrez un message de confirmation avec l’heure estimée d’arrivée.
+                    Nous finalisons la planification. Vous recevrez un message de confirmation avec l'heure estimée d'arrivée.
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -593,10 +624,10 @@ const CommandeSansCompte = () => {
                     </div>
                     {success.eta ? (
                       <p className="text-sm text-emerald-700">
-                        Estimation d’arrivée communiquée : <span className="font-semibold">{success.eta}</span>
+                        Estimation d'arrivée communiquée : <span className="font-semibold">{success.eta}</span>
                       </p>
                     ) : (
-                      <p className="text-sm text-emerald-700">Vous recevrez votre estimation d’arrivée par email.</p>
+                      <p className="text-sm text-emerald-700">Vous recevrez votre estimation d'arrivée par email.</p>
                     )}
                   </div>
                   <div className="grid gap-4 rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
@@ -747,7 +778,7 @@ const CommandeSansCompte = () => {
                       <div className="space-y-2">
                         <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">🚚 Détails du transport</p>
                         <h2 className="text-2xl font-semibold text-slate-900">Planifiez votre course</h2>
-                        <p className="text-sm text-slate-600">Complétez les détails logistiques pour ajuster l’estimation en temps réel.</p>
+                        <p className="text-sm text-slate-600">Complétez les détails logistiques pour ajuster l'estimation en temps réel.</p>
                       </div>
                       <div className="mt-8 grid gap-6">
                         <div className="grid gap-4 md:grid-cols-2">
@@ -825,7 +856,7 @@ const CommandeSansCompte = () => {
                           name="pickupAddress"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Adresse complète du lieu d’enlèvement *</FormLabel>
+                              <FormLabel>Adresse complète du lieu d'enlèvement *</FormLabel>
                               <FormControl>
                                 <Input {...field} autoComplete="street-address" placeholder="123 Rue de Paris, 75001 Paris" />
                               </FormControl>
@@ -908,32 +939,10 @@ const CommandeSansCompte = () => {
                             name="pickupTime"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Heure d’enlèvement prévue</FormLabel>
+                                <FormLabel>Heure d'enlèvement prévue</FormLabel>
                                 <FormControl>
                                   <Input {...field} type="time" placeholder="08:30" />
                                 </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="deliveryDelay"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Délai de livraison souhaité</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger className="rounded-2xl border-slate-200 bg-white text-slate-700">
-                                      <SelectValue placeholder="Choisir un délai" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent className="rounded-2xl border border-slate-200 bg-white">
-                                    <SelectItem value="none">Aucun délai spécifique</SelectItem>
-                                    <SelectItem value="90">≤ 90 minutes (Express automatique)</SelectItem>
-                                    <SelectItem value="60">≤ 1 heure (Flash Express automatique)</SelectItem>
-                                  </SelectContent>
-                                </Select>
                                 <FormMessage />
                               </FormItem>
                             )}
@@ -952,9 +961,16 @@ const CommandeSansCompte = () => {
                             )}
                           />
                         </div>
-                        <p className="text-xs text-slate-500">
-                          Sélectionnez un délai pour appliquer automatiquement la formule de livraison adaptée.
-                        </p>
+                        {timeDifferenceMinutes !== null && (
+                          <p className="text-xs text-slate-600">
+                            <span className="font-medium">Délai calculé : {timeDifferenceMinutes} minutes</span>
+                            {enforcedFormula && (
+                              <span className="ml-1">
+                                → La formule {enforcedFormula === "flash" ? "Flash Express" : "Express"} sera automatiquement appliquée.
+                              </span>
+                            )}
+                          </p>
+                        )}
                         <FormField
                           control={form.control}
                           name="deliveryDate"
@@ -1034,7 +1050,7 @@ const CommandeSansCompte = () => {
                                 <p className="mt-2 text-xs font-medium text-slate-500">{formulaLockMessage}</p>
                               ) : (
                                 <p className="mt-2 text-xs text-slate-500">
-                                  Choisissez librement la formule si aucun délai n’est imposé.
+                                  Choisissez librement la formule si aucun délai n'est imposé.
                                 </p>
                               )}
                               <FormMessage />
@@ -1069,7 +1085,7 @@ const CommandeSansCompte = () => {
                         <div className="h-px bg-slate-200" />
                         <div className="space-y-1">
                           <div className="space-y-0.5">
-                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Lieu d’enlèvement</p>
+                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Lieu d'enlèvement</p>
                             <p className="font-medium text-slate-900">{pickupAddressDisplay}</p>
                           </div>
                           <div className="space-y-0.5">
@@ -1114,7 +1130,7 @@ const CommandeSansCompte = () => {
                             <p className="text-xs text-slate-500">{formulaSummaryText}</p>
                           </div>
                           <div className="space-y-0.5">
-                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Heure d’enlèvement prévue</p>
+                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Heure d'enlèvement prévue</p>
                             <p className="font-medium text-slate-900">{pickupTimeDisplay}</p>
                           </div>
                           <div className="space-y-0.5">
@@ -1152,7 +1168,7 @@ const CommandeSansCompte = () => {
                             "Valider ma commande"
                           )}
                         </Button>
-                        <p className="text-center text-[11px] text-slate-500">Pas de mot de passe, pas d’inscription : vous serez recontacté(e) dès validation de la demande.</p>
+                        <p className="text-center text-[11px] text-slate-500">Pas de mot de passe, pas d'inscription : vous serez recontacté(e) dès validation de la demande.</p>
                       </div>
                     </div>
                   </aside>

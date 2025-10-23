@@ -311,14 +311,18 @@ const Home = () => {
           <p className="max-w-2xl text-lg text-white/90">
             Service professionnel 24/7 pour vos colis urgents. Tarifs transparents, suivi en temps réel et prise en charge immédiate par nos coursiers dédiés.
           </p>
-            <div className="flex flex-col gap-4 sm:flex-row">
-              <Link to="/tarifs" className="rounded-lg bg-blue-600 px-8 py-4 font-semibold text-white transition-transform duration-300 hover:scale-105 hover:bg-blue-700">
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <Button variant="cta" size="lg" asChild>
+              <Link to="/tarifs">
                 Voir nos tarifs
               </Link>
-            <Link to="/commande-sans-compte" className="rounded-lg border-2 border-white px-8 py-4 font-semibold text-white transition duration-300 hover:bg-white hover:text-blue-600">
-              Commander maintenant
-            </Link>
-          </div>
+            </Button>
+            <Button variant="outline-light" size="lg" asChild>
+              <Link to="/commande-sans-compte">
+                Commander maintenant
+              </Link>
+            </Button>
+        </div>
         </div>
       </section>
 

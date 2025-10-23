@@ -319,9 +319,11 @@ const CommandeSansCompte = () => {
     const currentFormula = watchedValues.formula;
 
     if (enforcedFormula) {
-      if (currentFormula && currentFormula !== enforcedFormula && currentFormula !== "flash") {
+    if (currentFormula && currentFormula !== enforcedFormula) {
+      if (currentFormula !== "flash") {
         manualFormulaRef.current = currentFormula as ManualShippingFormula;
       }
+    }
 
       if (currentFormula !== enforcedFormula) {
         form.setValue("formula", enforcedFormula, { shouldDirty: true, shouldValidate: true });
@@ -334,7 +336,7 @@ const CommandeSansCompte = () => {
       return;
     }
 
-    if (currentFormula && currentFormula !== "flash") {
+    if (currentFormula) {
       manualFormulaRef.current = currentFormula as ManualShippingFormula;
     }
   }, [enforcedFormula, form, watchedValues.formula]);

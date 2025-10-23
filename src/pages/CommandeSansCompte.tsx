@@ -1,31 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Building2,
-  CalendarIcon,
-  CheckCircle2,
-  Clock,
-  Info,
-  Loader2,
-  MapPin,
-  MoveRight,
-  Phone,
-} from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import {
+  CalendarIcon,
+  CheckCircle2,
+  Loader2,
+} from "lucide-react";
 
 import Layout from "@/components/layout/Layout";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Select,
   SelectContent,
@@ -33,11 +24,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Calendar } from "@/components/ui/calendar";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
   GUEST_SECTORS,
@@ -56,7 +45,7 @@ declare global {
   }
 }
 
-type ShippingFormula = "standard" | "express" | "flash";
+type ShippingFormula = "standard" | "express" | "eco";
 
 type EstimateSurcharge = {
   label: string;
@@ -74,9 +63,11 @@ type EstimateResponse = {
 };
 
 type GuestOrderPayload = {
+  contact_name: string;
   entreprise: string;
   email: string;
   phone: string;
+  siret?: string | null;
   secteur: GuestSectorKey;
   type_colis: string;
   autre_type?: string | null;
@@ -84,7 +75,7 @@ type GuestOrderPayload = {
   arrivee: string;
   poids_kg: number;
   dims_cm: { L: number; l: number; H: number };
-  planification: { now: boolean; date_iso?: string; time?: string };
+  planification: { now: boolean; date_iso?: string };
   formule: ShippingFormula;
 };
 
@@ -97,11 +88,17 @@ const phoneRegex = /^(?:\+33|0)[1-9](?:[ .-]?\d{2}){4}$/;
 
 const guestOrderSchema = z
   .object({
+    fullName: z
+      .string()
+      .trim()
+      .min(2, "Nom complet requis")
+      .max(120, "Nom complet trop long"),
     company: z
       .string()
       .trim()
-      .min(2, "Nom de l’entreprise requis")
-      .max(120, "Nom de l’entreprise trop long"),
+      .max(120, "Nom de la société trop long")
+      .optional()
+      .or(z.literal("")),
     email: z
       .string()
       .trim()
@@ -110,7 +107,17 @@ const guestOrderSchema = z
     phone: z
       .string()
       .trim()
-      .regex(phoneRegex, "Numéro de téléphone FR/E.164 invalide"),
+      .regex(phoneRegex, "Numéro de téléphone invalide"),
+    siret: z
+      .string()
+      .trim()
+      .optional()
+      .or(z.literal(""))
+      .refine((value) => {
+        if (!value) return true;
+        const sanitized = value.replace(/\s+/g, "");
+        return /^[0-9A-Za-z]{9,20}$/.test(sanitized);
+      }, "Numéro de SIRET invalide"),
     sector: z.custom<GuestSectorKey>(),
     packageType: z.string().min(1, "Type de colis requis"),
     otherPackage: z
@@ -127,21 +134,19 @@ const guestOrderSchema = z
       .trim()
       .min(5, "Adresse d’arrivée requise"),
     weightKg: z.coerce
-      .number({ invalid_type_error: "Indiquez un poids" })
+      .number({ invalid_type_error: "Poids requis" })
       .min(0.1, "Poids minimum 0,1 kg"),
     lengthCm: z.coerce
-      .number({ invalid_type_error: "Indiquez une longueur" })
-      .min(1, "Longueur minimale 1 cm"),
+      .number({ invalid_type_error: "Longueur requise" })
+      .min(1, "Longueur minimum 1 cm"),
     widthCm: z.coerce
-      .number({ invalid_type_error: "Indiquez une largeur" })
-      .min(1, "Largeur minimale 1 cm"),
+      .number({ invalid_type_error: "Largeur requise" })
+      .min(1, "Largeur minimum 1 cm"),
     heightCm: z.coerce
-      .number({ invalid_type_error: "Indiquez une hauteur" })
-      .min(1, "Hauteur minimale 1 cm"),
-    planificationMode: z.enum(["now", "schedule"]).default("now"),
-    scheduledDate: z.date().optional(),
-    scheduledTime: z.string().optional(),
-    formula: z.enum(["standard", "express", "flash"]),
+      .number({ invalid_type_error: "Hauteur requise" })
+      .min(1, "Hauteur minimum 1 cm"),
+    deliveryDate: z.date({ required_error: "Date de livraison requise" }),
+    formula: z.enum(["standard", "express", "eco"]),
   })
   .superRefine((values, ctx) => {
     if (values.packageType === "autre" && !values.otherPackage?.trim()) {
@@ -151,98 +156,63 @@ const guestOrderSchema = z
         message: "Merci de préciser le type de colis",
       });
     }
-
-    if (values.planificationMode === "schedule") {
-      if (!values.scheduledDate) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["scheduledDate"],
-          message: "Sélectionnez une date",
-        });
-      }
-      if (!values.scheduledTime) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["scheduledTime"],
-          message: "Sélectionnez une heure",
-        });
-      }
-      if (values.scheduledDate) {
-        const dateOnly = new Date(values.scheduledDate);
-        dateOnly.setHours(0, 0, 0, 0);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        if (dateOnly < today) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["scheduledDate"],
-            message: "Planifiez dans le futur",
-          });
-        }
-      }
-    }
   });
 
 type GuestOrderFormValues = z.infer<typeof guestOrderSchema>;
 
-const defaultValues: GuestOrderFormValues = {
+const defaultValues: Partial<GuestOrderFormValues> = {
+  fullName: "",
   company: "",
   email: "",
   phone: "",
+  siret: "",
   sector: "sante-medical",
   packageType: "",
   otherPackage: "",
   pickupAddress: "",
   dropoffAddress: "",
-  weightKg: 0.1,
-  lengthCm: 10,
-  widthCm: 10,
-  heightCm: 10,
-  planificationMode: "now",
-  scheduledDate: undefined,
-  scheduledTime: undefined,
+  weightKg: 0.5,
+  lengthCm: 30,
+  widthCm: 20,
+  heightCm: 15,
+  deliveryDate: undefined,
   formula: "standard",
 };
 
-const steps = ["Informations", "Détails du transport", "Récapitulatif"] as const;
-
-const shippingFormulas: Array<{ id: ShippingFormula; title: string; description: string; eta: string }> = [
+const shippingFormulas: Array<{ id: ShippingFormula; title: string; description: string }> = [
   {
     id: "standard",
     title: "Standard",
     description: "Collecte sous 4h, livraison dans la journée",
-    eta: "🏷️ Inclus dans l’estimation",
   },
   {
     id: "express",
     title: "Express",
-    description: "Collecte en 90 minutes, livraison prioritaire",
-    eta: "⚡ +20% sur la base",
+    description: "Collecte prioritaire en moins de 90 minutes",
   },
   {
-    id: "flash",
-    title: "Flash Express",
-    description: "Collecte immédiate, chauffeur dédié",
-    eta: "🚀 +35% sur la base",
+    id: "eco",
+    title: "Éco",
+    description: "Planification souple, tarif optimisé",
   },
 ];
 
 const sanitizeValue = (value: string) => value.replace(/[<>"'`]/g, "").trim();
 
 const buildPayload = (values: GuestOrderFormValues): GuestOrderPayload => {
-  const planification =
-    values.planificationMode === "now"
-      ? { now: true }
-      : {
-          now: false,
-          date_iso: values.scheduledDate?.toISOString(),
-          time: values.scheduledTime,
-        };
+  const entreprise = sanitizeValue(values.company || values.fullName);
+  const contact_name = sanitizeValue(values.fullName);
+  const planification = {
+    now: false,
+    date_iso: values.deliveryDate?.toISOString(),
+  };
 
   return {
-    entreprise: sanitizeValue(values.company),
+    contact_name,
+    entreprise,
     email: sanitizeValue(values.email),
     phone: sanitizeValue(values.phone),
+    siret: sanitizeValue(values.siret ?? "") || null,
     secteur: values.sector,
     type_colis: values.packageType,
     autre_type: values.packageType === "autre" ? sanitizeValue(values.otherPackage ?? "") : null,
@@ -265,8 +235,8 @@ const generateLocalReference = () => {
   const random = Math.floor(Math.random() * 9000 + 1000);
   return `OC-GUEST-${date}-${random}`;
 };
+
 const CommandeSansCompte = () => {
-  const [currentStep, setCurrentStep] = useState(0);
   const [estimate, setEstimate] = useState<EstimateResponse | null>(null);
   const [estimateLoading, setEstimateLoading] = useState(false);
   const [estimateError, setEstimateError] = useState<string | null>(null);
@@ -287,61 +257,40 @@ const CommandeSansCompte = () => {
     [watchedValues.sector],
   );
 
-  const packageOptions = useMemo(() => selectedSectorConfig?.packageTypes ?? [], [selectedSectorConfig]);
+  const packageOptions = useMemo(
+    () => selectedSectorConfig?.packageTypes ?? [],
+    [selectedSectorConfig],
+  );
 
-  const {
-    company,
-    email,
-    phone,
-    sector,
-    packageType,
-    otherPackage,
-    pickupAddress,
-    dropoffAddress,
-    weightKg,
-    lengthCm,
-    widthCm,
-    heightCm,
-    planificationMode,
-    scheduledDate,
-    scheduledTime,
-    formula,
-  } = watchedValues;
-
-  const volumetricWeight = useMemo(() => {
-    const length = Number(lengthCm) || 0;
-    const width = Number(widthCm) || 0;
-    const height = Number(heightCm) || 0;
-    if (!length || !width || !height) return 0;
-    return Math.round(((length * width * height) / 5000) * 100) / 100;
-  }, [heightCm, lengthCm, widthCm]);
+  const selectedFormula = shippingFormulas.find((item) => item.id === watchedValues.formula);
 
   const readyForEstimate = useMemo(() => {
     const hasAddresses =
-      sanitizeValue(pickupAddress ?? "").length >= 5 &&
-      sanitizeValue(dropoffAddress ?? "").length >= 5;
-    const hasSector = Boolean(sector);
-    const hasPackage = Boolean(packageType);
-    const hasOtherPackage = packageType !== "autre" || Boolean(sanitizeValue(otherPackage ?? ""));
-    const weight = Number(weightKg);
-    const length = Number(lengthCm);
-    const width = Number(widthCm);
-    const height = Number(heightCm);
+      sanitizeValue(watchedValues.pickupAddress ?? "").length >= 5 &&
+      sanitizeValue(watchedValues.dropoffAddress ?? "").length >= 5;
+    const hasSector = Boolean(watchedValues.sector);
+    const hasPackage = Boolean(watchedValues.packageType);
+    const hasOtherPackage =
+      watchedValues.packageType !== "autre" || Boolean(sanitizeValue(watchedValues.otherPackage ?? ""));
+    const weight = Number(watchedValues.weightKg);
+    const length = Number(watchedValues.lengthCm);
+    const width = Number(watchedValues.widthCm);
+    const height = Number(watchedValues.heightCm);
     const hasDimensions = weight >= 0.1 && length > 0 && width > 0 && height > 0;
-    const hasFormula = Boolean(formula);
+    const hasDate = watchedValues.deliveryDate instanceof Date;
 
-    return hasAddresses && hasSector && hasPackage && hasOtherPackage && hasDimensions && hasFormula;
+    return hasAddresses && hasSector && hasPackage && hasOtherPackage && hasDimensions && hasDate;
   }, [
-    dropoffAddress,
-    formula,
-    heightCm,
-    lengthCm,
-    otherPackage,
-    packageType,
-    pickupAddress,
-    sector,
-    weightKg,
-    widthCm,
+    watchedValues.dropoffAddress,
+    watchedValues.heightCm,
+    watchedValues.lengthCm,
+    watchedValues.otherPackage,
+    watchedValues.packageType,
+    watchedValues.pickupAddress,
+    watchedValues.sector,
+    watchedValues.weightKg,
+    watchedValues.widthCm,
+    watchedValues.deliveryDate,
   ]);
 
   useEffect(() => {
@@ -352,24 +301,7 @@ const CommandeSansCompte = () => {
 
     const controller = new AbortController();
 
-    const payload = buildPayload({
-      company,
-      email,
-      phone,
-      sector,
-      packageType,
-      otherPackage,
-      pickupAddress,
-      dropoffAddress,
-      weightKg,
-      lengthCm,
-      widthCm,
-      heightCm,
-      planificationMode,
-      scheduledDate,
-      scheduledTime,
-      formula,
-    });
+    const payload = buildPayload(form.getValues());
 
     const fetchEstimate = async () => {
       try {
@@ -407,78 +339,24 @@ const CommandeSansCompte = () => {
     };
   }, [
     readyForEstimate,
-    company,
-    email,
-    phone,
-    sector,
-    packageType,
-    otherPackage,
-    pickupAddress,
-    dropoffAddress,
-    weightKg,
-    lengthCm,
-    widthCm,
-    heightCm,
-    planificationMode,
-    scheduledDate,
-    scheduledTime,
-    formula,
+    form,
+    watchedValues.fullName,
+    watchedValues.company,
+    watchedValues.email,
+    watchedValues.phone,
+    watchedValues.siret,
+    watchedValues.sector,
+    watchedValues.packageType,
+    watchedValues.otherPackage,
+    watchedValues.pickupAddress,
+    watchedValues.dropoffAddress,
+    watchedValues.weightKg,
+    watchedValues.lengthCm,
+    watchedValues.widthCm,
+    watchedValues.heightCm,
+    watchedValues.deliveryDate,
+    watchedValues.formula,
   ]);
-
-  const focusFirstError = useCallback(() => {
-    const firstErrorKey = Object.keys(form.formState.errors)[0] as keyof GuestOrderFormValues | undefined;
-    if (firstErrorKey) {
-      form.setFocus(firstErrorKey);
-    }
-  }, [form]);
-
-  const handleStepValidation = useCallback(async () => {
-    if (currentStep === 0) {
-      const valid = await form.trigger(["company", "email", "phone"], { shouldFocus: true });
-      if (!valid) focusFirstError();
-      return valid;
-    }
-
-    if (currentStep === 1) {
-      const fields: Array<keyof GuestOrderFormValues> = [
-        "sector",
-        "packageType",
-        "pickupAddress",
-        "dropoffAddress",
-        "weightKg",
-        "lengthCm",
-        "widthCm",
-        "heightCm",
-        "formula",
-      ];
-
-      if (watchedValues.packageType === "autre") {
-        fields.push("otherPackage");
-      }
-      if (watchedValues.planificationMode === "schedule") {
-        fields.push("scheduledDate", "scheduledTime");
-      }
-
-      const valid = await form.trigger(fields, { shouldFocus: true });
-      if (!valid) focusFirstError();
-      return valid;
-    }
-
-    return true;
-  }, [currentStep, focusFirstError, form, watchedValues.packageType, watchedValues.planificationMode]);
-
-  const handleNext = useCallback(async () => {
-    const isValid = await handleStepValidation();
-    if (!isValid) {
-      toast.error("Veuillez corriger les champs en surbrillance.");
-      return;
-    }
-    setCurrentStep((step) => Math.min(step + 1, steps.length - 1));
-  }, [handleStepValidation]);
-
-  const handlePrevious = useCallback(() => {
-    setCurrentStep((step) => Math.max(step - 1, 0));
-  }, []);
 
   const executeRecaptcha = useCallback(async () => {
     try {
@@ -545,82 +423,53 @@ const CommandeSansCompte = () => {
 
     return (
       <Layout>
-        <section className="bg-muted/40 py-16">
+        <section className="bg-slate-100 py-16">
           <div className="container mx-auto px-4">
             <div className="mx-auto max-w-3xl">
-              <Card className="border-none bg-background/80 shadow-xl">
+              <Card className="rounded-3xl border-none bg-white/95 shadow-2xl">
                 <CardHeader className="space-y-4 text-center">
-                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
                     <CheckCircle2 className="h-9 w-9" aria-hidden="true" />
                   </div>
                   <CardTitle className="text-3xl font-semibold">Commande envoyée avec succès !</CardTitle>
-                  <p className="text-muted-foreground">
-                    Notre équipe finalise la planification. Vous recevrez une confirmation avec l’heure estimée d’arrivée.
+                  <p className="text-base text-slate-600">
+                    Nous finalisons la planification. Vous recevrez un message de confirmation avec l’heure estimée d’arrivée.
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="rounded-2xl border border-primary/20 bg-primary/5 p-6 text-left">
-                    <p className="text-sm font-semibold uppercase tracking-wide text-primary">Référence</p>
-                    <p className="text-2xl font-bold text-primary">{success.reference}</p>
+                  <div className="grid gap-4 rounded-3xl border border-emerald-100 bg-emerald-50/80 p-6 text-left">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-emerald-500">Référence</p>
+                      <p className="text-2xl font-bold text-emerald-600">{success.reference}</p>
+                    </div>
                     {success.eta ? (
-                      <p className="mt-2 text-sm text-primary/80">
+                      <p className="text-sm text-emerald-700">
                         Estimation d’arrivée communiquée : <span className="font-semibold">{success.eta}</span>
                       </p>
                     ) : (
-                      <p className="mt-2 text-sm text-primary/80">Vous recevrez votre estimation d’arrivée par email.</p>
+                      <p className="text-sm text-emerald-700">Vous recevrez votre estimation d’arrivée par email.</p>
                     )}
                   </div>
-                  <div className="grid gap-4 rounded-2xl border bg-muted/20 p-6 text-sm">
-                    <div className="flex items-center gap-3">
-                      <Building2 className="h-5 w-5 text-primary" aria-hidden="true" />
-                      <div>
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Entreprise</p>
-                        <p className="font-medium">{submittedPayload.entreprise}</p>
-                      </div>
+                  <div className="grid gap-4 rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs uppercase tracking-wider text-slate-500">Contact</span>
+                      <span className="font-semibold text-slate-800">{submittedPayload.contact_name}</span>
+                      {submittedPayload.entreprise ? (
+                        <span>{submittedPayload.entreprise}</span>
+                      ) : null}
                     </div>
-                    <div className="flex items-center gap-3">
-                      <MapPin className="h-5 w-5 text-primary" aria-hidden="true" />
-                      <div>
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Trajet</p>
-                        <p className="font-medium">{submittedPayload.depart}</p>
-                        <p className="text-muted-foreground">→ {submittedPayload.arrivee}</p>
-                      </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs uppercase tracking-wider text-slate-500">Trajet</span>
+                      <span className="font-semibold text-slate-800">{submittedPayload.depart}</span>
+                      <span>{submittedPayload.arrivee}</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Phone className="h-5 w-5 text-primary" aria-hidden="true" />
-                      <div>
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Contact</p>
-                        <p className="font-medium">{submittedPayload.email}</p>
-                        <p className="text-muted-foreground">{submittedPayload.phone}</p>
-                      </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs uppercase tracking-wider text-slate-500">Détails</span>
+                      <span className="font-semibold text-slate-800">{sectorLabel}</span>
+                      <span>{packageLabel}</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Info className="h-5 w-5 text-primary" aria-hidden="true" />
-                      <div>
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Détails</p>
-                        <p className="font-medium">{sectorLabel}</p>
-                        <p className="text-muted-foreground">{packageLabel}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-6 text-sm text-primary">
-                    <p className="font-semibold">Pour le suivi GPS en direct, créez un compte client.</p>
-                    <p className="mt-1 text-primary/80">
-                      Accédez à vos commandes, factures et notifications temps réel.
-                    </p>
                   </div>
                 </CardContent>
-                <CardFooter className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-                  <Button variant="cta" size="lg" asChild>
-                    <Link to="/inscription">Créer un compte</Link>
-                  </Button>
-                  <Button variant="outline" size="lg" asChild>
-                    <Link to="/commande-sans-compte">Nouvelle commande</Link>
-                  </Button>
-                  <Button variant="ghost" size="lg" asChild>
-                    <Link to="/">Accueil</Link>
-                  </Button>
-                </CardFooter>
               </Card>
             </div>
           </div>
@@ -628,200 +477,137 @@ const CommandeSansCompte = () => {
       </Layout>
     );
   }
+
+  const weightDisplay = watchedValues.weightKg ? `${Number(watchedValues.weightKg || 0).toFixed(1)} kg` : "—";
+  const dimensionsDisplay =
+    Number(watchedValues.lengthCm) && Number(watchedValues.widthCm) && Number(watchedValues.heightCm)
+      ? `${Number(watchedValues.lengthCm)} × ${Number(watchedValues.widthCm)} × ${Number(watchedValues.heightCm)} cm`
+      : "—";
+  const deliveryDateDisplay = watchedValues.deliveryDate
+    ? format(watchedValues.deliveryDate, "PPP", { locale: fr })
+    : "—";
+  const totalDisplay = estimate
+    ? `${estimate.total.toFixed(2)} €`
+    : estimateLoading
+      ? "Calcul en cours…"
+      : "100 €";
+
   return (
     <Layout>
-      <section className="bg-muted/30 py-10">
+      <section className="bg-slate-100 py-16">
         <div className="container mx-auto px-4">
-          <div className="grid gap-10 xl:grid-cols-12">
-            <div className="order-2 xl:order-1 xl:col-span-8">
-              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-primary/90 to-indigo-700 p-8 text-primary-foreground shadow-xl">
-                <div className="pointer-events-none absolute -top-16 -right-10 hidden h-64 w-64 rounded-full bg-primary/40 blur-3xl xl:block" />
-                <div className="pointer-events-none absolute -bottom-10 -left-16 hidden h-72 w-72 rotate-6 bg-white/10 backdrop-blur xl:block" />
-                <div className="relative z-10 grid gap-8">
-                  <div className="flex flex-col gap-3">
-                    <Badge variant="secondary" className="w-fit bg-white/10 text-white">
-                      Commande instantanée
-                    </Badge>
-                    <h1 className="text-3xl font-semibold md:text-4xl">
-                      Commandez sans compte, en quelques étapes.
-                    </h1>
-                    <p className="max-w-xl text-white/80">
-                      Renseignez votre course et obtenez une estimation dynamique. Un expert vous recontacte immédiatement pour
-                      déclencher l’enlèvement.
-                    </p>
-                  </div>
-                  <div className="grid gap-4 rounded-3xl bg-white/10 p-6 backdrop-blur">
-                    <div className="flex items-center justify-between text-sm text-white/80">
-                      <span>Secteur</span>
-                      <span className="font-semibold text-white">
-                        {selectedSectorConfig?.label ?? "Sélectionnez un secteur"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm text-white/80">
-                      <span>Type de colis</span>
-                      <span className="font-semibold text-white">
-                        {watchedValues.packageType
-                          ? getPackageTypeLabel(watchedValues.sector, watchedValues.packageType)
-                          : "À définir"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm text-white/80">
-                      <span>Statut</span>
-                      <span className="flex items-center gap-2 font-semibold text-white">
-                        <span
-                          className={cn(
-                            "h-2 w-2 rounded-full",
-                            estimateLoading ? "bg-amber-300 animate-ping" : "bg-emerald-300",
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-10 text-center">
+              <span className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">
+                Commande sans compte
+              </span>
+              <h1 className="mt-4 text-3xl font-semibold text-slate-900 md:text-4xl">
+                Validez votre transport en toute autonomie
+              </h1>
+              <p className="mt-4 text-base text-slate-600 md:text-lg">
+                Renseignez vos informations, obtenez un récapitulatif clair puis confirmez en un clic.
+              </p>
+            </div>
+            <div className="grid gap-8 xl:grid-cols-[1.75fr_1fr]">
+              <div className="order-1 space-y-6 xl:order-1">
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" noValidate>
+                    <div className="space-y-6 rounded-3xl bg-white p-6 shadow-xl ring-1 ring-slate-200/60 sm:p-8">
+                      <h2 className="text-2xl font-semibold text-slate-900">🧍 Vos informations</h2>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <FormField
+                          control={form.control}
+                          name="fullName"
+                          render={({ field }) => (
+                            <FormItem className="md:col-span-2">
+                              <FormLabel>Nom complet *</FormLabel>
+                              <FormControl>
+                                <Input {...field} autoComplete="name" placeholder="Jean Dupont" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
                           )}
                         />
-                        {estimateLoading
-                          ? "Préparation…"
-                          : currentStep === steps.length - 1
-                            ? "Prêt à valider"
-                            : "Complétez le formulaire"}
-                      </span>
-                    </div>
-                  </div>
-                  {selectedSectorConfig ? (
-                    <div className="grid gap-4 rounded-3xl bg-white/5 p-6 text-sm">
-                      <p className="font-semibold uppercase tracking-wide text-white/70">
-                        {selectedSectorConfig.description}
-                      </p>
-                      <p className="text-white/80">{selectedSectorConfig.highlight}</p>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedSectorConfig.packageTypes.slice(0, 3).map((item) => (
-                          <span key={item.value} className="rounded-full border border-white/20 px-3 py-1 text-xs text-white/70">
-                            {item.label}
-                          </span>
-                        ))}
-                        <span className="rounded-full border border-dashed border-white/20 px-3 py-1 text-xs text-white/60">
-                          + options sur-mesure
-                        </span>
+                        <FormField
+                          control={form.control}
+                          name="company"
+                          render={({ field }) => (
+                            <FormItem className="md:col-span-2">
+                              <FormLabel>Nom de la société (facultatif)</FormLabel>
+                              <FormControl>
+                                <Input {...field} autoComplete="organization" placeholder="Swift Connexion" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email *</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="email" autoComplete="email" placeholder="vous@exemple.fr" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="phone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Téléphone *</FormLabel>
+                              <FormControl>
+                                <Input {...field} autoComplete="tel" placeholder="06 12 34 56 78" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="siret"
+                          render={({ field }) => (
+                            <FormItem className="md:col-span-2">
+                              <FormLabel>Numéro de SIRET</FormLabel>
+                              <FormControl>
+                                <Input {...field} inputMode="numeric" placeholder="123 456 789 00012" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       </div>
                     </div>
-                  ) : null}
-                </div>
-                <div className="absolute inset-y-12 right-8 hidden w-40 -skew-y-6 space-y-4 xl:block">
-                  <div className="h-24 rounded-2xl bg-white/20 shadow-lg backdrop-blur transition-transform duration-500 hover:-translate-y-1" />
-                  <div className="h-24 rounded-2xl bg-white/10 shadow-lg backdrop-blur transition-transform duration-500 hover:-translate-y-1" />
-                  <div className="h-24 rounded-2xl bg-white/5 shadow-lg backdrop-blur transition-transform duration-500 hover:-translate-y-1" />
-                </div>
-              </div>
-            </div>
-            <div className="order-1 xl:order-2 xl:col-span-4">
-              <div className="flex flex-col gap-6" aria-live="polite">
-                <Form {...form}>
-                  <form className="space-y-6" noValidate>
-                    <div className="space-y-4 rounded-2xl border bg-background/90 p-6 shadow-lg">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Checkout invité</p>
-                        <span className="text-sm text-muted-foreground">
-                          Étape {currentStep + 1} / {steps.length}
-                        </span>
+
+                    <div className="space-y-6 rounded-3xl bg-white p-6 shadow-xl ring-1 ring-slate-200/60 sm:p-8">
+                      <div className="flex flex-col gap-2">
+                        <h2 className="text-2xl font-semibold text-slate-900">🚚 Détails du transport</h2>
+                        <p className="text-sm text-slate-500">
+                          Précisez votre secteur et les informations logistiques pour une estimation optimale.
+                        </p>
                       </div>
-                      <div className="flex items-center justify-between gap-3">
-                        {steps.map((label, index) => {
-                          const isActive = index === currentStep;
-                          const isCompleted = index < currentStep;
-                          return (
-                            <div key={label} className="flex flex-1 items-center gap-3">
-                              <div
-                                className={cn(
-                                  "flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold transition",
-                                  isCompleted
-                                    ? "border-primary bg-primary text-primary-foreground"
-                                    : isActive
-                                      ? "border-primary bg-primary/10 text-primary"
-                                      : "border-muted-foreground/30 text-muted-foreground",
-                                )}
-                                aria-current={isActive ? "step" : undefined}
-                                aria-label={label}
-                              >
-                                {index + 1}
-                              </div>
-                              <div className="hidden flex-1 border-t border-dashed border-muted-foreground/30 lg:block" />
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <h2 className="text-xl font-semibold">{steps[currentStep]}</h2>
-                      {currentStep === 0 ? (
-                        <div className="grid gap-4">
-                          <FormField
-                            control={form.control}
-                            name="company"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Nom de l’entreprise *</FormLabel>
-                                <FormControl>
-                                  <Input {...field} autoComplete="organization" placeholder="Ex : Swift Labs" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="email"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Email *</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    {...field}
-                                    inputMode="email"
-                                    autoComplete="email"
-                                    placeholder="contact@exemple.fr"
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="phone"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Téléphone *</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    {...field}
-                                    inputMode="tel"
-                                    autoComplete="tel"
-                                    placeholder="+33 1 23 45 67 89"
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <div className="flex justify-end pt-2">
-                            <Button type="button" onClick={handleNext}>
-                              Suivant
-                              <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
-                            </Button>
-                          </div>
-                        </div>
-                      ) : null}
-                      {currentStep === 1 ? (
-                        <div className="grid gap-4">
+                      <div className="grid gap-4">
+                        <div className="grid gap-4 md:grid-cols-2">
                           <FormField
                             control={form.control}
                             name="sector"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Secteur *</FormLabel>
+                                <FormLabel>Choisir votre secteur *</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value}>
                                   <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Sélectionnez un secteur" />
+                                    <SelectTrigger className="bg-white">
+                                      <SelectValue placeholder="Sélectionnez votre secteur" />
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    {GUEST_SECTORS.map((sector) => (
-                                      <SelectItem key={sector.id} value={sector.id}>
-                                        {sector.label}
+                                    {GUEST_SECTORS.map((option) => (
+                                      <SelectItem key={option.id} value={option.id}>
+                                        {option.label}
                                       </SelectItem>
                                     ))}
                                   </SelectContent>
@@ -836,10 +622,18 @@ const CommandeSansCompte = () => {
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel>Type de colis *</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value} disabled={!packageOptions.length}>
+                                <Select
+                                  onValueChange={field.onChange}
+                                  value={field.value}
+                                  disabled={!packageOptions.length}
+                                >
                                   <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder={packageOptions.length ? "Sélectionnez" : "Choisissez un secteur"} />
+                                    <SelectTrigger className="bg-white">
+                                      <SelectValue
+                                        placeholder={
+                                          packageOptions.length ? "Sélectionnez un type" : "Choisissez un secteur d’abord"
+                                        }
+                                      />
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
@@ -854,480 +648,325 @@ const CommandeSansCompte = () => {
                               </FormItem>
                             )}
                           />
-                          {watchedValues.packageType === "autre" ? (
-                            <FormField
-                              control={form.control}
-                              name="otherPackage"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Précision (50 caractères max)</FormLabel>
-                                  <FormControl>
-                                    <Input {...field} maxLength={50} placeholder="Ex : documents sensibles" />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          ) : null}
+                        </div>
+                        {watchedValues.packageType === "autre" ? (
                           <FormField
                             control={form.control}
-                            name="pickupAddress"
+                            name="otherPackage"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Adresse de départ *</FormLabel>
+                                <FormLabel>Précisez votre colis *</FormLabel>
                                 <FormControl>
-                                  <Input
-                                    {...field}
-                                    autoComplete="street-address"
-                                    placeholder="123 Rue de Paris, 75001 Paris"
-                                  />
+                                  <Input {...field} maxLength={50} placeholder="Ex : documents confidentiels" />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
+                        ) : null}
+                        <FormField
+                          control={form.control}
+                          name="pickupAddress"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Adresse de départ *</FormLabel>
+                              <FormControl>
+                                <Input {...field} autoComplete="street-address" placeholder="123 Rue de Paris, 75001 Paris" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="dropoffAddress"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Adresse d’arrivée *</FormLabel>
+                              <FormControl>
+                                <Input {...field} autoComplete="street-address" placeholder="45 Avenue Victor Hugo, 92100 Boulogne" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <div className="grid gap-4 md:grid-cols-[1fr_1fr]">
                           <FormField
                             control={form.control}
-                            name="dropoffAddress"
+                            name="weightKg"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Adresse d’arrivée *</FormLabel>
+                                <FormLabel>Poids du colis (kg) *</FormLabel>
                                 <FormControl>
-                                  <Input
-                                    {...field}
-                                    autoComplete="street-address"
-                                    placeholder="45 Avenue Victor Hugo, 92100 Boulogne"
-                                  />
+                                  <Input {...field} type="number" step="0.1" min={0.1} inputMode="decimal" placeholder="0.5" />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
-                          <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="grid gap-4 md:grid-cols-3">
                             <FormField
                               control={form.control}
-                              name="weightKg"
+                              name="lengthCm"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Poids (kg) *</FormLabel>
+                                  <FormLabel>Longueur (cm) *</FormLabel>
                                   <FormControl>
-                                    <Input
-                                      {...field}
-                                      type="number"
-                                      step="0.1"
-                                      min={0.1}
-                                      inputMode="decimal"
-                                      placeholder="0.5"
-                                    />
+                                    <Input {...field} type="number" min={1} inputMode="numeric" placeholder="30" />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
                               )}
                             />
-                            <div className="grid gap-4 sm:grid-cols-3">
-                              <FormField
-                                control={form.control}
-                                name="lengthCm"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <div className="flex items-center justify-between">
-                                      <FormLabel>Longueur *</FormLabel>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <button
-                                            type="button"
-                                            className="text-xs text-muted-foreground transition hover:text-foreground"
-                                            aria-label="Poids volumétrique"
-                                          >
-                                            <Info className="h-3.5 w-3.5" aria-hidden="true" />
-                                          </button>
-                                        </TooltipTrigger>
-                                        <TooltipContent className="max-w-[220px] text-xs">
-                                          Poids volumétrique = (L × l × H) / 5000
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </div>
-                                    <FormControl>
-                                      <Input {...field} type="number" min={1} inputMode="numeric" placeholder="30" />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                              <FormField
-                                control={form.control}
-                                name="widthCm"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Largeur *</FormLabel>
-                                    <FormControl>
-                                      <Input {...field} type="number" min={1} inputMode="numeric" placeholder="20" />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                              <FormField
-                                control={form.control}
-                                name="heightCm"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Hauteur *</FormLabel>
-                                    <FormControl>
-                                      <Input {...field} type="number" min={1} inputMode="numeric" placeholder="15" />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                            </div>
+                            <FormField
+                              control={form.control}
+                              name="widthCm"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Largeur (cm) *</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} type="number" min={1} inputMode="numeric" placeholder="20" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="heightCm"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Hauteur (cm) *</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} type="number" min={1} inputMode="numeric" placeholder="15" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
                           </div>
-                          <div className="grid gap-4 sm:grid-cols-2">
-                            <FormField
-                              control={form.control}
-                              name="planificationMode"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Planification</FormLabel>
-                                  <div className="rounded-xl border bg-muted/40 p-2">
-                                    <RadioGroup
-                                      onValueChange={field.onChange}
-                                      value={field.value}
-                                      className="grid gap-2 sm:grid-cols-2"
+                        </div>
+                        <FormField
+                          control={form.control}
+                          name="deliveryDate"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                              <FormLabel>Date souhaitée de livraison *</FormLabel>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <FormControl>
+                                    <Button
+                                      variant="outline"
+                                      className={cn(
+                                        "justify-start rounded-2xl border-slate-200 bg-white text-left font-normal text-slate-700",
+                                        !field.value && "text-slate-400",
+                                      )}
                                     >
-                                      <Label
-                                        htmlFor="plan-now"
-                                        className={cn(
-                                          "flex cursor-pointer items-center gap-2 rounded-lg border bg-background px-3 py-2 text-sm shadow-sm transition",
-                                          field.value === "now" ? "border-primary text-primary" : "border-transparent text-muted-foreground",
-                                        )}
-                                      >
-                                        <RadioGroupItem value="now" id="plan-now" className="sr-only" />
-                                        <Clock className="h-4 w-4" aria-hidden="true" />
-                                        Maintenant
-                                      </Label>
-                                      <Label
-                                        htmlFor="plan-later"
-                                        className={cn(
-                                          "flex cursor-pointer items-center gap-2 rounded-lg border bg-background px-3 py-2 text-sm shadow-sm transition",
-                                          field.value === "schedule" ? "border-primary text-primary" : "border-transparent text-muted-foreground",
-                                        )}
-                                      >
-                                        <RadioGroupItem value="schedule" id="plan-later" className="sr-only" />
-                                        <CalendarIcon className="h-4 w-4" aria-hidden="true" />
-                                        Planifier
-                                      </Label>
-                                    </RadioGroup>
-                                  </div>
-                                </FormItem>
-                              )}
-                            />
-                            <div className="grid gap-4 sm:grid-cols-2">
-                              {watchedValues.planificationMode === "schedule" ? (
-                                <>
-                                  <FormField
-                                    control={form.control}
-                                    name="scheduledDate"
-                                    render={({ field }) => (
-                                      <FormItem className="flex flex-col">
-                                        <FormLabel>Date</FormLabel>
-                                        <Popover>
-                                          <PopoverTrigger asChild>
-                                            <FormControl>
-                                              <Button
-                                                variant="outline"
-                                                className={cn(
-                                                  "justify-start text-left font-normal",
-                                                  !field.value && "text-muted-foreground",
-                                                )}
-                                              >
-                                                <CalendarIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-                                                {field.value ? format(field.value, "PPP", { locale: fr }) : "Choisir"}
-                                              </Button>
-                                            </FormControl>
-                                          </PopoverTrigger>
-                                          <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar
-                                              mode="single"
-                                              selected={field.value}
-                                              onSelect={field.onChange}
-                                              initialFocus
-                                              disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                                            />
-                                          </PopoverContent>
-                                        </Popover>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
+                                      <CalendarIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+                                      {field.value ? format(field.value, "PPP", { locale: fr }) : "Choisir une date"}
+                                    </Button>
+                                  </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto rounded-2xl border border-slate-200 bg-white p-2" align="start">
+                                  <Calendar
+                                    mode="single"
+                                    selected={field.value}
+                                    onSelect={field.onChange}
+                                    initialFocus
+                                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                                   />
-                                  <FormField
-                                    control={form.control}
-                                    name="scheduledTime"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Heure</FormLabel>
-                                        <FormControl>
-                                          <Input {...field} type="time" step={300} />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
+                                </PopoverContent>
+                              </Popover>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="formula"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Formule souhaitée *</FormLabel>
+                              <RadioGroup
+                                onValueChange={field.onChange}
+                                value={field.value}
+                                className="grid gap-3 md:grid-cols-3"
+                              >
+                                {shippingFormulas.map((formulaOption) => (
+                                  <Label
+                                    key={formulaOption.id}
+                                    htmlFor={`formula-${formulaOption.id}`}
+                                    className={cn(
+                                      "flex cursor-pointer flex-col gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm shadow-sm transition",
+                                      field.value === formulaOption.id
+                                        ? "border-yellow-400 bg-yellow-50 text-slate-900 shadow-md"
+                                        : "hover:border-slate-300 hover:bg-white",
                                     )}
-                                  />
-                                </>
-                              ) : (
-                                <div className="col-span-2 rounded-xl border border-dashed border-muted-foreground/30 bg-muted/20 p-4 text-sm text-muted-foreground">
-                                  Collecte immédiate : un chauffeur est missionné dès validation.
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <FormField
-                            control={form.control}
-                            name="formula"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Choix de la formule *</FormLabel>
-                                <RadioGroup
-                                  onValueChange={field.onChange}
-                                  value={field.value}
-                                  className="grid gap-3"
-                                >
-                                  {shippingFormulas.map((formula) => {
-                                    const isSelected = field.value === formula.id;
-                                    return (
-                                      <Label
-                                        key={formula.id}
-                                        htmlFor={`formula-${formula.id}`}
-                                        className={cn(
-                                          "flex cursor-pointer items-center justify-between rounded-2xl border bg-background px-4 py-3 transition",
-                                          isSelected
-                                            ? "border-primary shadow-lg"
-                                            : "border-border hover:border-primary/50",
-                                        )}
-                                      >
-                                        <RadioGroupItem id={`formula-${formula.id}`} className="sr-only" value={formula.id} />
-                                        <div>
-                                          <p className="font-semibold">{formula.title}</p>
-                                          <p className="text-sm text-muted-foreground">{formula.description}</p>
-                                        </div>
-                                        <span className="text-sm text-primary">{formula.eta}</span>
-                                      </Label>
-                                    );
-                                  })}
-                                </RadioGroup>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <div className="flex items-center justify-between pt-2">
-                            <Button type="button" variant="ghost" onClick={handlePrevious}>
-                              <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
-                              Précédent
-                            </Button>
-                            <Button type="button" onClick={handleNext}>
-                              Suivant
-                              <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
-                            </Button>
-                          </div>
+                                  >
+                                    <RadioGroupItem
+                                      value={formulaOption.id}
+                                      id={`formula-${formulaOption.id}`}
+                                      className="sr-only"
+                                    />
+                                    <span className="font-semibold">{formulaOption.title}</span>
+                                    <span className="text-xs text-slate-500">{formulaOption.description}</span>
+                                  </Label>
+                                ))}
+                              </RadioGroup>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-6 rounded-3xl bg-white p-6 shadow-xl ring-1 ring-slate-200/60 sm:p-8">
+                      <h2 className="text-2xl font-semibold text-slate-900">🧾 Récapitulatif de la commande</h2>
+                      <p className="text-sm text-slate-500">
+                        Vérifiez les informations avant d’envoyer votre demande. Vous pouvez modifier chaque section à tout moment.
+                      </p>
+                      <div className="grid gap-3 rounded-2xl bg-slate-50 p-6 text-sm text-slate-600">
+                        <div className="flex items-center justify-between">
+                          <span>Secteur</span>
+                          <span className="font-semibold text-slate-900">
+                            {selectedSectorConfig?.label ?? "—"}
+                          </span>
                         </div>
-                      ) : null}
-                      {currentStep === 2 ? (
-                        <div className="space-y-4">
-                          <div className="rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-4 text-sm text-primary">
-                            <p className="font-medium">Vérifiez vos informations.</p>
-                            <p className="text-primary/80">
-                              Le récapitulatif à droite se met à jour en temps réel. Vous pouvez revenir aux étapes précédentes si
-                              besoin.
-                            </p>
-                          </div>
-                          <div className="grid gap-3 text-sm">
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">Entreprise</span>
-                              <span className="font-semibold">{watchedValues.company || "—"}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">Contact</span>
-                              <span className="font-semibold">{watchedValues.email || "—"}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">Secteur</span>
-                              <span className="font-semibold">
-                                {selectedSectorConfig?.label ?? "—"}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">Formule</span>
-                              <span className="font-semibold">
-                                {shippingFormulas.find((formula) => formula.id === watchedValues.formula)?.title ?? "—"}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex justify-start">
-                            <Button type="button" variant="ghost" onClick={handlePrevious}>
-                              <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
-                              Modifier les détails
-                            </Button>
-                          </div>
+                        <div className="flex items-center justify-between">
+                          <span>Type de colis</span>
+                          <span className="font-semibold text-slate-900">
+                            {watchedValues.packageType
+                              ? getPackageTypeLabel(watchedValues.sector, watchedValues.packageType)
+                              : "—"}
+                          </span>
                         </div>
-                      ) : null}
+                        <div className="flex items-center justify-between">
+                          <span>Poids et dimensions</span>
+                          <span className="text-right font-semibold text-slate-900">
+                            {weightDisplay}
+                            <br />
+                            {dimensionsDisplay}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Date souhaitée</span>
+                          <span className="font-semibold text-slate-900">{deliveryDateDisplay}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Formule</span>
+                          <span className="font-semibold text-slate-900">{selectedFormula?.title ?? "—"}</span>
+                        </div>
+                        <div className="border-t border-dashed border-slate-300 pt-3 text-left">
+                          <p className="text-xs uppercase tracking-wide text-slate-500">Adresses</p>
+                          <p className="font-semibold text-slate-900">Départ</p>
+                          <p>{watchedValues.pickupAddress || "—"}</p>
+                          <p className="mt-2 font-semibold text-slate-900">Arrivée</p>
+                          <p>{watchedValues.dropoffAddress || "—"}</p>
+                        </div>
+                        <div className="flex items-center justify-between rounded-2xl bg-white px-4 py-3 text-base font-semibold text-slate-900 shadow-inner">
+                          <span>Total estimé</span>
+                          <span>{totalDisplay}</span>
+                        </div>
+                        {estimateError ? (
+                          <p className="text-sm text-red-500">{estimateError}</p>
+                        ) : null}
+                        {estimateLoading ? (
+                          <div className="space-y-2">
+                            <Skeleton className="h-3 w-3/4" />
+                            <Skeleton className="h-3 w-1/2" />
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="flex flex-col items-center gap-3 pt-2">
+                        <p className="text-sm text-slate-500">
+                          Aucune création de compte n’est nécessaire. Vous recevrez un récapitulatif par email.
+                        </p>
+                        <Button
+                          type="submit"
+                          disabled={isSubmitting}
+                          className="mx-auto w-full max-w-sm rounded-full bg-yellow-400 px-8 py-6 text-base font-semibold text-slate-900 shadow-lg transition hover:bg-yellow-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-2"
+                        >
+                          {isSubmitting ? (
+                            <span className="flex items-center justify-center gap-2">
+                              <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                              Validation en cours…
+                            </span>
+                          ) : (
+                            "Valider ma commande"
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   </form>
                 </Form>
+              </div>
 
-                <Card className="border-primary/30 bg-background/90 shadow-lg lg:sticky lg:top-6">
-                  <CardHeader className="space-y-1">
-                    <CardTitle className="text-xl font-semibold">Récapitulatif</CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      Distance calculée via Directions API et ajustements en fonction des options choisies.
-                    </p>
-                  </CardHeader>
-                  <CardContent className="space-y-4 text-sm">
-                    <div className="grid gap-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Secteur</span>
-                        <span className="font-medium">
-                          {selectedSectorConfig?.label ?? "—"}
-                        </span>
+              <aside className="order-2 xl:order-2">
+                <Card className="rounded-3xl border-none bg-white/95 shadow-2xl xl:sticky xl:top-24">
+                  <CardHeader className="flex flex-col gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                        <CheckCircle2 className="h-6 w-6" aria-hidden="true" />
                       </div>
+                      <div>
+                        <CardTitle className="text-xl font-semibold text-slate-900">Récapitulatif instantané</CardTitle>
+                        <p className="text-sm text-slate-500">Visualisez vos choix avant validation.</p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4 text-sm text-slate-600">
+                    <div className="rounded-2xl bg-slate-50 p-5">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">Secteur choisi</p>
+                      <p className="mt-1 text-lg font-semibold text-slate-900">
+                        {selectedSectorConfig?.label ?? "—"}
+                      </p>
+                      <p className="mt-2 text-sm text-slate-500">
+                        {selectedSectorConfig?.description ?? "Sélectionnez un secteur pour obtenir une estimation adaptée."}
+                      </p>
+                    </div>
+                    <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-5">
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Type de colis</span>
-                        <span className="font-medium">
+                        <span>Type de colis</span>
+                        <span className="font-semibold text-slate-900">
                           {watchedValues.packageType
                             ? getPackageTypeLabel(watchedValues.sector, watchedValues.packageType)
                             : "—"}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Poids volumétrique</span>
-                        <span className="font-medium">{volumetricWeight ? `${volumetricWeight} kg` : "—"}</span>
+                        <span>Poids</span>
+                        <span className="font-semibold text-slate-900">{weightDisplay}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Formule</span>
-                        <span className="font-medium">
-                          {shippingFormulas.find((formula) => formula.id === watchedValues.formula)?.title ?? "—"}
-                        </span>
+                        <span>Dimensions</span>
+                        <span className="font-semibold text-slate-900">{dimensionsDisplay}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Formule</span>
+                        <span className="font-semibold text-slate-900">{selectedFormula?.title ?? "—"}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Date</span>
+                        <span className="font-semibold text-slate-900">{deliveryDateDisplay}</span>
                       </div>
                     </div>
-
-                    <div className="rounded-xl border border-dashed border-muted/40 p-4 text-sm">
-                      {estimateLoading ? (
-                        <div className="space-y-2">
-                          <Skeleton className="h-4 w-2/3" />
-                          <Skeleton className="h-4 w-1/2" />
-                          <Skeleton className="h-4 w-1/3" />
-                        </div>
-                      ) : estimate ? (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Distance estimée</span>
-                            <span className="font-semibold">{estimate.distance_km.toFixed(1)} km</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Sous-total</span>
-                            <span className="font-semibold">{estimate.subtotal.toFixed(2)} €</span>
-                          </div>
-                          {typeof estimate.extra_distance_km === "number" && typeof estimate.extra_distance_fee === "number" ? (
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">Km additionnels</span>
-                              <span className="font-semibold">
-                                {estimate.extra_distance_km.toFixed(1)} km · {estimate.extra_distance_fee.toFixed(2)} €
-                              </span>
-                            </div>
-                          ) : null}
-                          {estimate.surcharges?.length ? (
-                            <div className="space-y-1">
-                              {estimate.surcharges.map((surcharge) => (
-                                <div key={surcharge.label} className="flex items-center justify-between text-muted-foreground">
-                                  <span>{surcharge.label}</span>
-                                  <span className="font-semibold text-foreground">{surcharge.amount.toFixed(2)} €</span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : null}
-                          {typeof estimate.vat === "number" ? (
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">TVA</span>
-                              <span className="font-semibold">{estimate.vat.toFixed(2)} €</span>
-                            </div>
-                          ) : null}
-                          <div className="flex items-center justify-between text-base font-semibold">
-                            <span>Total TTC</span>
-                            <span>{estimate.total.toFixed(2)} €</span>
-                          </div>
-                        </div>
-                      ) : estimateError ? (
-                        <p className="text-sm text-destructive">{estimateError}</p>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">
-                          Complétez les informations de transport pour obtenir une estimation.
-                        </p>
-                      )}
+                    <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/70 p-5 text-slate-700">
+                      <p className="text-xs uppercase tracking-wide text-emerald-600">Total estimé</p>
+                      <p className="mt-2 text-2xl font-bold text-emerald-700">{totalDisplay}</p>
+                      <p className="mt-2 text-sm">
+                        Estimation indicative incluant les informations renseignées. Le tarif final vous sera confirmé par nos équipes.
+                      </p>
                     </div>
-
-                    <Badge variant="outline" className="w-full justify-start gap-2 border-primary/50 bg-primary/5 text-primary">
-                      <Info className="h-4 w-4" aria-hidden="true" />
-                      Sans compte : pas de suivi GPS live. Une estimation d’arrivée vous sera envoyée.
-                    </Badge>
+                    <div className="rounded-2xl bg-slate-50 p-5 text-xs text-slate-500">
+                      Pas de mot de passe, pas d’inscription : vous êtes recontacté(e) dès validation de la demande.
+                    </div>
                   </CardContent>
-                  <CardFooter className="hidden items-center justify-between gap-3 border-t border-muted/40 bg-muted/20 p-4 lg:flex">
-                    <Button type="button" variant="ghost" onClick={handlePrevious} disabled={currentStep === 0}>
-                      <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
-                      Précédent
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={form.handleSubmit(onSubmit)}
-                      disabled={currentStep !== steps.length - 1 || isSubmitting}
-                      className="min-w-[180px]"
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                          Validation…
-                        </>
-                      ) : (
-                        <>
-                          Valider la commande
-                          <MoveRight className="ml-2 h-4 w-4" aria-hidden="true" />
-                        </>
-                      )}
-                    </Button>
-                  </CardFooter>
                 </Card>
-              </div>
+              </aside>
             </div>
           </div>
         </div>
       </section>
-
-      {currentStep === steps.length - 1 ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-muted/40 bg-background/95 px-4 py-3 shadow-lg lg:hidden">
-          <div className="mx-auto flex w-full max-w-xl items-center gap-3">
-            <Button type="button" variant="ghost" onClick={handlePrevious} className="shrink-0">
-              <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
-              Précédent
-            </Button>
-            <Button
-              type="button"
-              className="flex-1"
-              onClick={form.handleSubmit(onSubmit)}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                  Validation…
-                </>
-              ) : (
-                <>
-                  Valider la commande
-                  <MoveRight className="ml-2 h-4 w-4" aria-hidden="true" />
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      ) : null}
     </Layout>
   );
 };

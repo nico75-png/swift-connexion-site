@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -45,7 +45,8 @@ declare global {
   }
 }
 
-type ShippingFormula = "standard" | "express" | "eco";
+type ShippingFormula = "standard" | "express" | "eco" | "flash";
+type ManualShippingFormula = Exclude<ShippingFormula, "flash">;
 
 type EstimateSurcharge = {
   label: string;
@@ -155,8 +156,9 @@ const guestOrderSchema = z
       .trim()
       .optional()
       .or(z.literal("")),
+    deliveryDelay: z.enum(["none", "60", "90"]),
     deliveryDate: z.date({ required_error: "Date de livraison requise" }),
-    formula: z.enum(["standard", "express", "eco"]),
+    formula: z.enum(["standard", "express", "eco", "flash"]),
   })
   .superRefine((values, ctx) => {
     if (values.packageType === "autre" && !values.otherPackage?.trim()) {
@@ -187,11 +189,17 @@ const defaultValues: Partial<GuestOrderFormValues> = {
   heightCm: 15,
   pickupTime: "",
   deliveryTime: "",
+  deliveryDelay: "none",
   deliveryDate: undefined,
   formula: "standard",
 };
 
 const shippingFormulas: Array<{ id: ShippingFormula; title: string; description: string }> = [
+  {
+    id: "flash",
+    title: "Flash Express",
+    description: "Livraison éclair en moins d’une heure",
+  },
   {
     id: "standard",
     title: "Standard",
@@ -275,6 +283,104 @@ const CommandeSansCompte = () => {
   );
 
   const selectedFormula = shippingFormulas.find((item) => item.id === watchedValues.formula);
+  const manualFormulaRef = useRef<ManualShippingFormula>(
+    (defaultValues.formula as ManualShippingFormula | undefined) ?? "standard",
+  );
+
+  const enforcedFormula = useMemo<ShippingFormula | null>(() => {
+    if (watchedValues.deliveryDelay === "60") {
+      return "flash";
+    }
+    if (watchedValues.deliveryDelay === "90") {
+      return "express";
+    }
+    return null;
+  }, [watchedValues.deliveryDelay]);
+
+  useEffect(() => {
+    const currentFormula = watchedValues.formula;
+
+    if (enforcedFormula) {
+      if (currentFormula && currentFormula !== enforcedFormula && currentFormula !== "flash") {
+        manualFormulaRef.current = currentFormula as ManualShippingFormula;
+      }
+
+      if (currentFormula !== enforcedFormula) {
+        form.setValue("formula", enforcedFormula, { shouldDirty: true, shouldValidate: true });
+      }
+      return;
+    }
+
+    if (currentFormula === "flash") {
+      form.setValue("formula", manualFormulaRef.current, { shouldDirty: true, shouldValidate: true });
+      return;
+    }
+
+    if (currentFormula && currentFormula !== "flash") {
+      manualFormulaRef.current = currentFormula as ManualShippingFormula;
+    }
+  }, [enforcedFormula, form, watchedValues.formula]);
+
+  const isFormulaLocked = Boolean(enforcedFormula);
+  const formulaLockMessage = useMemo(() => {
+    if (watchedValues.deliveryDelay === "60") {
+      return "Formule Flash Express imposée pour garantir une livraison en moins d’une heure.";
+    }
+    if (watchedValues.deliveryDelay === "90") {
+      return "Formule Express imposée pour respecter votre délai de 90 minutes.";
+    }
+    return null;
+  }, [watchedValues.deliveryDelay]);
+
+  const formulasToDisplay = useMemo(() => {
+    if (selectedFormula?.id === "flash") {
+      return shippingFormulas;
+    }
+    return shippingFormulas.filter((formula) => formula.id !== "flash");
+  }, [selectedFormula?.id]);
+
+  const formulaBadge = useMemo(() => {
+    switch (selectedFormula?.id) {
+      case "flash":
+        return {
+          className: "bg-red-100 text-red-700",
+          label: "⚡ Flash Express",
+          detail: watchedValues.deliveryDelay === "60" ? "(délai de 1h)" : null,
+        };
+      case "express":
+        return {
+          className: "bg-orange-100 text-orange-700",
+          label: "Express",
+          detail: watchedValues.deliveryDelay === "90" ? "(délai ≤ 90 min)" : null,
+        };
+      case "standard":
+      case "eco":
+        return {
+          className: "bg-emerald-100 text-emerald-700",
+          label: selectedFormula?.title ?? "—",
+          detail: null,
+        };
+      default:
+        return {
+          className: "bg-slate-100 text-slate-500",
+          label: "—",
+          detail: null,
+        };
+    }
+  }, [selectedFormula?.id, selectedFormula?.title, watchedValues.deliveryDelay]);
+
+  const formulaSummaryText = useMemo(() => {
+    if (!selectedFormula) {
+      return "—";
+    }
+    if (selectedFormula.id === "flash") {
+      return "⚡ Flash Express" + (watchedValues.deliveryDelay === "60" ? " (délai de 1h)" : "");
+    }
+    if (selectedFormula.id === "express" && watchedValues.deliveryDelay === "90") {
+      return `${selectedFormula.title} (délai ≤ 90 min)`;
+    }
+    return selectedFormula.title;
+  }, [selectedFormula, watchedValues.deliveryDelay]);
 
   const readyForEstimate = useMemo(() => {
     const hasAddresses =
@@ -778,6 +884,28 @@ const CommandeSansCompte = () => {
                           />
                           <FormField
                             control={form.control}
+                            name="deliveryDelay"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Délai de livraison souhaité</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger className="rounded-2xl border-slate-200 bg-white text-slate-700">
+                                      <SelectValue placeholder="Choisir un délai" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent className="rounded-2xl border border-slate-200 bg-white">
+                                    <SelectItem value="none">Aucun délai spécifique</SelectItem>
+                                    <SelectItem value="90">≤ 90 minutes (Express automatique)</SelectItem>
+                                    <SelectItem value="60">≤ 1 heure (Flash Express automatique)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
                             name="deliveryTime"
                             render={({ field }) => (
                               <FormItem>
@@ -790,6 +918,9 @@ const CommandeSansCompte = () => {
                             )}
                           />
                         </div>
+                        <p className="text-xs text-slate-500">
+                          Sélectionnez un délai pour appliquer automatiquement la formule de livraison adaptée.
+                        </p>
                         <FormField
                           control={form.control}
                           name="deliveryDate"
@@ -836,27 +967,42 @@ const CommandeSansCompte = () => {
                                 value={field.value}
                                 className="grid gap-3 md:grid-cols-3"
                               >
-                                {shippingFormulas.map((formulaOption) => (
-                                  <Label
-                                    key={formulaOption.id}
-                                    htmlFor={`formula-${formulaOption.id}`}
-                                    className={cn(
-                                      "flex cursor-pointer flex-col gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm shadow-sm transition",
-                                      field.value === formulaOption.id
-                                        ? "border-yellow-400 bg-yellow-50 text-slate-900 shadow-md"
-                                        : "hover:border-slate-300 hover:bg-white",
-                                    )}
-                                  >
-                                    <RadioGroupItem
-                                      value={formulaOption.id}
-                                      id={`formula-${formulaOption.id}`}
-                                      className="sr-only"
-                                    />
-                                    <span className="font-semibold">{formulaOption.title}</span>
-                                    <span className="text-xs text-slate-500">{formulaOption.description}</span>
-                                  </Label>
-                                ))}
+                                {formulasToDisplay.map((formulaOption) => {
+                                  const isOptionLocked =
+                                    isFormulaLocked && enforcedFormula && formulaOption.id !== enforcedFormula;
+
+                                  return (
+                                    <Label
+                                      key={formulaOption.id}
+                                      htmlFor={`formula-${formulaOption.id}`}
+                                      className={cn(
+                                        "flex cursor-pointer flex-col gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm shadow-sm transition",
+                                        field.value === formulaOption.id
+                                          ? "border-yellow-400 bg-yellow-50 text-slate-900 shadow-md"
+                                          : "hover:border-slate-300 hover:bg-white",
+                                        isOptionLocked &&
+                                          "cursor-not-allowed opacity-60 hover:border-slate-200 hover:bg-slate-50",
+                                      )}
+                                    >
+                                      <RadioGroupItem
+                                        value={formulaOption.id}
+                                        id={`formula-${formulaOption.id}`}
+                                        className="sr-only"
+                                        disabled={isOptionLocked}
+                                      />
+                                      <span className="font-semibold">{formulaOption.title}</span>
+                                      <span className="text-xs text-slate-500">{formulaOption.description}</span>
+                                    </Label>
+                                  );
+                                })}
                               </RadioGroup>
+                              {formulaLockMessage ? (
+                                <p className="mt-2 text-xs font-medium text-slate-500">{formulaLockMessage}</p>
+                              ) : (
+                                <p className="mt-2 text-xs text-slate-500">
+                                  Choisissez librement la formule si aucun délai n’est imposé.
+                                </p>
+                              )}
                               <FormMessage />
                             </FormItem>
                           )}
@@ -917,9 +1063,20 @@ const CommandeSansCompte = () => {
                             <p className="text-[11px] uppercase tracking-wide text-slate-500">Dimensions</p>
                             <p className="font-medium text-slate-900">{dimensionsDisplay}</p>
                           </div>
-                          <div className="space-y-0.5">
-                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Formule souhaitée</p>
-                            <p className="font-medium text-slate-900">{selectedFormula?.title ?? "—"}</p>
+                          <div className="space-y-1">
+                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Formule appliquée</p>
+                            <div
+                              className={cn(
+                                "inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold",
+                                formulaBadge.className,
+                              )}
+                            >
+                              <span>{formulaBadge.label}</span>
+                              {formulaBadge.detail ? (
+                                <span className="text-xs font-medium text-current/80">{formulaBadge.detail}</span>
+                              ) : null}
+                            </div>
+                            <p className="text-xs text-slate-500">{formulaSummaryText}</p>
                           </div>
                           <div className="space-y-0.5">
                             <p className="text-[11px] uppercase tracking-wide text-slate-500">Heure d’enlèvement prévue</p>

@@ -17,9 +17,10 @@ const ContactInfo = () => {
   return (
     <div className="space-y-10">
       <div className="space-y-4">
-        <h1 className="text-4xl font-semibold text-foreground md:text-5xl">Contact Us</h1>
+        <h1 className="text-4xl font-semibold text-foreground md:text-5xl">Contactez-nous</h1>
         <p className="max-w-xl text-base text-muted-foreground md:text-lg">
-          We'll show you self-help options first. Additional help is available below, including live chat with our specialists.
+          Commencez par nos ressources d'auto-assistance. Vous trouverez ci-dessous des options supplémentaires, dont un chat en
+          direct avec nos spécialistes.
         </p>
       </div>
 
@@ -29,37 +30,37 @@ const ContactInfo = () => {
           title="Documentation"
           detail={
             <>
-              <p>Browse guides, API references, and best practices.</p>
+              <p>Consultez nos guides, références API et meilleures pratiques.</p>
               <p className="mt-1 font-medium text-foreground">{normalizeUrlDisplay(SUPPORT_DOCS_URL)}</p>
             </>
           }
           href={SUPPORT_DOCS_URL}
-          actionLabel="View documentation"
-          ariaLabel="Open documentation portal"
+          actionLabel="Consulter la documentation"
+          ariaLabel="Ouvrir le portail de documentation"
         />
         <ContactCard
           icon={Mail}
-          title="Our Email"
+          title="Adresse e-mail"
           detail={<p>{SUPPORT_EMAIL}</p>}
           href={`mailto:${SUPPORT_EMAIL}`}
-          actionLabel="Send us an email"
-          ariaLabel="Send an email to our team"
+          actionLabel="Nous écrire"
+          ariaLabel="Envoyer un courriel à notre équipe"
         />
         <ContactCard
           icon={Phone}
-          title="Phone"
+          title="Téléphone"
           detail={<p>{SUPPORT_PHONE_DISPLAY}</p>}
           href={`tel:${SUPPORT_PHONE}`}
-          actionLabel="Call our team"
-          ariaLabel="Call our team"
+          actionLabel="Appeler notre équipe"
+          ariaLabel="Appeler notre équipe"
         />
         <ContactCard
           icon={MapPin}
-          title="Visit Us"
+          title="Nous rendre visite"
           detail={<p>{SUPPORT_ADDRESS}</p>}
           href={SUPPORT_VISIT_URL}
-          actionLabel="Plan your visit"
-          ariaLabel="Open our address on maps"
+          actionLabel="Préparer votre visite"
+          ariaLabel="Ouvrir notre adresse dans Maps"
         />
       </div>
     </div>

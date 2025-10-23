@@ -11,9 +11,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 const contactSchema = z.object({
-  fullName: z.string().trim().min(1, "Full name is required"),
-  email: z.string().trim().min(1, "Email is required").email("Enter a valid email address"),
-  inquiry: z.string().trim().min(1, "Please share a few details about your inquiry"),
+  fullName: z.string().trim().min(1, "Le nom complet est obligatoire"),
+  email: z
+    .string()
+    .trim()
+    .min(1, "L'adresse e-mail est obligatoire")
+    .email("Veuillez saisir une adresse e-mail valide"),
+  inquiry: z.string().trim().min(1, "Veuillez nous en dire davantage sur votre demande"),
 });
 
 type ContactValues = z.infer<typeof contactSchema>;
@@ -45,17 +49,17 @@ const ContactForm = () => {
         });
 
         if (!response.ok) {
-          throw new Error("Unable to submit your request. Please try again.");
+          throw new Error("Impossible d'envoyer votre demande. Veuillez réessayer.");
         }
       } else {
         // TODO: Replace this placeholder when wiring the contact API endpoint.
         await new Promise((resolve) => setTimeout(resolve, 600));
       }
 
-      toast.success("Thanks! We'll reach out within one business day.");
+      toast.success("Merci ! Nous vous répondrons sous un jour ouvré.");
       form.reset();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Something went wrong. Please try again.";
+      const message = error instanceof Error ? error.message : "Une erreur est survenue. Veuillez réessayer.";
       toast.error(message);
     }
   };
@@ -66,8 +70,8 @@ const ContactForm = () => {
     <Card className="relative overflow-hidden rounded-[1.75rem] border border-border/60 bg-background/95 shadow-soft backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <span className="pointer-events-none absolute inset-0 rounded-[1.75rem] bg-gradient-to-br from-secondary/10 via-primary/5 to-transparent" />
       <CardHeader className="relative space-y-2 pb-6">
-        <CardTitle className="text-2xl font-semibold text-foreground">Send us a message</CardTitle>
-        <p className="text-sm text-muted-foreground">We'll respond within one business day.</p>
+        <CardTitle className="text-2xl font-semibold text-foreground">Envoyez-nous un message</CardTitle>
+        <p className="text-sm text-muted-foreground">Nous vous répondrons sous un jour ouvré.</p>
       </CardHeader>
       <CardContent className="relative p-6 pt-0">
         <Form {...form}>
@@ -77,9 +81,9 @@ const ContactForm = () => {
               name="fullName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Full Name</FormLabel>
+                  <FormLabel>Nom complet</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Full Name" autoComplete="name" />
+                    <Input {...field} placeholder="Nom complet" autoComplete="name" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -91,9 +95,14 @@ const ContactForm = () => {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email address</FormLabel>
+                  <FormLabel>Adresse e-mail</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Enter your email address" inputMode="email" autoComplete="email" />
+                    <Input
+                      {...field}
+                      placeholder="Saisissez votre adresse e-mail"
+                      inputMode="email"
+                      autoComplete="email"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -105,14 +114,9 @@ const ContactForm = () => {
               name="inquiry"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>About your inquiry</FormLabel>
+                  <FormLabel>Sujet de votre demande</FormLabel>
                   <FormControl>
-                    <Textarea
-                      {...field}
-                      placeholder="Enter your message"
-                      rows={5}
-                      className="resize-none"
-                    />
+                    <Textarea {...field} placeholder="Saisissez votre message" rows={5} className="resize-none" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -123,10 +127,10 @@ const ContactForm = () => {
               {isSubmitting ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-                  Sending...
+                  Envoi en cours...
                 </>
               ) : (
-                "Submit"
+                "Envoyer"
               )}
             </Button>
           </form>

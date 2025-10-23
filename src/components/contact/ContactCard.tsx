@@ -40,11 +40,11 @@ const ContactCard = ({ icon: Icon, title, detail, href, actionLabel, className, 
           <a
             href={href}
             className="text-sm font-semibold text-primary transition-smooth hover:text-primary-dark"
-            aria-label={ariaLabel ?? `${title} link`}
+            aria-label={ariaLabel ?? `Lien vers ${title}`}
             target={isExternalLink ? "_blank" : undefined}
             rel={isExternalLink ? "noreferrer" : undefined}
           >
-            {actionLabel ?? "Open link"}
+            {actionLabel ?? "Ouvrir le lien"}
           </a>
         ) : null}
       </div>

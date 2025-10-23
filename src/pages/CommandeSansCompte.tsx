@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,6 +9,76 @@ import { toast } from "sonner";
 const CommandeSansCompte = () => {
   const [estimatedPrice, setEstimatedPrice] = useState<number | null>(null);
   const [orderSubmitted, setOrderSubmitted] = useState(false);
+  const [selectedSector, setSelectedSector] = useState("");
+  const [packageType, setPackageType] = useState("");
+
+  const sectorOptions = useMemo(
+    () => [
+      {
+        value: "sante-medical",
+        label: "Santé & Médical",
+        packages: [
+          "Échantillons biologiques (PSL, analyses, prélèvements)",
+          "Médicaments, ordonnances et traitements",
+          "Dispositifs médicaux",
+          "Chaîne du froid (vaccins, poches de sang, perfusions, insuline)",
+          "Dossiers médicaux confidentiels",
+          "Petits équipements hospitaliers",
+          "Urgences techniques (pièces détachées respirateurs, brancards)",
+        ],
+      },
+      {
+        value: "juridique-administratif",
+        label: "Juridique & Administratif",
+        packages: [
+          "Dossiers juridiques et confidentiels",
+          "Contrats à signer",
+          "Scellés et pièces de justice",
+          "Supports numériques (clé USB, disque)",
+          "Clés et badges d’accès",
+        ],
+      },
+      {
+        value: "evenementiel-media",
+        label: "Événementiel & Média",
+        packages: [
+          "Matériel audiovisuel",
+          "Kits d’accueil / badges / PLV",
+          "Décors et éléments scéniques",
+          "Produits presse / lancement",
+          "Urgences techniques plateau",
+        ],
+      },
+      {
+        value: "retail-luxe-ecommerce",
+        label: "Retail, Luxe & E-commerce",
+        packages: [
+          "Produits boutique",
+          "Échantillons et pièces de collection",
+          "Retours e-commerce",
+          "Accessoires / vitrines",
+          "Colis premium sécurisés",
+        ],
+      },
+      {
+        value: "industrie-services",
+        label: "Industrie & Services de Proximité",
+        packages: [
+          "Pièces détachées",
+          "Outils",
+          "Matériel IT / maintenance corporate",
+          "Clés / badges (serrurier)",
+          "Chaussures / accessoires (cordonnier)",
+        ],
+      },
+    ],
+    []
+  );
+
+  const filteredPackageOptions = useMemo(() => {
+    const sector = sectorOptions.find((option) => option.value === selectedSector);
+    return sector ? sector.packages : [];
+  }, [sectorOptions, selectedSector]);
 
   const handleEstimate = () => {
     // Calcul simple basé sur zone
@@ -20,6 +90,11 @@ const CommandeSansCompte = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedSector) {
+      toast.error("Merci de sélectionner un secteur pour votre demande.");
+      return;
+    }
+
     setOrderSubmitted(true);
     toast.success("Demande envoyée ! Nous vous recontacterons sous 30 minutes.");
   };
@@ -170,26 +245,42 @@ const CommandeSansCompte = () => {
                   <h2 className="mb-6">Détails du transport</h2>
                   <div className="space-y-6">
                     <div className="grid md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Type de colis *</label>
-                        <select required className="w-full h-11 px-4 rounded-lg border border-input bg-background">
-                          <option value="">Sélectionnez</option>
-                          <option>Document (enveloppe)</option>
-                          <option>Colis léger (&lt;5kg)</option>
-                          <option>Colis moyen (5-20kg)</option>
-                          <option>Colis volumineux (&gt;20kg)</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Secteur</label>
-                        <select className="w-full h-11 px-4 rounded-lg border border-input bg-background">
-                          <option>Général</option>
-                          <option>Médical / Santé</option>
-                          <option>Optique</option>
-                          <option>Juridique</option>
-                          <option>Événementiel</option>
-                        </select>
-                      </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Choisissez votre secteur *</label>
+                      <select
+                        required
+                        className="w-full h-11 px-4 rounded-lg border border-input bg-background"
+                        value={selectedSector}
+                        onChange={(event) => {
+                          setSelectedSector(event.target.value);
+                          setPackageType("");
+                        }}
+                      >
+                        <option value="">Sélectionnez</option>
+                        {sectorOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Type de colis *</label>
+                      <select
+                        required
+                        className="w-full h-11 px-4 rounded-lg border border-input bg-background"
+                        value={packageType}
+                        onChange={(event) => setPackageType(event.target.value)}
+                        disabled={!selectedSector}
+                      >
+                        <option value="">{selectedSector ? "Sélectionnez" : "Choisissez d'abord un secteur"}</option>
+                        {filteredPackageOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-6">

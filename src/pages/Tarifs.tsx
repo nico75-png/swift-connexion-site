@@ -5,19 +5,19 @@ import { PricingRateTable } from "@/components/pricing/PricingRateTable";
 const Tarifs = () => {
   const faqs = [{
     question: "Comment sont calculés les tarifs ?",
-    answer: "Nos tarifs reposent sur la zone de prise en charge, la formule choisie (Standard, Express, Flash Express) et la distance réelle parcourue : base pour 0–10 km, puis prix au kilomètre au-delà. Aucun frais caché."
+    answer: "Les tarifs sont calculés en fonction de la distance, du poids du colis, et de l’urgence de la livraison."
   }, {
     question: "Y a-t-il des frais supplémentaires cachés ?",
-    answer: "Non, nos tarifs sont totalement transparents. Le prix affiché dans le simulateur est le prix final, sauf si vous ajoutez des options complémentaires."
+    answer: "Non, tous les frais sont détaillés avant validation de la commande. Aucune surprise."
   }, {
     question: "Proposez-vous des tarifs dégressifs ?",
-    answer: "Oui, pour les entreprises avec volume régulier (> 20 courses/mois), nous proposons des tarifs préférentiels sur devis. Contactez notre équipe commerciale."
+    answer: "Oui, des remises sont proposées en fonction du volume mensuel ou d’un contrat régulier."
   }, {
     question: "Comment puis-je payer mes courses ?",
-    answer: "Paiement par carte bancaire à la commande pour les courses ponctuelles. Facturation mensuelle disponible pour les comptes professionnels."
+    answer: "Le paiement peut s’effectuer par carte bancaire, virement ou facturation mensuelle selon votre profil."
   }, {
-    question: "Les tarifs incluent-ils l'assurance ?",
-    answer: "Oui, une assurance de base jusqu'à 500 € est incluse. Pour les colis de valeur supérieure, une assurance renforcée est disponible à 2 % de la valeur déclarée."
+    question: "Les tarifs incluent-ils l’assurance ?",
+    answer: "Oui, une assurance de base est incluse. Des options complémentaires sont disponibles selon la valeur déclarée."
   }];
   return <Layout>
       {/* Hero */}
@@ -35,19 +35,31 @@ const Tarifs = () => {
       <PricingRateTable />
 
       {/* FAQ Tarifs */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-center mb-12">Questions fréquentes sur les tarifs</h2>
+      <section className="bg-white py-16 sm:py-24">
+        <div className="mx-auto flex w-full max-w-4xl flex-col gap-12 px-4 sm:px-6 lg:px-8">
+          <header className="text-center">
+            <h2 className="text-3xl font-semibold text-gray-900 sm:text-4xl">Foire aux questions – Tarifs</h2>
+            <p className="mt-4 text-base text-gray-600 sm:text-lg">
+              Retrouvez ici toutes les réponses liées à notre système de tarification pour la livraison express B2B
+            </p>
+          </header>
+
+          <div className="space-y-4">
             <Accordion type="single" collapsible className="space-y-4">
-              {faqs.map((faq, index) => <AccordionItem key={index} value={`item-${index}`} className="border border-border rounded-lg px-6">
-                  <AccordionTrigger className="text-left font-semibold hover:no-underline">
+              {faqs.map((faq, index) => (
+                <AccordionItem
+                  key={index}
+                  value={`item-${index}`}
+                  className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-shadow data-[state=open]:border-blue-200 data-[state=open]:shadow-md"
+                >
+                  <AccordionTrigger className="px-6 py-5 text-left text-lg font-semibold text-gray-900 hover:no-underline data-[state=open]:text-blue-600">
                     {faq.question}
                   </AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground">
+                  <AccordionContent className="px-6 pb-6 text-base leading-relaxed text-gray-600">
                     {faq.answer}
                   </AccordionContent>
-                </AccordionItem>)}
+                </AccordionItem>
+              ))}
             </Accordion>
           </div>
         </div>

@@ -9,10 +9,21 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
-import { Zap, Lock, Eye, Heart, FileText, ArrowRight, Check, Star, X } from "lucide-react";
-import medicalImage from "@/assets/medical-sector.jpg";
-import opticianImage from "@/assets/optician-sector.jpg";
-import lawyerImage from "@/assets/lawyer-sector.jpg";
+import {
+  Zap,
+  Lock,
+  Eye,
+  ArrowRight,
+  Check,
+  Star,
+  X,
+  Stethoscope,
+  Scale,
+  Megaphone,
+  ShoppingBag,
+  Factory,
+  Handshake
+} from "lucide-react";
 type ServiceType = "Standard" | "Express" | "Flash Express";
 const servicePricing: Record<ServiceType, {
   base: number;
@@ -116,23 +127,47 @@ const benefits = [{
   description: "Tracez votre commande de l'enlèvement à la livraison"
 }];
 const expertises = [{
-  icon: Heart,
-  title: "Santé & Médical",
-  description: "Transport sécurisé de dispositifs médicaux et échantillons",
-  gradient: "from-blue-500 to-purple-600",
-  image: medicalImage
+  icon: Stethoscope,
+  title: "Santé & médical",
+  description: "Transport conditionné d’appareils, prélèvements et dossiers médicaux avec traçabilité complète.",
+  highlight: "Traçabilité & conformité 24/7",
+  highlightClass: "text-sky-600",
+  accent: "bg-sky-50 text-sky-600 border-sky-100"
 }, {
-  icon: Eye,
-  title: "Optique",
-  description: "Livraison rapide de montures et verres correcteurs",
-  gradient: "from-green-500 to-emerald-600",
-  image: opticianImage
+  icon: Scale,
+  title: "Juridique & administratif",
+  description: "Acheminement sécurisé de dossiers sensibles, plis d’huissier et contrats à signer dans les délais.",
+  highlight: "Confidentialité garantie",
+  highlightClass: "text-purple-600",
+  accent: "bg-purple-50 text-purple-600 border-purple-100"
 }, {
-  icon: FileText,
-  title: "Juridique",
-  description: "Coursier spécialisé pour documents confidentiels",
-  gradient: "from-gray-600 to-gray-800",
-  image: lawyerImage
+  icon: Megaphone,
+  title: "Événementiel & médias",
+  description: "Coordination agile pour le matériel scénique, kits presse et éléments de communication urgents.",
+  highlight: "Gestion agile des temps forts",
+  highlightClass: "text-rose-600",
+  accent: "bg-rose-50 text-rose-600 border-rose-100"
+}, {
+  icon: ShoppingBag,
+  title: "Retail, luxe & e-commerce",
+  description: "Livraison premium en boutique ou à domicile pour vos clients VIP, stocks et opérations omnicanales.",
+  highlight: "Expérience client valorisée",
+  highlightClass: "text-amber-600",
+  accent: "bg-amber-50 text-amber-600 border-amber-100"
+}, {
+  icon: Factory,
+  title: "Industrie",
+  description: "Pièces critiques, prototypes et outillage livrés en juste-à-temps pour limiter tout arrêt de production.",
+  highlight: "Fiabilité logistique continue",
+  highlightClass: "text-slate-600",
+  accent: "bg-slate-50 text-slate-600 border-slate-200"
+}, {
+  icon: Handshake,
+  title: "Services de proximité",
+  description: "Courses quotidiennes, documents administratifs et livraisons locales au plus près de vos équipes.",
+  highlight: "Réactivité terrain",
+  highlightClass: "text-emerald-600",
+  accent: "bg-emerald-50 text-emerald-600 border-emerald-100"
 }];
 const subscriptionPlans = [{
   title: "Standard",
@@ -346,21 +381,31 @@ const Home = () => {
           <p className="mx-auto mb-12 max-w-2xl text-center text-xl text-gray-600">
             Des solutions de transport adaptées à chaque secteur professionnel
           </p>
-          <div className="grid gap-8 md:grid-cols-3">
-            {expertises.map(expertise => <article key={expertise.title} className="group overflow-hidden rounded-2xl shadow-lg transition duration-500 hover:-translate-y-1 hover:shadow-2xl">
-                <div className="relative h-48 overflow-hidden">
-                  <img src={expertise.image} alt={expertise.title} className="h-full w-full object-cover transition duration-500 group-hover:scale-110" />
-                  <div className={`absolute inset-0 bg-gradient-to-br ${expertise.gradient} opacity-20`} />
-                </div>
-                <div className="space-y-4 bg-white p-6">
-                  <h3 className="text-xl font-bold">{expertise.title}</h3>
-                  <p className="text-gray-600">{expertise.description}</p>
-                  <Link to="/expertises" className="inline-flex items-center font-semibold text-blue-600 transition hover:text-blue-700">
-                    En savoir plus
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </div>
-              </article>)}
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {expertises.map(expertise => {
+              const Icon = expertise.icon;
+              return <article
+                  key={expertise.title}
+                  className="group flex h-full flex-col gap-6 rounded-3xl border border-slate-200 bg-white/90 p-8 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+                >
+                  <div className={cn("flex h-14 w-14 items-center justify-center rounded-2xl border text-lg", expertise.accent)}>
+                    <Icon className="h-6 w-6" aria-hidden="true" />
+                  </div>
+                  <div className="space-y-3">
+                    <span className={cn("text-sm font-semibold uppercase tracking-wide", expertise.highlightClass)}>
+                      {expertise.highlight}
+                    </span>
+                    <h3 className="text-2xl font-semibold text-gray-900">{expertise.title}</h3>
+                    <p className="text-base text-gray-600">{expertise.description}</p>
+                  </div>
+                  <div className="mt-auto pt-2">
+                    <Link to="/expertises" className="inline-flex items-center font-semibold text-blue-600 transition hover:text-blue-700">
+                      Découvrir nos solutions
+                      <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                    </Link>
+                  </div>
+                </article>;
+            })}
           </div>
         </div>
       </section>

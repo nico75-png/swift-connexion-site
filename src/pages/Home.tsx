@@ -16,13 +16,7 @@ import {
   ArrowRight,
   Check,
   Star,
-  X,
-  Stethoscope,
-  Scale,
-  Megaphone,
-  ShoppingBag,
-  Factory,
-  Handshake
+  X
 } from "lucide-react";
 type ServiceType = "Standard" | "Express" | "Flash Express";
 const servicePricing: Record<ServiceType, {
@@ -127,47 +121,61 @@ const benefits = [{
   description: "Tracez votre commande de l'enlèvement à la livraison"
 }];
 const expertises = [{
-  icon: Stethoscope,
-  title: "Santé & médical",
-  description: "Transport conditionné d’appareils, prélèvements et dossiers médicaux avec traçabilité complète.",
+  title: "Santé et médical",
+  description: "Transport sécurisé de matériel, prélèvements et dossiers médicaux sensibles.",
   highlight: "Traçabilité & conformité 24/7",
   highlightClass: "text-sky-600",
-  accent: "bg-sky-50 text-sky-600 border-sky-100"
+  image: "https://images.unsplash.com/photo-1580281657521-4e4382b87469?auto=format&fit=crop&w=960&q=70&fm=webp",
+  imageAlt: "Professionnel de santé en consultation",
+  imagePrompt: "Clean clinic scene, doctor with stethoscope, soft light, brand color overlay, 4:3"
 }, {
-  icon: Scale,
-  title: "Juridique & administratif",
-  description: "Acheminement sécurisé de dossiers sensibles, plis d’huissier et contrats à signer dans les délais.",
+  title: "Juridique et administratif",
+  description: "Acheminement sous scellés de dossiers, plis d’huissier et contrats urgents.",
   highlight: "Confidentialité garantie",
   highlightClass: "text-purple-600",
-  accent: "bg-purple-50 text-purple-600 border-purple-100"
+  image: "https://images.unsplash.com/photo-1521790797524-b2497295b8a0?auto=format&fit=crop&w=960&q=70&fm=webp",
+  imageAlt: "Contrat et balance de la justice sur un bureau",
+  imagePrompt: "Legal desk, contract and scales, minimal premium look, 4:3"
 }, {
-  icon: Megaphone,
-  title: "Événementiel & médias",
-  description: "Coordination agile pour le matériel scénique, kits presse et éléments de communication urgents.",
+  title: "Événementiel et médias",
+  description: "Logistique agile pour scènes, régies, kits presse et équipements audiovisuels.",
   highlight: "Gestion agile des temps forts",
   highlightClass: "text-rose-600",
-  accent: "bg-rose-50 text-rose-600 border-rose-100"
+  image: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=960&q=70&fm=webp",
+  imageAlt: "Scène éclairée avec caméra",
+  imagePrompt: "Stage lights and camera, dynamic but clean, 4:3, brand tint"
 }, {
-  icon: ShoppingBag,
-  title: "Retail, luxe & e-commerce",
-  description: "Livraison premium en boutique ou à domicile pour vos clients VIP, stocks et opérations omnicanales.",
+  title: "Commerce de détail",
+  description: "Réassort express, retours et opérations commerciales orchestrés sans rupture.",
   highlight: "Expérience client valorisée",
   highlightClass: "text-amber-600",
-  accent: "bg-amber-50 text-amber-600 border-amber-100"
+  image: "https://images.unsplash.com/photo-1521334884684-d80222895322?auto=format&fit=crop&w=960&q=70&fm=webp",
+  imageAlt: "Allée de magasin moderne",
+  imagePrompt: "Retail aisle neatly arranged, modern lighting, 4:3"
 }, {
-  icon: Factory,
+  title: "Luxe et e-commerce",
+  description: "Livraisons premium omnicanales pour clients VIP, stocks et packaging précieux.",
+  highlight: "Service haut de gamme",
+  highlightClass: "text-fuchsia-600",
+  image: "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?auto=format&fit=crop&w=960&q=70&fm=webp",
+  imageAlt: "Packaging premium et interface e-commerce",
+  imagePrompt: "Luxury packaging with subtle e-commerce UI elements, 4:3"
+}, {
   title: "Industrie",
-  description: "Pièces critiques, prototypes et outillage livrés en juste-à-temps pour limiter tout arrêt de production.",
+  description: "Pièces critiques et prototypes livrés juste-à-temps pour éviter tout arrêt.",
   highlight: "Fiabilité logistique continue",
   highlightClass: "text-slate-600",
-  accent: "bg-slate-50 text-slate-600 border-slate-200"
+  image: "https://images.unsplash.com/photo-1581092334391-359636323d99?auto=format&fit=crop&w=960&q=70&fm=webp",
+  imageAlt: "Chaîne de production industrielle",
+  imagePrompt: "Modern factory line, clean and safe, 4:3, brand overlay"
 }, {
-  icon: Handshake,
   title: "Services de proximité",
-  description: "Courses quotidiennes, documents administratifs et livraisons locales au plus près de vos équipes.",
+  description: "Courses quotidiennes, documents et matériels livrés au plus près de vos équipes.",
   highlight: "Réactivité terrain",
   highlightClass: "text-emerald-600",
-  accent: "bg-emerald-50 text-emerald-600 border-emerald-100"
+  image: "https://images.unsplash.com/photo-1608231387042-66d1773070a5?auto=format&fit=crop&w=960&q=70&fm=webp",
+  imageAlt: "Coursier effectuant une livraison de proximité",
+  imagePrompt: "Local courier on city street, friendly service vibe, 4:3"
 }];
 const subscriptionPlans = [{
   title: "Standard",
@@ -385,30 +393,42 @@ const Home = () => {
             Des solutions de transport adaptées à chaque secteur professionnel
           </p>
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {expertises.map(expertise => {
-              const Icon = expertise.icon;
-              return <article
-                  key={expertise.title}
-                  className="group flex h-full flex-col gap-6 rounded-3xl border border-slate-200 bg-white/90 p-8 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
-                >
-                  <div className={cn("flex h-14 w-14 items-center justify-center rounded-2xl border text-lg", expertise.accent)}>
-                    <Icon className="h-6 w-6" aria-hidden="true" />
+            {expertises.map(expertise => (
+              <article
+                key={expertise.title}
+                className="group flex h-full flex-col gap-6 rounded-3xl border border-slate-200 bg-white/90 p-8 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+              >
+                <div className="overflow-hidden rounded-2xl">
+                  <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-slate-100 md:aspect-[4/3]">
+                    <img
+                      src={expertise.image}
+                      alt={expertise.imageAlt}
+                      loading="lazy"
+                      decoding="async"
+                      className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                    />
+                    <div
+                      className="pointer-events-none absolute inset-0 bg-gradient-to-t from-primary/70 via-primary/40 to-transparent mix-blend-multiply"
+                      aria-hidden="true"
+                    />
+                    <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/30" aria-hidden="true" />
                   </div>
-                  <div className="space-y-3">
-                    <span className={cn("text-sm font-semibold uppercase tracking-wide", expertise.highlightClass)}>
-                      {expertise.highlight}
-                    </span>
-                    <h3 className="text-2xl font-semibold text-gray-900">{expertise.title}</h3>
-                    <p className="text-base text-gray-600">{expertise.description}</p>
-                  </div>
-                  <div className="mt-auto pt-2">
-                    <Link to="/expertises" className="inline-flex items-center font-semibold text-blue-600 transition hover:text-blue-700">
-                      Découvrir nos solutions
-                      <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-                    </Link>
-                  </div>
-                </article>;
-            })}
+                </div>
+                <div className="space-y-3">
+                  <span className={cn("text-sm font-semibold uppercase tracking-wide", expertise.highlightClass)}>
+                    {expertise.highlight}
+                  </span>
+                  <h3 className="text-2xl font-semibold text-gray-900">{expertise.title}</h3>
+                  <p className="text-base text-gray-600">{expertise.description}</p>
+                </div>
+                <div className="mt-auto pt-2">
+                  <Link to="/expertises" className="inline-flex items-center font-semibold text-blue-600 transition hover:text-blue-700">
+                    Découvrir nos solutions
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                  </Link>
+                </div>
+              </article>
+            ))}
           </div>
         </div>
       </section>

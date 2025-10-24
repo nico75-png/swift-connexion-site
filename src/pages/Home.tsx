@@ -326,15 +326,18 @@ const Home = () => {
         </div>
       </section>
 
-      <section className="bg-gradient-to-br from-blue-50 to-indigo-100 py-20">
+      <section className="bg-gradient-to-b from-[#e4ecff] via-white to-white py-20">
         <div className="container mx-auto px-4">
-          <div className="grid gap-8 md:grid-cols-3">
-            {benefits.map(benefit => <Card key={benefit.title} className="rounded-2xl border-none bg-white p-8 shadow-lg transition duration-300 hover:-translate-y-1 hover:shadow-xl">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
-                  <benefit.icon className="h-6 w-6 text-blue-600" />
+          <div className="flex flex-col gap-6 lg:flex-row">
+            {benefits.map(benefit => <Card
+                key={benefit.title}
+                className="group relative flex flex-1 flex-col items-start gap-4 overflow-hidden rounded-3xl border border-white/60 bg-white/80 p-8 shadow-[0_35px_65px_-45px_rgba(15,23,42,0.45)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_45px_90px_-50px_rgba(37,99,235,0.55)]"
+              >
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#93c5fd] to-[#2563eb] shadow-[0_15px_30px_-20px_rgba(37,99,235,0.7)]">
+                  <benefit.icon className="h-7 w-7 text-white" />
                 </div>
-                <h3 className="mb-3 text-xl font-bold">{benefit.title}</h3>
-                <p className="text-gray-600">{benefit.description}</p>
+                <h3 className="text-2xl font-semibold text-slate-900">{benefit.title}</h3>
+                <p className="text-base text-slate-500">{benefit.description}</p>
               </Card>)}
           </div>
         </div>

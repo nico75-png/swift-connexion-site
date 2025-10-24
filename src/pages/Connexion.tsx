@@ -11,11 +11,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import heroVisualDesktop from "@/assets/hero-courier.jpg";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthProfile } from "@/providers/AuthProvider";
 import { toast } from "sonner";
 
-const heroVisual = "{image_url}"; // Remplacez {image_url} par l'URL fournie pour le visuel de la colonne droite.
+const heroVisual = heroVisualDesktop;
+const heroVisualSrcSet = `${heroVisualDesktop} 640w, ${heroVisualDesktop} 1024w, ${heroVisualDesktop} 1440w`;
+const heroVisualSizes = "(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 45vw";
 
 const rememberIdentifierStorageKey = "auth:remember-identifier";
 const forgotPasswordRoute = "/mot-de-passe-oublie"; // Ajustez cette route selon votre configuration.
@@ -29,9 +32,9 @@ const signInSchema = z.object({
 type SignInValues = z.infer<typeof signInSchema>;
 
 const GoogleIcon = () => (
-  <svg viewBox="0 0 24 24" role="img" aria-hidden="true" className="h-5 w-5">
+  <svg viewBox="0 0 24 24" role="img" aria-hidden="true" className="h-5 w-5 text-primary">
     <path
-      fill="#4285F4"
+      fill="currentColor"
       d="M21.805 10.023h-9.18v3.955h5.273c-.227 1.23-1.25 3.61-5.273 3.61-3.175 0-5.763-2.626-5.763-5.86 0-3.234 2.588-5.86 5.763-5.86 1.806 0 3.02.77 3.71 1.436l2.53-2.46C17.165 3.316 15.093 2.4 12.352 2.4 6.903 2.4 2.4 6.85 2.4 12.2c0 5.35 4.503 9.8 9.952 9.8 5.745 0 9.545-4.04 9.545-9.74 0-.653-.07-1.147-.192-1.737Z"
     />
   </svg>
@@ -130,7 +133,9 @@ const Connexion = () => {
         headline: "Gardez une longueur d'avance sur chaque tournée",
         description: "Supervisez vos équipes et vos flux en temps réel avec une interface pensée pour les opérations critiques.",
         imageUrl: heroVisual,
-        imageAlt: "Joueuse de tennis concentrée sur un service puissant",
+        imageAlt: "Responsable logistique coordonnant une tournée de livraisons depuis un entrepôt moderne",
+        imageSrcSet: heroVisualSrcSet,
+        imageSizes: heroVisualSizes,
       }}
     >
       <div className="space-y-8">
@@ -237,7 +242,7 @@ const Connexion = () => {
 
               <Link
                 to={forgotPasswordRoute}
-                className="text-sm font-semibold text-primary transition-smooth hover:text-primary-dark hover:underline"
+                className="text-sm font-semibold text-primary transition-smooth hover:text-primary-dark hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2"
               >
                 Mot de passe oublié ?
               </Link>
@@ -266,7 +271,7 @@ const Connexion = () => {
           Nouveau ?{" "}
           <Link
             to="/inscription"
-            className="font-semibold text-primary transition-smooth hover:text-primary-dark hover:underline"
+            className="font-semibold text-primary transition-smooth hover:text-primary-dark hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2"
           >
             Créer un compte
           </Link>

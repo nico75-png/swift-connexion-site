@@ -9,6 +9,8 @@ export interface AuthLayoutVisualProps {
   description: string;
   imageUrl: string;
   imageAlt: string;
+  imageSrcSet?: string;
+  imageSizes?: string;
 }
 
 export interface AuthLayoutProps {
@@ -48,10 +50,16 @@ const AuthLayout = ({ children, visual, brand, brandHref = "/", className }: Aut
           <div className="relative order-1 overflow-hidden md:order-2">
             <img
               src={visual.imageUrl}
+              srcSet={visual.imageSrcSet}
+              sizes={visual.imageSizes}
               alt={visual.imageAlt}
+              loading="lazy"
               className="absolute inset-0 h-full w-full object-cover"
             />
-            <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-br from-black/30 via-black/40 to-black/70" />
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 bg-gradient-to-br from-primary/45 via-primary-dark/60 to-black/75 mix-blend-multiply"
+            />
             <div aria-hidden="true" className="absolute inset-x-4 inset-y-3 rounded-[36px] border border-white/40 opacity-70 sm:inset-x-6 sm:inset-y-4 sm:rounded-[40px]" />
 
             <div className="relative z-10 flex h-full flex-col justify-between px-6 py-8 sm:px-10 sm:py-12">

@@ -19,17 +19,17 @@ const DashboardLayout = ({ children, sidebar, topbar, showProfileReminder = fals
   const shouldShowReminder = showProfileReminder && !isProfileComplete && fallbackEmail;
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-background">
       {/* Sidebar fixe */}
       {sidebar}
 
       {/* Zone principale avec topbar + contenu */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden">
         {/* Topbar */}
         {topbar}
 
         {/* Contenu principal scrollable */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto px-6 py-6 md:px-10 md:py-8">
           {shouldShowReminder && (
             <Alert className="mb-6 border-amber-300 bg-amber-50 text-amber-900">
               <Info className="h-4 w-4 text-amber-500" />

@@ -2,17 +2,19 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
-import { MessageCircle, Plus } from "lucide-react";
+import { MessageCircle, Plus, Search } from "lucide-react";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import ClientSidebar from "@/components/dashboard/ClientSidebar";
 import Topbar from "@/components/dashboard/Topbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import ThreadView from "@/components/messaging/ThreadView";
 import MessageComposerFullScreen from "@/components/messaging/MessageComposerFullScreen";
+import ConversationInfoPanel from "@/components/messaging/ConversationInfoPanel";
 import { useMessagesStore } from "@/hooks/useMessagesStore";
 import type { Conversation, Participant } from "@/hooks/useMessagesStore";
 import { cn } from "@/lib/utils";
@@ -97,6 +99,15 @@ const ClientMessages = () => {
     );
   }, [clientConversations, selectedConversationId]);
 
+  const selectedParticipant: Participant | null = useMemo(() => {
+    if (!selectedConversation) {
+      return null;
+    }
+
+    const otherParticipantId = selectedConversation.participants.find((participantId) => participantId !== CLIENT_ID);
+    return otherParticipantId ? participantsMap[otherParticipantId] ?? null : null;
+  }, [participantsMap, selectedConversation]);
+
   const handleSelectConversation = (conversationId: string) => {
     setIsComposerOpen(false);
     setSelectedConversationId(conversationId);
@@ -152,81 +163,120 @@ const ClientMessages = () => {
           </Button>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-          <Card className="h-[720px] flex flex-col">
-            <CardHeader className="space-y-1">
-              <h2 className="text-lg font-semibold">Vos échanges</h2>
-              <p className="text-sm text-muted-foreground">
-                Support One Connexion et chauffeurs affectés à vos commandes
-              </p>
-            </CardHeader>
-            <CardContent className="p-0 flex-1 flex flex-col">
-              <ScrollArea className="flex-1">
-                <div className="space-y-2 p-2">
-                  {clientConversations.map(({ conversation, otherParticipant, lastMessage }) => {
-                    const isActive = conversation.id === selectedConversationId && !isComposerOpen;
+        <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_320px]">
+          <section
+            className={cn(
+              "flex min-h-[560px] flex-col rounded-2xl border bg-card shadow-soft",
+              selectedConversation && !isComposerOpen ? "hidden md:flex" : "flex",
+            )}
+          >
+            <div className="border-b px-6 py-4">
+              <div className="space-y-2">
+                <div>
+                  <h2 className="text-lg font-semibold">Vos échanges</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Support One Connexion et chauffeurs affectés à vos commandes
+                  </p>
+                </div>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Rechercher une conversation"
+                    className="h-10 rounded-xl border-input bg-muted/40 pl-9 text-sm focus-visible:ring-2"
+                    aria-label="Rechercher une conversation"
+                  />
+                </div>
+              </div>
+            </div>
+            <ScrollArea className="flex-1" role="list" aria-label="Liste des conversations">
+              <div className="space-y-1 px-2 py-3">
+                {clientConversations.map(({ conversation, otherParticipant, lastMessage }) => {
+                  const isActive = conversation.id === selectedConversationId && !isComposerOpen;
+                  const lastMessagePreview = lastMessage?.content ?? "Nouvelle conversation";
+                  const hasUnread = Boolean(
+                    lastMessage && lastMessage.recipientId === CLIENT_ID && lastMessage.senderId !== CLIENT_ID,
+                  );
+                  const initials =
+                    otherParticipant?.avatarFallback ?? conversation.id.slice(0, 2).toUpperCase();
 
-                    return (
-                      <button
-                        key={conversation.id}
-                        type="button"
-                        onClick={() => handleSelectConversation(conversation.id)}
-                        className={cn(
-                          "w-full rounded-lg border p-4 text-left transition",
-                          isActive
-                            ? "border-primary bg-primary/5"
-                            : "border-transparent hover:border-border hover:bg-muted/40",
-                        )}
-                      >
+                  return (
+                    <button
+                      key={conversation.id}
+                      type="button"
+                      role="listitem"
+                      aria-current={isActive ? "true" : undefined}
+                      onClick={() => handleSelectConversation(conversation.id)}
+                      className={cn(
+                        "group relative flex w-full items-center gap-3 rounded-xl border border-transparent bg-transparent px-4 py-3 text-left transition",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2",
+                        isActive
+                          ? "border-border bg-card shadow-soft"
+                          : "hover:border-border hover:bg-muted/70",
+                      )}
+                    >
+                      <div className="relative">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback>{initials}</AvatarFallback>
+                        </Avatar>
+                        <span
+                          className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-success"
+                          aria-hidden="true"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1 space-y-1">
                         <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 space-y-2">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="font-medium text-sm">
-                                {otherParticipant?.displayName ?? "Participant inconnu"}
-                              </span>
-                              {otherParticipant && (
-                                <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
-                                  {otherParticipant.role}
-                                </Badge>
-                              )}
-                              <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
-                                {CONTEXT_LABELS[conversation.context.type] ?? conversation.context.type}
-                              </Badge>
-                              {conversation.context.reference && (
-                                <Badge variant="outline" className="text-[10px]">
-                                  {conversation.context.reference}
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {lastMessage ? lastMessage.subject : "Nouvelle conversation"}
+                          <div className="min-w-0 space-y-1">
+                            <p className="truncate text-sm font-semibold text-foreground">
+                              {otherParticipant?.displayName ?? "Participant inconnu"}
                             </p>
-                            {lastMessage && (
-                              <p className="text-xs text-muted-foreground truncate">
-                                {lastMessage.content}
-                              </p>
-                            )}
+                            <p className="truncate text-xs text-muted-foreground">{lastMessagePreview}</p>
                           </div>
-                          <span className="text-[11px] text-muted-foreground uppercase tracking-wide">
+                          <span className="shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground">
                             {safeRelative(conversation.updatedAt)}
                           </span>
                         </div>
-                      </button>
-                    );
-                  })}
+                        <div className="flex flex-wrap items-center gap-2">
+                          {otherParticipant && (
+                            <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                              {otherParticipant.role}
+                            </Badge>
+                          )}
+                          <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+                            {CONTEXT_LABELS[conversation.context.type] ?? conversation.context.type}
+                          </Badge>
+                          {conversation.context.reference && (
+                            <Badge variant="outline" className="text-[10px]">
+                              {conversation.context.reference}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      {hasUnread && (
+                        <span className="ml-2 inline-flex min-w-[1.75rem] items-center justify-center rounded-full bg-primary px-2 py-1 text-[10px] font-semibold text-primary-foreground">
+                          Nouveau
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
 
-                  {clientConversations.length === 0 && (
-                    <div className="py-10 text-center text-sm text-muted-foreground space-y-3">
-                      <MessageCircle className="mx-auto h-6 w-6" />
-                      <p>Aucune conversation pour le moment.</p>
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+                {clientConversations.length === 0 && (
+                  <div className="py-10 text-center text-sm text-muted-foreground">
+                    <MessageCircle className="mx-auto h-6 w-6" />
+                    <p className="mt-3">Aucune conversation pour le moment.</p>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </section>
 
-          <div className="flex flex-col gap-4">
+          <section
+            className={cn(
+              "flex min-h-[560px] flex-col rounded-2xl border bg-card shadow-soft",
+              selectedConversation || isComposerOpen ? "flex" : "hidden md:flex",
+            )}
+          >
             {selectedConversation ? (
               <ThreadView
                 conversation={selectedConversation}
@@ -236,18 +286,20 @@ const ClientMessages = () => {
                 onMessageSent={handleMessageSent}
               />
             ) : (
-              <Card className="flex h-[480px] items-center justify-center text-center text-sm text-muted-foreground">
-                <CardContent className="space-y-3">
+              <div className="flex h-full flex-1 items-center justify-center px-8 text-center text-sm text-muted-foreground">
+                <div className="space-y-3">
                   <MessageCircle className="mx-auto h-8 w-8" />
                   <p>
                     {isComposerOpen
                       ? "Renseignez les informations dans la fenêtre de composition pour démarrer une nouvelle discussion."
                       : "Sélectionnez une conversation pour afficher les messages."}
                   </p>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
-          </div>
+          </section>
+
+          <ConversationInfoPanel participant={selectedParticipant} conversation={selectedConversation} />
         </div>
       </div>
       <MessageComposerFullScreen

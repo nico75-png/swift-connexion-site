@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Phone } from "lucide-react";
+import { ArrowLeft, EllipsisVertical, Paperclip, Phone, Send, Smile } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -116,8 +116,8 @@ const ThreadView = ({
   };
 
   return (
-    <Card className="flex h-[720px] flex-col">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-4 sm:px-6">
+    <Card className="flex h-full flex-col rounded-2xl border bg-card shadow-soft">
+      <div className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b bg-card/95 px-4 py-4 backdrop-blur sm:px-6">
         <div className="flex flex-1 items-center gap-4">
           {onBack && (
             <Button
@@ -131,11 +131,17 @@ const ThreadView = ({
               <span className="sr-only">Retour aux conversations</span>
             </Button>
           )}
-          <Avatar className="h-12 w-12">
-            <AvatarFallback>
-              {otherParticipant?.avatarFallback ?? conversation.id.slice(0, 2).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <div className="relative">
+            <Avatar className="h-12 w-12">
+              <AvatarFallback>
+                {otherParticipant?.avatarFallback ?? conversation.id.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <span
+              className="absolute -bottom-0.5 -right-0.5 inline-flex h-3 w-3 items-center justify-center rounded-full border-2 border-card bg-success"
+              aria-hidden="true"
+            />
+          </div>
           <div className="min-w-0 flex-1 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-lg font-semibold leading-tight">
@@ -157,74 +163,86 @@ const ThreadView = ({
             </div>
             {otherParticipant?.role === "DRIVER" && otherParticipant.phone && (
               <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Phone className="h-4 w-4" />
+                <Phone className="h-4 w-4" aria-hidden="true" />
                 <span>{otherParticipant.phone}</span>
               </p>
             )}
           </div>
         </div>
+        <Button type="button" variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground">
+          <EllipsisVertical className="h-4 w-4" />
+          <span className="sr-only">Options de la conversation</span>
+        </Button>
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="space-y-4 px-4 py-6 sm:px-6">
+      <ScrollArea className="flex-1" role="list" aria-label="Messages de la conversation">
+        <div className="space-y-6 px-4 py-6 sm:px-6">
           {conversation.messages.map((threadMessage: Message) => {
             const sender = participantsMap[threadMessage.senderId];
             const recipient = participantsMap[threadMessage.recipientId];
             const isCurrentUser = threadMessage.senderId === currentUserId;
 
             return (
-              <div key={threadMessage.id} className={cn("flex gap-3", isCurrentUser ? "justify-end" : "justify-start")}>
-                {!isCurrentUser && sender && (
-                  <Avatar className="h-9 w-9">
-                    <AvatarFallback>{sender.avatarFallback}</AvatarFallback>
-                  </Avatar>
-                )}
+              <div key={threadMessage.id} className="space-y-3" role="listitem">
                 <div
                   className={cn(
-                    "max-w-[75%] rounded-xl border p-4 shadow-sm transition",
-                    isCurrentUser ? "ml-auto border-primary/40 bg-primary/5" : "bg-muted/60 border-border",
+                    "flex items-start gap-3",
+                    isCurrentUser ? "flex-row-reverse" : "flex-row",
                   )}
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="space-y-1">
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback>
+                      {sender?.avatarFallback ?? threadMessage.senderId.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div
+                    className={cn(
+                      "flex max-w-[70%] flex-col gap-2",
+                      isCurrentUser ? "items-end" : "items-start",
+                    )}
+                  >
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      {sender && (
+                        <span className="font-semibold text-foreground">
+                          {sender.displayName}
+                        </span>
+                      )}
+                      <span aria-hidden="true">•</span>
+                      <span>
+                        {new Date(threadMessage.timestamp).toLocaleString("fr-FR", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                    <div
+                      className={cn(
+                        "w-full rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm",
+                        isCurrentUser
+                          ? "bg-primary/15 text-foreground"
+                          : "bg-muted text-muted-foreground",
+                      )}
+                    >
                       <p className="text-sm font-semibold text-foreground">{threadMessage.subject}</p>
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <p className="mt-2 text-sm text-foreground/90">{threadMessage.content}</p>
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
                         {sender && (
-                          <span className="inline-flex items-center gap-1">
-                            <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
-                              {ROLE_LABELS[sender.role] ?? sender.role}
-                            </Badge>
-                            <span>{sender.displayName}</span>
-                          </span>
+                          <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                            {ROLE_LABELS[sender.role] ?? sender.role}
+                          </Badge>
                         )}
                         {recipient && (
-                          <span className="inline-flex items-center gap-1">
-                            <span className="text-muted-foreground/70">→</span>
-                            <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
-                              {ROLE_LABELS[recipient.role] ?? recipient.role}
-                            </Badge>
-                            <span>{recipient.displayName}</span>
-                          </span>
+                          <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+                            {ROLE_LABELS[recipient.role] ?? recipient.role}
+                          </Badge>
                         )}
                       </div>
                     </div>
-                    <span className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                      {new Date(threadMessage.timestamp).toLocaleString("fr-FR", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
                   </div>
-                  <p className="mt-3 text-sm leading-relaxed text-foreground/90">{threadMessage.content}</p>
                 </div>
-                {isCurrentUser && sender && (
-                  <Avatar className="h-9 w-9">
-                    <AvatarFallback>{sender.avatarFallback}</AvatarFallback>
-                  </Avatar>
-                )}
               </div>
             );
           })}
@@ -232,21 +250,48 @@ const ThreadView = ({
         </div>
       </ScrollArea>
 
-      <div className="border-t px-4 py-4 sm:px-6">
+      <div className="border-t bg-card/95 px-4 py-4 sm:px-6">
         <form onSubmit={handleSubmit} className="space-y-3">
-          <Textarea
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-            placeholder="Votre message"
-            rows={3}
-            disabled={isSending}
-          />
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <div className="flex justify-end">
-            <Button type="submit" disabled={isSending}>
-              {isSending ? "Envoi..." : "Envoyer"}
-            </Button>
+          <div className="flex items-end gap-3 rounded-2xl border border-input bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-primary/60 focus-within:ring-offset-0">
+            <Textarea
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              placeholder="Écrire un message"
+              rows={3}
+              disabled={isSending}
+              className="min-h-[48px] flex-1 resize-none border-0 bg-transparent px-0 py-2 text-sm shadow-none focus-visible:outline-none focus-visible:ring-0"
+            />
+            <div className="flex items-center gap-1.5 pb-2">
+              <button
+                type="button"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted"
+                aria-label="Insérer un emoji"
+              >
+                <Smile className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted"
+                aria-label="Joindre un fichier"
+              >
+                <Paperclip className="h-4 w-4" />
+              </button>
+              <Button
+                type="submit"
+                size="icon"
+                disabled={isSending}
+                className="h-9 w-9 rounded-full bg-primary text-primary-foreground shadow-soft"
+              >
+                {isSending ? (
+                  <Send className="h-4 w-4 animate-pulse" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                <span className="sr-only">Envoyer le message</span>
+              </Button>
+            </div>
           </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
         </form>
       </div>
     </Card>

@@ -129,9 +129,9 @@ const MessageComposer = ({ actorId, actorRole, conversation, recipients, onMessa
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border bg-card p-4 shadow-sm">
+      <div className="rounded-2xl border bg-card p-5 shadow-soft">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
+          <div className="space-y-1">
             <h3 className="text-lg font-semibold">Composer un message</h3>
             <p className="text-sm text-muted-foreground">
               {actorRole === "ADMIN"
@@ -140,7 +140,9 @@ const MessageComposer = ({ actorId, actorRole, conversation, recipients, onMessa
             </p>
           </div>
           {selectedRecipient && (
-            <Badge variant="secondary">{selectedRecipient.role}</Badge>
+            <Badge variant="secondary" className="uppercase tracking-wide">
+              {selectedRecipient.role}
+            </Badge>
           )}
         </div>
       </div>
@@ -154,7 +156,7 @@ const MessageComposer = ({ actorId, actorRole, conversation, recipients, onMessa
                 <FormLabel>Destinataire *</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value} disabled={Boolean(conversation)}>
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-11 rounded-xl border-input">
                       <SelectValue placeholder="Choisir un destinataire" />
                     </SelectTrigger>
                   </FormControl>
@@ -191,9 +193,9 @@ const MessageComposer = ({ actorId, actorRole, conversation, recipients, onMessa
                     <FormLabel>Contexte *</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner le contexte" />
-                        </SelectTrigger>
+                    <SelectTrigger className="h-11 rounded-xl border-input">
+                      <SelectValue placeholder="Sélectionner le contexte" />
+                    </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {contextOptions.map((option) => (
@@ -215,7 +217,7 @@ const MessageComposer = ({ actorId, actorRole, conversation, recipients, onMessa
                   <FormItem>
                     <FormLabel>Référence (commande ou incident)</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ex: CMD-010" {...field} />
+                      <Input placeholder="Ex: CMD-010" className="h-11 rounded-xl border-input" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -231,7 +233,7 @@ const MessageComposer = ({ actorId, actorRole, conversation, recipients, onMessa
               <FormItem>
                 <FormLabel>Objet *</FormLabel>
                 <FormControl>
-                  <Input placeholder="Objet du message" {...field} />
+                  <Input placeholder="Objet du message" className="h-11 rounded-xl border-input" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -245,7 +247,12 @@ const MessageComposer = ({ actorId, actorRole, conversation, recipients, onMessa
               <FormItem>
                 <FormLabel>Message *</FormLabel>
                 <FormControl>
-                  <Textarea rows={6} placeholder="Votre message" {...field} />
+                  <Textarea
+                    rows={6}
+                    placeholder="Votre message"
+                    className="rounded-2xl border-input"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -253,7 +260,7 @@ const MessageComposer = ({ actorId, actorRole, conversation, recipients, onMessa
           />
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting} className="rounded-full px-6 shadow-soft">
               {isSubmitting ? "Envoi..." : "Envoyer"}
             </Button>
           </div>

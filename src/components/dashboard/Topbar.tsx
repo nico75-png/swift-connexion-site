@@ -36,7 +36,7 @@ const Topbar = ({ userName, title, notifications = [] }: TopbarProps) => {
   };
 
   return (
-    <header className="h-16 border-b border-border bg-card flex items-center justify-between px-6">
+    <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6 md:px-10">
       {/* Titre de page ou breadcrumb */}
       <div>
         <h2 className="text-lg font-semibold">{title || `Bienvenue, ${finalName}`}</h2>

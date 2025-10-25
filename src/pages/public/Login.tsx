@@ -5,9 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { upsertProfile } from "@/lib/api/profiles";
 import { useAuthProfile } from "@/providers/AuthProvider";
 
-import "./connexion.css";
+import "./login.css";
 
-const Connexion = () => {
+const Login = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isSignUp, setIsSignUp] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -21,15 +21,15 @@ const Connexion = () => {
   const redirectTarget = useMemo(() => {
     const redirectParam = searchParams.get("redirect");
     if (!redirectParam) {
-      return "/espace-client";
+      return "/dashboard-client";
     }
 
     try {
       const decoded = decodeURIComponent(redirectParam);
-      return decoded.startsWith("/") ? decoded : "/espace-client";
+      return decoded.startsWith("/") ? decoded : "/dashboard-client";
     } catch (error) {
       console.warn("Failed to decode redirect parameter", error);
-      return "/espace-client";
+      return "/dashboard-client";
     }
   }, [searchParams]);
 
@@ -132,7 +132,7 @@ const Connexion = () => {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/onboarding/expertise`,
+          emailRedirectTo: `${window.location.origin}/dashboard-client`,
           data: {
             full_name: fullName,
             first_name: firstName,
@@ -407,4 +407,4 @@ const Connexion = () => {
   );
 };
 
-export default Connexion;
+export default Login;

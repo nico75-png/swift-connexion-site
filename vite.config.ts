@@ -16,8 +16,13 @@ export default defineConfig(({ mode }) => ({
     },
   },
   test: {
-    environment: "node",
+    environment: "jsdom",
     setupFiles: "./src/setupTests.ts",
     globals: true,
+    alias: {
+      "@testing-library/react": path.resolve(__dirname, "./src/test-utils/rtl"),
+      "@testing-library/user-event": path.resolve(__dirname, "./src/test-utils/userEvent"),
+      "@testing-library/jest-dom/vitest": path.resolve(__dirname, "./src/test-utils/jestDom"),
+    },
   },
 }));

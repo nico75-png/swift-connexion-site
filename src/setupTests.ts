@@ -1,3 +1,12 @@
+import { afterEach } from "vitest";
+
+import "@/test-utils/jestDom";
+import { cleanup } from "@/test-utils/rtl";
+
+afterEach(() => {
+  cleanup();
+});
+
 const storage = new Map<string, string>();
 
 if (typeof globalThis.window === "undefined") {

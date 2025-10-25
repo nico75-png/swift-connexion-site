@@ -4,7 +4,10 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@testing-library/react": ["./src/test-utils/rtl"],
+      "@testing-library/user-event": ["./src/test-utils/userEvent"],
+      "@testing-library/jest-dom/vitest": ["./src/test-utils/jestDom"]
     },
     "noImplicitAny": false,
     "noUnusedParameters": false,

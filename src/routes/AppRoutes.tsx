@@ -6,19 +6,19 @@ import { useAuth, type UserRole } from "@/lib/stores/auth.store";
 import { useAuthProfile } from "@/providers/AuthProvider";
 
 // Pages publiques
-const Home = lazy(() => import("@/pages/public"));
-const Expertises = lazy(() => import("@/pages/public/expertises"));
-const Tarifs = lazy(() => import("@/pages/public/Tarifs"));
-const FAQ = lazy(() => import("@/pages/public/FAQ"));
-const Contact = lazy(() => import("@/pages/public/Contact"));
-const CommandeSansCompte = lazy(() => import("@/pages/public/CommandeSansCompte"));
-const Login = lazy(() => import("@/pages/public/Login"));
-const Register = lazy(() => import("@/pages/public/Register"));
-const ForgotPassword = lazy(() => import("@/pages/public/ForgotPassword"));
-const MentionsLegales = lazy(() => import("@/pages/public/MentionsLegales"));
-const CGV = lazy(() => import("@/pages/public/CGV"));
-const Cookies = lazy(() => import("@/pages/public/Cookies"));
-const NotFound = lazy(() => import("@/pages/public/NotFound"));
+const Home = lazy(() => import("@/pages"));
+const Expertises = lazy(() => import("@/pages/expertises"));
+const Tarifs = lazy(() => import("@/pages/tarifs"));
+const FAQ = lazy(() => import("@/pages/faq"));
+const Contact = lazy(() => import("@/pages/contact"));
+const CommandeSansCompte = lazy(() => import("@/pages/commande-sans-compte"));
+const Login = lazy(() => import("@/pages/login"));
+const Register = lazy(() => import("@/pages/register"));
+const ForgotPassword = lazy(() => import("@/pages/forgot-password"));
+const MentionsLegales = lazy(() => import("@/pages/mentions-legales"));
+const CGV = lazy(() => import("@/pages/cgv"));
+const Cookies = lazy(() => import("@/pages/cookies"));
+const NotFound = lazy(() => import("@/pages/not-found"));
 
 // Pages Espace Client (une seule page principale)
 const DashboardClient = lazy(() => import("@/pages/dashboard-client"));
@@ -107,11 +107,8 @@ export function AppRoutes() {
         <Route path="contact" element={withGuards(Contact)} />
         <Route path="commande-sans-compte" element={withGuards(CommandeSansCompte)} />
         <Route path="login" element={withGuards(Login)} />
-        <Route path="se-connecter" element={<Navigate to="/login" replace />} />
         <Route path="register" element={withGuards(Register)} />
-        <Route path="registre" element={<Navigate to="/register" replace />} />
         <Route path="forgot-password" element={withGuards(ForgotPassword)} />
-        <Route path="mot-de-passe-oublie" element={<Navigate to="/forgot-password" replace />} />
         <Route path="mentions-legales" element={withGuards(MentionsLegales)} />
         <Route path="cgv" element={withGuards(CGV)} />
         <Route path="cookies" element={withGuards(Cookies)} />
@@ -120,7 +117,6 @@ export function AppRoutes() {
 
         {/* C - ESPACE ADMIN */}
         <Route path="dashboard-admin" element={withGuards(DashboardAdmin, { requiresAuth: true, roles: ["admin"] })} />
-        <Route path="admin" element={<Navigate to="/dashboard-admin" replace />} />
 
         {/* 404 */}
         <Route path="404" element={withGuards(NotFound)} />

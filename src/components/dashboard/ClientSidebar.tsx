@@ -183,7 +183,7 @@ const ClientSidebar = () => {
                 SIDEBAR_BG,
                 SIDEBAR_BORDER,
                 "text-[#F2F6FA] backdrop-blur-2xl transition-[width] duration-300",
-                isCollapsed ? "w-[92px]" : "w-[260px]"
+                isCollapsed ? "w-[88px]" : "w-[216px]"
               )}
             >
               <div className="relative flex h-full flex-col overflow-hidden">

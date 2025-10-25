@@ -83,7 +83,7 @@ All colors MUST be HSL.
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
-    --sidebar-w: 240px;
+    --sidebar-w: 216px;
     --drawer-w: 420px;
   }
 
@@ -148,6 +148,7 @@ All colors MUST be HSL.
     z-index: 30;
     display: flex;
     flex-direction: column;
+    width: minmax(0, var(--sidebar-w));
   }
 
   .sidebar > * {

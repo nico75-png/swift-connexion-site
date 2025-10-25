@@ -15,4 +15,9 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  test: {
+    environment: "node",
+    setupFiles: "./src/setupTests.ts",
+    globals: true,
+  },
 }));

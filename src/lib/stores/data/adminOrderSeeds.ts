@@ -49,4 +49,25 @@ type ClientDirectoryEntry = {
 
 export const CLIENT_DIRECTORY: Partial<Record<string, ClientDirectoryEntry>> = {};
 
-export const ADMIN_ORDER_SEEDS: AdminOrderSeed[] = [];
+export const ADMIN_ORDER_SEEDS: AdminOrderSeed[] = [
+  {
+    number: "1000",
+    client: "Futura Logistics",
+    sector: "B2B Express",
+    date: "2025-01-15",
+    time: "10:30",
+    transportType: "Course urgente intra-muros",
+    status: "En attente",
+    amount: 95.5,
+    pickupAddress: "24 Rue de Rivoli, 75001 Paris",
+    deliveryAddress: "18 Rue de Lyon, 75012 Paris",
+    zone: "INTRA_PARIS",
+    volume: 1.5,
+    weight: 60,
+    instructions: "Prévenir le destinataire 10 minutes avant l'arrivée.",
+    express: true,
+    fragile: false,
+    temperatureControlled: false,
+    driverId: null,
+  },
+];

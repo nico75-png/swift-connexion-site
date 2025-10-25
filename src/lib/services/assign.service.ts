@@ -19,6 +19,7 @@ import {
   saveOrders,
   saveScheduledAssignments,
 } from "@/lib/stores/driversOrders.store";
+import { ensureOrderNumberFormat } from "@/lib/orderSequence";
 
 interface ServiceResult {
   success: boolean;
@@ -36,7 +37,15 @@ const nowIso = () => new Date().toISOString();
 
 const resolveDriver = (driverId: string, drivers: Driver[]) => drivers.find((driver) => driver.id === driverId);
 
-const resolveOrder = (orderId: string, orders: Order[]) => orders.find((order) => order.id === orderId);
+const normalizeOrderId = (orderId: string) => {
+  const formatted = ensureOrderNumberFormat(orderId);
+  return formatted || orderId.trim();
+};
+
+const resolveOrder = (orderId: string, orders: Order[]) => {
+  const target = normalizeOrderId(orderId);
+  return orders.find((order) => normalizeOrderId(order.id) === target);
+};
 
 export const cancelScheduledAssignmentsForInterval = (
   driverId: string,
@@ -169,7 +178,8 @@ export const assignDriver = (
   const orders = getOrders();
   const drivers = getDrivers();
 
-  const orderIndex = orders.findIndex((item) => item.id === orderId);
+  const normalizedOrderId = normalizeOrderId(orderId);
+  const orderIndex = orders.findIndex((item) => normalizeOrderId(item.id) === normalizedOrderId);
   if (orderIndex === -1) {
     return { success: false, error: "Commande introuvable" };
   }

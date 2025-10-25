@@ -199,36 +199,38 @@ const Inscription = () => {
           
         </div>
 
-        <div className="grid flex-1 overflow-hidden rounded-[42px] border border-border/60 bg-card shadow-large sm:rounded-[48px] lg:grid-cols-[0.4fr_0.6fr] xl:grid-cols-2">
-          <div className="order-2 flex min-h-[360px] items-stretch bg-card lg:order-1">
-            <div className="flex w-full flex-col justify-between px-6 py-8 sm:px-10 sm:py-12">
-              <div className="space-y-3">
-                <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">Créer un compte</h1>
-                <p className="text-base text-muted-foreground">
-                  Rejoignez la communauté One Connexion et pilotez vos livraisons avec précision.
-                </p>
-              </div>
-
-              <div className="mt-8 space-y-8">
-                <Button type="button" variant="outline" size="lg" className="w-full justify-center gap-3 text-sm font-semibold" onClick={handleGoogleSignUp} disabled={isSubmitting || isGoogleLoading}>
-                  {isGoogleLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <GoogleIcon />}
-                  Continuer avec Google
-                </Button>
-
-                <div className="relative">
-                  <Separator className="bg-border" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="bg-card px-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                      ou remplissez le formulaire…
-                    </span>
+        <div className="grid flex-1 rounded-[42px] border border-border/60 bg-card shadow-large sm:rounded-[48px] lg:grid-cols-[0.4fr_0.6fr] lg:overflow-hidden xl:grid-cols-2" data-testid="registration-shell">
+          <div className="order-2 flex min-h-0 items-stretch bg-card lg:order-1 lg:min-h-[360px]" data-testid="registration-form-panel">
+            <div className="flex w-full flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-6 py-8 sm:px-10 sm:py-12" data-testid="registration-form-scroll-area">
+                <div className="flex min-h-full flex-col gap-8 lg:gap-10">
+                  <div className="space-y-3">
+                    <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">Créer un compte</h1>
+                    <p className="text-base text-muted-foreground">
+                      Rejoignez la communauté One Connexion et pilotez vos livraisons avec précision.
+                    </p>
                   </div>
-                </div>
 
-                <Form {...form}>
-                  <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)} noValidate>
-                    <FormField control={form.control} name="fullName" render={({
-                    field
-                  }) => <FormItem>
+                  <div className="flex flex-1 flex-col gap-8">
+                    <Button type="button" variant="outline" size="lg" className="w-full justify-center gap-3 text-sm font-semibold" onClick={handleGoogleSignUp} disabled={isSubmitting || isGoogleLoading}>
+                      {isGoogleLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <GoogleIcon />}
+                      Continuer avec Google
+                    </Button>
+
+                    <div className="relative">
+                      <Separator className="bg-border" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="bg-card px-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                          ou remplissez le formulaire…
+                        </span>
+                      </div>
+                    </div>
+
+                    <Form {...form}>
+                      <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)} noValidate>
+                        <FormField control={form.control} name="fullName" render={({
+                        field
+                      }) => <FormItem>
                           <FormLabel className="text-sm font-semibold text-foreground">Nom complet</FormLabel>
                           <FormControl>
                             <Input {...field} placeholder="Jean Dupont" autoComplete="name" />
@@ -320,21 +322,23 @@ const Inscription = () => {
                           </div>
                         </FormItem>} />
 
-                    <Button type="submit" variant="cta" size="lg" className="w-full" disabled={isSubmitting || !isFormValid}>
-                      {isSubmitting ? <span className="flex items-center justify-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                          Inscription en cours…
-                        </span> : "Continuer"}
-                    </Button>
-                  </form>
-                </Form>
+                        <Button type="submit" variant="cta" size="lg" className="w-full" disabled={isSubmitting || !isFormValid}>
+                          {isSubmitting ? <span className="flex items-center justify-center gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                              Inscription en cours…
+                            </span> : "Continuer"}
+                        </Button>
+                      </form>
+                    </Form>
 
-                <p className="text-center text-sm text-muted-foreground">
-                  Déjà inscrit ?{" "}
-                <Link to="/auth" className="font-semibold text-primary transition-smooth hover:text-primary-dark hover:underline">
-                  Se connecter
-                </Link>
-                </p>
+                    <p className="mt-auto text-center text-sm text-muted-foreground">
+                      Déjà inscrit ?{" "}
+                    <Link to="/auth" className="font-semibold text-primary transition-smooth hover:text-primary-dark hover:underline">
+                      Se connecter
+                    </Link>
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

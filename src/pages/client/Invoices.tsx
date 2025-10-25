@@ -43,10 +43,10 @@ const getStatusLabel = (status: string): string => {
 
 const getStatusColor = (status: string) => {
   const colors: Record<string, string> = {
-    paid: "bg-success/10 text-success border-success/20",
-    pending: "bg-warning/10 text-warning border-warning/20",
-    overdue: "bg-destructive/10 text-destructive border-destructive/20",
-    cancelled: "bg-muted text-muted-foreground border-muted",
+    paid: "border-[rgba(0,184,132,0.3)] bg-[rgba(0,184,132,0.12)] text-[#00B884]",
+    pending: "border-[rgba(255,176,32,0.35)] bg-[rgba(255,176,32,0.15)] text-[#C46A00]",
+    overdue: "border-[rgba(232,76,76,0.35)] bg-[rgba(232,76,76,0.18)] text-[#D64545]",
+    cancelled: "border-[rgba(200,224,251,0.6)] bg-[rgba(200,224,251,0.45)] text-[#0B2D55]",
   };
   return colors[status] || colors.pending;
 };
@@ -128,47 +128,50 @@ const ClientInvoices = () => {
       topbar={<Topbar userName={currentUser?.name ?? undefined} notifications={formattedNotifications} />}
       showProfileReminder
     >
-      <div className="space-y-6">
+      <div className="-mx-6 -my-6 space-y-8 rounded-3xl bg-[#F2F6FA] px-6 py-6 text-[#0B0B0B] shadow-[0_4px_20px_rgba(11,45,85,0.05)] md:-mx-10 md:-my-8 md:px-10 md:py-8">
         {/* En-tête */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold mb-2">Factures</h1>
-            <p className="text-muted-foreground">Consultez et téléchargez vos factures</p>
+            <div className="mb-2 flex items-center gap-2">
+              <div className="h-8 w-1 rounded-full bg-[#0B2D55]" />
+              <h1 className="text-3xl font-semibold tracking-tight text-[#0B2D55]">Factures</h1>
+            </div>
+            <p className="text-sm text-[#4A4A4A]">Consultez et téléchargez vos factures</p>
           </div>
           <CreateOrderButton className="mt-3 sm:mt-0" />
         </div>
 
         {/* Statistiques */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <StatsCard
             label="Factures en attente"
             value={pendingCount}
             icon={Wallet}
-            color="text-warning"
+            color="text-[#0B2D55]"
           />
           <StatsCard
             label="Montant dû"
             value={`${outstandingTotal.toFixed(2)} €`}
             icon={Download}
-            color="text-destructive"
+            color="text-[#0B2D55]"
           />
           <StatsCard
             label="Factures payées"
             value={paidCount}
             icon={FileText}
-            color="text-success"
+            color="text-[#0B2D55]"
           />
         </div>
 
         {/* Filtres */}
-        <Card>
+        <Card className="rounded-3xl border border-[rgba(0,0,0,0.08)] bg-white shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
           <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex flex-col gap-4 md:flex-row">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full md:w-48">
+                <SelectTrigger className="h-12 w-full rounded-2xl border border-[rgba(0,0,0,0.08)] bg-white text-sm text-[#0B0B0B] shadow-[0_4px_12px_rgba(0,0,0,0.05)] focus:ring-2 focus:ring-[rgba(11,45,85,0.2)] md:w-48">
                   <SelectValue placeholder="Tous les statuts" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-2xl border border-[rgba(0,0,0,0.08)] bg-white text-sm text-[#0B0B0B] shadow-[0_8px_20px_rgba(0,0,0,0.08)]">
                   <SelectItem value="all">Tous les statuts</SelectItem>
                   <SelectItem value="pending">En attente</SelectItem>
                   <SelectItem value="paid">Payée</SelectItem>
@@ -181,55 +184,65 @@ const ClientInvoices = () => {
         </Card>
 
         {/* Tableau des factures */}
-        <Card>
-          <CardContent className="p-0">
+        <Card className="rounded-3xl border border-[rgba(0,0,0,0.08)] bg-white shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
+          <CardContent className="overflow-hidden p-0">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-muted/50 border-b">
+                <thead className="border-b bg-[#E3EDF8]">
                   <tr>
-                    <th className="text-left p-4 text-sm font-semibold">N° Facture</th>
-                    <th className="text-left p-4 text-sm font-semibold">Date de création</th>
-                    <th className="text-left p-4 text-sm font-semibold">Date d'échéance</th>
-                    <th className="text-right p-4 text-sm font-semibold">Montant</th>
-                    <th className="text-left p-4 text-sm font-semibold">Statut</th>
-                    <th className="text-right p-4 text-sm font-semibold">Actions</th>
+                    <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide text-[#0B2D55]">N° Facture</th>
+                    <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide text-[#0B2D55]">Date de création</th>
+                    <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide text-[#0B2D55]">Date d'échéance</th>
+                    <th className="p-4 text-right text-sm font-semibold uppercase tracking-wide text-[#0B2D55]">Montant</th>
+                    <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide text-[#0B2D55]">Statut</th>
+                    <th className="p-4 text-right text-sm font-semibold uppercase tracking-wide text-[#0B2D55]">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {isLoading ? (
                     <tr>
-                      <td colSpan={6} className="p-6 text-center text-sm text-muted-foreground">
+                      <td colSpan={6} className="p-6 text-center text-sm text-[#4A4A4A]">
                         Chargement...
                       </td>
                     </tr>
                   ) : filteredInvoices.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="p-6 text-center text-sm text-muted-foreground">
+                      <td colSpan={6} className="p-6 text-center text-sm text-[#4A4A4A]">
                         Aucune facture disponible pour le moment.
                       </td>
                     </tr>
                   ) : (
                     filteredInvoices.map((invoice) => (
-                      <tr key={invoice.id} className="border-b hover:bg-muted/30 transition-colors">
-                        <td className="p-4 font-mono text-sm">{invoice.invoice_number}</td>
-                        <td className="p-4 text-sm text-muted-foreground">{formatDate(invoice.created_at)}</td>
-                        <td className="p-4 text-sm text-muted-foreground">{formatDate(invoice.due_date)}</td>
-                        <td className="p-4 text-right font-semibold">
+                      <tr key={invoice.id} className="border-b transition-colors hover:bg-[#F0F6FD]">
+                        <td className="p-4 font-mono text-sm font-semibold text-[#0B2D55]">{invoice.invoice_number}</td>
+                        <td className="p-4 text-sm text-[#4A4A4A]">{formatDate(invoice.created_at)}</td>
+                        <td className="p-4 text-sm text-[#4A4A4A]">{formatDate(invoice.due_date)}</td>
+                        <td className="p-4 text-right text-base font-semibold text-[#0B2D55]">
                           {invoice.amount.toFixed(2)} {invoice.currency}
                         </td>
                         <td className="p-4">
-                          <Badge className={getStatusColor(invoice.status)}>
+                          <Badge variant="outline" className={`${getStatusColor(invoice.status)} px-3 py-1 text-xs font-semibold`}>
                             {getStatusLabel(invoice.status)}
                           </Badge>
                         </td>
                         <td className="p-4">
                           <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => handleDownload(invoice.invoice_number)}>
-                              <Download className="h-4 w-4 mr-2" />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="rounded-full bg-transparent px-4 text-[#0B2D55] transition hover:bg-[rgba(255,204,0,0.2)]"
+                              onClick={() => handleDownload(invoice.invoice_number)}
+                            >
+                              <Download className="mr-2 h-4 w-4" />
                               Télécharger
                             </Button>
                             {invoice.status === "pending" && (
-                              <Button variant="cta" size="sm" asChild>
+                              <Button
+                                variant="default"
+                                size="sm"
+                                className="rounded-full bg-[#FFCC00] px-4 py-2 text-sm font-semibold text-[#0B2D55] shadow-[0_6px_16px_rgba(255,204,0,0.25)] transition hover:bg-[#FFD84D] hover:shadow-[0_8px_20px_rgba(255,204,0,0.3)]"
+                                asChild
+                              >
                                 <Link to={`/espace-client/factures/${invoice.id}/paiement`} state={{ invoice }}>
                                   Régler
                                 </Link>

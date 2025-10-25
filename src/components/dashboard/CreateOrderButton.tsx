@@ -216,7 +216,7 @@ const CreateOrderButton = ({ className }: CreateOrderButtonProps) => {
       setFormValues(INITIAL_FORM);
       
       // Redirection vers la page de détail de la commande
-      navigate(`/commandes/${newOrder.id}`);
+      navigate(`/dashboard-client/commandes/${newOrder.id}`);
     } catch (error) {
       console.error("Failed to create order", error);
       toast({

@@ -707,7 +707,7 @@ const Home = () => {
             <Link to="/commande-sans-compte" className="rounded-lg bg-blue-600 px-8 py-4 font-semibold text-white transition-transform duration-300 hover:scale-105 hover:bg-blue-700">
               Commander maintenant
             </Link>
-            <Link to="/auth?mode=signup" className="rounded-lg border-2 border-white px-8 py-4 font-semibold text-white transition duration-300 hover:bg-white hover:text-blue-600">
+            <Link to="/register" className="rounded-lg border-2 border-white px-8 py-4 font-semibold text-white transition duration-300 hover:bg-white hover:text-blue-600">
               Créer un compte
             </Link>
           </div>

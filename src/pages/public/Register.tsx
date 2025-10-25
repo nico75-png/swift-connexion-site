@@ -333,7 +333,7 @@ const Inscription = () => {
 
                     <p className="mt-auto text-center text-sm text-muted-foreground">
                       Déjà inscrit ?{" "}
-                    <Link to="/auth" className="font-semibold text-primary transition-smooth hover:text-primary-dark hover:underline">
+                    <Link to="/login" className="font-semibold text-primary transition-smooth hover:text-primary-dark hover:underline">
                       Se connecter
                     </Link>
                     </p>

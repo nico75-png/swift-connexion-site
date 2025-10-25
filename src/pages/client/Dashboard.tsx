@@ -1,301 +1,262 @@
-import { useEffect, useMemo, useState } from "react";
-import { differenceInDays, isAfter, subDays } from "date-fns";
-import { Activity, Package, TrendingUp, Wallet } from "lucide-react";
+import { useMemo } from "react";
+import { Link } from "react-router-dom";
+import { format, subDays } from "date-fns";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+} from "recharts";
+import {
+  Activity,
+  BellRing,
+  CircleAlert,
+  CreditCard,
+  Package,
+  TrendingUp,
+  Truck,
+  Wallet,
+} from "lucide-react";
+
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import ClientSidebar from "@/components/dashboard/ClientSidebar";
-import Topbar from "@/components/dashboard/Topbar";
-import CreateOrderButton from "@/components/dashboard/CreateOrderButton";
-import StatsCard from "@/components/dashboard/StatsCard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
-import {
-  ClientOrderListItem,
-  listOrdersByClient,
-} from "@/lib/stores/clientOrders.store";
-import { ensureStoragePrimitives, formatDateTime } from "@/lib/reorder";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/lib/stores/auth.store";
-import { getNotifications } from "@/lib/stores/driversOrders.store";
-import type { NotificationEntry } from "@/lib/stores/driversOrders.store";
 
-/**
- * Dashboard principal du client
- * Vue d'ensemble avec stats, graphique et dernières commandes
- */
+const createActivityData = () => {
+  const reference = [0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2];
+  const today = new Date();
+
+  return reference.map((value, index) => {
+    const day = subDays(today, reference.length - index - 1);
+
+    return {
+      label: format(day, "dd MMM"),
+      commandes: value,
+      livraisons: Math.max(0, value - (index % 2 === 0 ? 0 : 0.5)),
+    };
+  });
+};
+
 const ClientDashboard = () => {
-  const { currentClient, currentUser } = useAuth();
-  const [orders, setOrders] = useState<ClientOrderListItem[]>([]);
-  const [notifications, setNotifications] = useState<NotificationEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { currentUser, currentClient } = useAuth();
+  const displayName = currentUser?.name ?? "Utilisateur";
+  const firstName = displayName.split(" ")[0] || displayName;
 
-  useEffect(() => {
-    let mounted = true;
+  const activityData = useMemo(() => createActivityData(), []);
 
-    const load = async () => {
-      try {
-        if (typeof window !== "undefined") {
-          ensureStoragePrimitives();
-        }
-
-        const [ordersResult, notificationsResult] = await Promise.all([
-          currentClient?.id ? listOrdersByClient(currentClient.id) : Promise.resolve([]),
-          Promise.resolve(getNotifications()),
-        ]);
-
-        if (!mounted) return;
-
-        setOrders(ordersResult);
-        setNotifications(notificationsResult);
-      } finally {
-        if (mounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    load();
-
-    return () => {
-      mounted = false;
-    };
-  }, [currentClient?.id]);
-
-  const recentOrders = useMemo(() => orders.slice(0, 4), [orders]);
-
-  const lastThirtyDaysOrders = useMemo(() => {
-    const cutoff = subDays(new Date(), 30);
-    return orders.filter((order) => {
-      if (!order.createdAt) return false;
-      const created = new Date(order.createdAt);
-      return isAfter(created, cutoff);
-    });
-  }, [orders]);
-
-  const totalAmountLast30Days = useMemo(() => {
-    return lastThirtyDaysOrders.reduce((sum, order) => sum + (order.amountTTC ?? 0), 0);
-  }, [lastThirtyDaysOrders]);
-
-  const deliveredOrdersLast30Days = useMemo(
-    () => lastThirtyDaysOrders.filter((order) => order.status.toLowerCase().includes("livr")),
-    [lastThirtyDaysOrders],
-  );
-
-  const averageDeliveryDelay = useMemo(() => {
-    if (lastThirtyDaysOrders.length === 0) return 0;
-    const today = new Date();
-    const total = lastThirtyDaysOrders.reduce((sum, order) => {
-      if (!order.createdAt) return sum;
-      return sum + differenceInDays(today, new Date(order.createdAt));
-    }, 0);
-    return Math.round((total / lastThirtyDaysOrders.length) * 10) / 10;
-  }, [lastThirtyDaysOrders]);
-
-  const stats = useMemo(() => {
-    const deliveredRatio = lastThirtyDaysOrders.length
-      ? Math.round((deliveredOrdersLast30Days.length / lastThirtyDaysOrders.length) * 100)
-      : 0;
-
-    return [
+  const stats = useMemo(
+    () => [
       {
         label: "Commandes sur 30 jours",
-        value: lastThirtyDaysOrders.length,
+        value: "0",
         icon: Package,
-        color: "text-primary",
-        trend: {
-          value: Math.min(120, lastThirtyDaysOrders.length * 12),
-          isPositive: lastThirtyDaysOrders.length >= 1,
-        },
+        accent: "text-amber-500",
       },
       {
         label: "Taux de livraison",
-        value: `${deliveredRatio}%`,
+        value: "0 %",
         icon: Activity,
-        color: "text-success",
-        trend: {
-          value: deliveredRatio - 60,
-          isPositive: deliveredRatio >= 60,
-        },
+        accent: "text-green-500",
       },
       {
-        label: "Montant dépensé",
-        value: `${totalAmountLast30Days.toFixed(2)} €`,
+        label: "Montant consommé",
+        value: "0,00 €",
         icon: Wallet,
-        color: "text-secondary",
+        accent: "text-blue-500",
       },
       {
         label: "Délai moyen",
-        value: `${averageDeliveryDelay} j`,
+        value: "0 j",
         icon: TrendingUp,
-        color: "text-info",
+        accent: "text-purple-500",
       },
-    ];
-  }, [
-    lastThirtyDaysOrders.length,
-    deliveredOrdersLast30Days.length,
-    totalAmountLast30Days,
-    averageDeliveryDelay,
-  ]);
-
-  const getStatusColor = (color: string) => {
-    const colors: Record<string, string> = {
-      info: "bg-info/10 text-info border-info/20",
-      success: "bg-success/10 text-success border-success/20",
-      warning: "bg-warning/10 text-warning border-warning/20",
-    };
-    return colors[color] || colors.info;
-  };
-
-  const formattedNotifications = useMemo(
-    () =>
-      notifications
-        .filter((notif) => notif.createdAt)
-        .map((notif) => {
-          const date = new Date(notif.createdAt);
-          const isValidDate = !isNaN(date.getTime());
-          
-          return {
-            id: notif.id,
-            message: notif.message,
-            time: isValidDate
-              ? new Intl.DateTimeFormat("fr-FR", {
-                  day: "2-digit",
-                  month: "long",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                }).format(date)
-              : "Date inconnue",
-            read: notif.read,
-          };
-        }),
-    [notifications],
+    ],
+    [],
   );
 
+  const quickActions = useMemo(
+    () => [
+      {
+        label: "Suivre une commande",
+        description: "Visualisez les étapes en temps réel",
+        href: "/suivi",
+        icon: Truck,
+      },
+      {
+        label: "Consulter vos factures",
+        description: "Retrouvez et téléchargez vos factures",
+        href: "/factures",
+        icon: CreditCard,
+      },
+      {
+        label: "Messagerie",
+        description: "Échangez avec notre équipe support",
+        href: "/messages",
+        icon: BellRing,
+      },
+    ],
+    [],
+  );
+
+  const profileCompletion = useMemo(() => {
+    const requiredFields = ["company", "contactName", "siret"] as const;
+
+    if (!currentClient) {
+      return { completed: false, missingCount: requiredFields.length };
+    }
+
+    const missingCount = requiredFields.reduce((count, field) => {
+      return currentClient[field] ? count : count + 1;
+    }, 0);
+
+    return {
+      completed: missingCount === 0,
+      missingCount,
+    };
+  }, [currentClient]);
+
   return (
-    <DashboardLayout
-      sidebar={<ClientSidebar />}
-      topbar={<Topbar userName={currentUser?.name ?? undefined} notifications={formattedNotifications} />}
-      showProfileReminder
-    >
-      <div className="space-y-6">
-        {/* En-tête */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Tableau de bord</h1>
-            <p className="text-muted-foreground">Aperçu de votre activité</p>
-          </div>
-          <CreateOrderButton className="mt-3 sm:mt-0" />
-        </div>
-
-        {/* Stats KPI */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat, i) => (
-            <StatsCard key={i} {...stat} />
-          ))}
-        </div>
-
-        {/* Graphique activité (placeholder) */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Activité des 30 derniers jours</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-lg p-6">
-              <div className="grid h-full w-full grid-cols-15 items-end gap-1">
-                {Array.from({ length: 15 }).map((_, index) => {
-                  const factor = lastThirtyDaysOrders[index]?.amountTTC ?? 0;
-                  const height = Math.min(100, Math.round((factor / 120) * 100));
-                  return (
-                    <div
-                      // eslint-disable-next-line react/no-array-index-key
-                      key={index}
-                      className="bg-primary/60 transition-all duration-500 rounded-t"
-                      style={{ height: `${height}%` }}
-                    />
-                  );
-                })}
-              </div>
+    <DashboardLayout sidebar={<ClientSidebar />}>
+      <div className="space-y-8">
+        <section className="relative overflow-hidden rounded-3xl border border-amber-100 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-800 p-8 text-white shadow-xl">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,204,0,0.18),_transparent_55%)]" />
+          <div className="relative z-10 flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <Badge variant="secondary" className="w-fit bg-white/10 text-white backdrop-blur">
+                Tableau de bord client
+              </Badge>
+              <h1 className="text-3xl font-semibold leading-tight md:text-4xl">
+                Bienvenue, {firstName}
+              </h1>
+              <p className="max-w-2xl text-sm text-white/80 md:text-base">
+                Centralisez vos commandes, suivez vos livraisons et accédez rapidement à toutes vos informations clés.
+              </p>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Dernières commandes */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Dernières commandes</CardTitle>
-            <Button variant="outline" asChild>
-              <Link to="/commandes">Voir tout</Link>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <p className="rounded-lg border border-dashed border-muted-foreground/40 p-6 text-center text-sm text-muted-foreground">
-                Chargement des dernières commandes…
-              </p>
-            ) : recentOrders.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-muted-foreground/40 p-6 text-center text-sm text-muted-foreground">
-                Aucune commande récente à afficher.
-              </p>
-            ) : (
-              <div className="space-y-4">
-                {recentOrders.map((order) => (
-                  <div
-                    key={order.id}
-                    className="flex flex-col gap-3 rounded-lg border border-transparent bg-muted/30 p-4 transition hover:border-primary/40 hover:bg-primary/5 md:flex-row md:items-center md:justify-between"
-                  >
-                    <div>
-                      <p className="font-medium">{order.orderNumber}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {order.transportLabel}
-                        {order.createdAt && ` • ${formatDateTime(order.createdAt, "fr-FR")}`}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-                      <Badge className={getStatusColor(order.status.toLowerCase().includes("livr") ? "success" : "info")}>
-                        {order.status}
-                      </Badge>
-                      <div className="flex flex-col gap-2 sm:flex-row">
-                        <Button variant="outline" size="sm" asChild>
-                          <Link to={`/commandes/${order.id}`}>Voir le détail</Link>
-                        </Button>
-                        <Button variant="cta" size="sm" asChild>
-                          <Link to={`/suivi/${order.id}`}>Voir le suivi GPS</Link>
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <Alert className="flex-1 border-white/20 bg-white/10 text-white">
+                <CircleAlert className="h-4 w-4 text-amber-300" />
+                <AlertTitle className="flex items-center gap-2 text-sm font-semibold">
+                  {profileCompletion.completed ? "Profil complet" : "Complétez votre profil"}
+                  {!profileCompletion.completed && (
+                    <Badge className="bg-amber-500 text-slate-900">Prioritaire</Badge>
+                  )}
+                </AlertTitle>
+                <AlertDescription className="text-xs text-white/80 md:text-sm">
+                  {!profileCompletion.completed
+                    ? `Il vous reste ${profileCompletion.missingCount} champ(s) à renseigner pour sécuriser vos expéditions.`
+                    : "Toutes vos informations sont à jour. Merci !"}
+                </AlertDescription>
+              </Alert>
 
-        {/* Notifications récentes */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Notifications récentes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <p className="rounded-lg border border-dashed border-muted-foreground/40 p-4 text-center text-sm text-muted-foreground">
-                Chargement des notifications…
+              <Button
+                asChild
+                size="lg"
+                className="h-12 min-w-[200px] rounded-full bg-amber-400 px-6 text-base font-semibold text-slate-900 shadow-lg shadow-amber-500/30 transition hover:bg-amber-300"
+              >
+                <Link to="/commandes/nouvelle">Créer une commande</Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {stats.map((stat) => (
+            <Card key={stat.label} className="border border-slate-200/60 bg-white shadow-sm">
+              <CardContent className="flex items-center justify-between gap-4 p-6">
+                <div>
+                  <p className="text-sm font-medium text-slate-500">{stat.label}</p>
+                  <p className="mt-3 text-3xl font-bold text-slate-900">{stat.value}</p>
+                </div>
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-50">
+                  <stat.icon className={`h-6 w-6 ${stat.accent}`} />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </section>
+
+        <div className="grid gap-6 xl:grid-cols-[2fr,1fr]">
+          <Card className="border border-slate-200/60 bg-white shadow-sm">
+            <CardHeader className="flex flex-col gap-2 border-b border-slate-100/80 bg-slate-50/60">
+              <CardTitle className="text-lg font-semibold text-slate-900">
+                Activité des 30 derniers jours
+              </CardTitle>
+              <p className="text-sm text-slate-500">
+                Données simulées pour visualiser vos futures performances.
               </p>
-            ) : formattedNotifications.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-muted-foreground/40 p-4 text-center text-sm text-muted-foreground">
-                Aucune notification récente.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {formattedNotifications.slice(0, 5).map((notif) => (
-                  <div key={notif.id} className={`rounded-lg p-3 ${!notif.read ? "bg-primary/5" : "bg-muted/30"}`}>
-                    <p className="text-sm">{notif.message}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{notif.time}</p>
-                  </div>
-                ))}
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="h-[280px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={activityData} margin={{ top: 16, right: 16, left: -16, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="colorDeliveries" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#0f172a" stopOpacity={0.2} />
+                        <stop offset="95%" stopColor="#0f172a" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                    <XAxis
+                      dataKey="label"
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fill: "#64748b", fontSize: 12 }}
+                      interval="preserveStartEnd"
+                    />
+                    <Tooltip
+                      cursor={{ strokeDasharray: "4 4" }}
+                      contentStyle={{
+                        borderRadius: "12px",
+                        border: "1px solid #e2e8f0",
+                        boxShadow: "0 12px 40px rgba(15,23,42,0.08)",
+                      }}
+                      labelStyle={{ fontWeight: 600, color: "#0f172a" }}
+                    />
+                    <Area type="monotone" dataKey="commandes" stroke="#f59e0b" strokeWidth={2} fill="url(#colorOrders)" />
+                    <Area type="monotone" dataKey="livraisons" stroke="#0f172a" strokeWidth={2} fill="url(#colorDeliveries)" />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-slate-200/60 bg-white shadow-sm">
+            <CardHeader className="border-b border-slate-100/80 bg-slate-50/60">
+              <CardTitle className="text-lg font-semibold text-slate-900">Actions rapides</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4 p-6">
+              {quickActions.map((action) => (
+                <div key={action.label} className="flex items-start gap-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                    <action.icon className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <Link to={action.href} className="text-sm font-semibold text-slate-900 hover:text-amber-500">
+                      {action.label}
+                    </Link>
+                    <p className="text-xs text-slate-500 md:text-sm">{action.description}</p>
+                  </div>
+                </div>
+              ))}
+              <Separator className="my-2" />
+              <div className="rounded-xl border border-dashed border-amber-200 bg-amber-50/50 p-4 text-sm text-amber-700">
+                Anticipez vos besoins logistiques en programmant vos futures expéditions dès aujourd'hui.
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </DashboardLayout>
   );

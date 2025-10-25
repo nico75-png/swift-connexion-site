@@ -1,11 +1,37 @@
-import { FormEvent, useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+
+import { supabase } from "@/integrations/supabase/client";
+import { upsertProfile } from "@/lib/api/profiles";
+import { useAuthProfile } from "@/providers/AuthProvider";
 
 import "./connexion.css";
 
 const Connexion = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isSignUp, setIsSignUp] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [signUpError, setSignUpError] = useState<string | null>(null);
+  const [signUpSuccess, setSignUpSuccess] = useState<string | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isSigningUp, setIsSigningUp] = useState(false);
+  const navigate = useNavigate();
+  const { session, isLoading, refreshProfile } = useAuthProfile();
+
+  const redirectTarget = useMemo(() => {
+    const redirectParam = searchParams.get("redirect");
+    if (!redirectParam) {
+      return "/espace-client";
+    }
+
+    try {
+      const decoded = decodeURIComponent(redirectParam);
+      return decoded.startsWith("/") ? decoded : "/espace-client";
+    } catch (error) {
+      console.warn("Failed to decode redirect parameter", error);
+      return "/espace-client";
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const mode = searchParams.get("mode");
@@ -16,17 +42,139 @@ const Connexion = () => {
     }
   }, [searchParams]);
 
-  const handleLoginSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-  };
-
-  const handleSignUpSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-  };
+  useEffect(() => {
+    if (!isLoading && session) {
+      navigate(redirectTarget, { replace: true });
+    }
+  }, [isLoading, session, redirectTarget, navigate]);
 
   const handleToggle = (next: boolean) => {
     setIsSignUp(next);
-    setSearchParams(next ? { mode: "signup" } : { mode: "login" });
+    setLoginError(null);
+    setSignUpError(null);
+    if (next) {
+      setSignUpSuccess(null);
+    }
+
+    const redirectParam = searchParams.get("redirect");
+    const params: Record<string, string> = { mode: next ? "signup" : "login" };
+    if (redirectParam) {
+      params.redirect = redirectParam;
+    }
+
+    setSearchParams(params);
+  };
+
+  const handleLoginSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (isLoggingIn) {
+      return;
+    }
+
+    setLoginError(null);
+
+    const formData = new FormData(event.currentTarget);
+    const email = String(formData.get("email") ?? "").trim();
+    const password = String(formData.get("password") ?? "");
+
+    if (!email || !password) {
+      setLoginError("Veuillez renseigner votre email et votre mot de passe.");
+      return;
+    }
+
+    setIsLoggingIn(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      navigate(redirectTarget, { replace: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "La connexion a échoué.";
+      setLoginError(message);
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleSignUpSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (isSigningUp) {
+      return;
+    }
+
+    setSignUpError(null);
+    setSignUpSuccess(null);
+
+    const formData = new FormData(event.currentTarget);
+    const fullName = String(formData.get("fullname") ?? "").trim();
+    const email = String(formData.get("email") ?? "").trim();
+    const phone = String(formData.get("phone") ?? "").trim();
+    const password = String(formData.get("password") ?? "");
+
+    if (!fullName || !email || !password) {
+      setSignUpError("Veuillez compléter les champs obligatoires.");
+      return;
+    }
+
+    const names = fullName.split(/\s+/).filter(Boolean);
+    const firstName = names.shift() ?? "";
+    const lastName = names.join(" ") || firstName;
+
+    setIsSigningUp(true);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/onboarding/expertise`,
+          data: {
+            full_name: fullName,
+            first_name: firstName,
+            last_name: lastName,
+            phone,
+          },
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data.user) {
+        try {
+          await upsertProfile({
+            userId: data.user.id,
+            firstName,
+            lastName,
+          });
+          await refreshProfile();
+        } catch (profileError) {
+          console.error("Failed to persist profile", profileError);
+        }
+      }
+
+      (event.currentTarget as HTMLFormElement).reset();
+      setSignUpSuccess("Votre compte a été créé. Vérifiez votre boîte mail pour confirmer votre inscription.");
+
+      setIsSignUp(false);
+      const redirectParam = searchParams.get("redirect");
+      const params: Record<string, string> = { mode: "login" };
+      if (redirectParam) {
+        params.redirect = redirectParam;
+      }
+      setSearchParams(params);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "L'inscription a échoué.";
+      setSignUpError(message);
+    } finally {
+      setIsSigningUp(false);
+    }
   };
 
   return (
@@ -113,8 +261,20 @@ const Connexion = () => {
                 />
               </label>
 
-              <button type="submit" className="onecx-auth__primary">
-                Se connecter
+              {loginError && (
+                <p className="onecx-auth__feedback onecx-auth__feedback--error" role="alert">
+                  {loginError}
+                </p>
+              )}
+
+              {signUpSuccess && !isSignUp && (
+                <p className="onecx-auth__feedback onecx-auth__feedback--success" role="status">
+                  {signUpSuccess}
+                </p>
+              )}
+
+              <button type="submit" className="onecx-auth__primary" disabled={isLoggingIn}>
+                {isLoggingIn ? "Connexion…" : "Se connecter"}
               </button>
 
               <div className="onecx-auth__aux">
@@ -219,8 +379,14 @@ const Connexion = () => {
                 />
               </label>
 
-              <button type="submit" className="onecx-auth__primary">
-                Créer mon compte
+              {signUpError && (
+                <p className="onecx-auth__feedback onecx-auth__feedback--error" role="alert">
+                  {signUpError}
+                </p>
+              )}
+
+              <button type="submit" className="onecx-auth__primary" disabled={isSigningUp}>
+                {isSigningUp ? "Création en cours…" : "Créer mon compte"}
               </button>
 
               <div className="onecx-auth__aux">

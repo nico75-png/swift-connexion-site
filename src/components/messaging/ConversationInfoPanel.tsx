@@ -48,7 +48,7 @@ const InfoRow = ({
 const ConversationInfoPanel = ({ participant, conversation, className }: ConversationInfoPanelProps) => {
   const mediaItems = useMemo(() => {
     if (!conversation) {
-      return Array.from({ length: 6 }).map((_, index) => ({ id: `media-placeholder-${index}` }));
+      return Array.from({ length: 6 }).map((_, index) => ({ id: `media-placeholder-${index}`, label: undefined }));
     }
 
     return conversation.messages.slice(0, 9).map((message, index) => ({

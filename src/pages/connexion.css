@@ -1,0 +1,277 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
+@import url("https://unicons.iconscout.com/release/v4.0.8/css/line.css");
+
+:root {
+  --onecx-blue: #0b2d55;
+  --onecx-blue-dark: #082243;
+  --onecx-card: #f2f6fa;
+  --onecx-text: #0b1a2d;
+  --onecx-muted: rgba(11, 29, 85, 0.65);
+  --onecx-yellow: #ffcc00;
+  --onecx-yellow-dark: #e0b400;
+  --onecx-white: #ffffff;
+}
+
+.onecx-auth {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(2rem, 5vw, 4rem) 1.5rem;
+  background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.18), transparent 40%),
+    linear-gradient(140deg, var(--onecx-blue) 0%, var(--onecx-blue-dark) 100%);
+  font-family: "Poppins", sans-serif;
+}
+
+.onecx-auth__wrapper {
+  width: min(960px, 100%);
+  text-align: center;
+  color: var(--onecx-white);
+}
+
+.onecx-auth__title {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  opacity: 0.8;
+  margin-bottom: 0.75rem;
+}
+
+.onecx-auth__headline {
+  font-size: clamp(2rem, 5vw, 2.8rem);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.onecx-auth__description {
+  font-size: clamp(1rem, 2.6vw, 1.15rem);
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.8);
+  max-width: 520px;
+  margin: 0.5rem auto 0;
+}
+
+.onecx-auth__toggle {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 0.35rem;
+  background: rgba(242, 246, 250, 0.2);
+  margin-top: clamp(2rem, 4vw, 3rem);
+  position: relative;
+}
+
+.onecx-auth__toggle-button {
+  position: relative;
+  z-index: 1;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  padding: 0.45rem 1.4rem;
+  font-weight: 500;
+  font-size: 0.95rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.onecx-auth__toggle-button.active {
+  color: var(--onecx-blue);
+  font-weight: 600;
+}
+
+.onecx-auth__toggle-indicator {
+  position: absolute;
+  inset: 4px;
+  width: calc(50% - 8px);
+  border-radius: 999px;
+  background: var(--onecx-white);
+  box-shadow: 0 10px 25px rgba(11, 45, 85, 0.2);
+  transition: transform 0.5s cubic-bezier(0.6, 0.05, 0.2, 1);
+}
+
+.onecx-auth__toggle-indicator.is-signup {
+  transform: translateX(100%);
+}
+
+.onecx-auth__card-wrap {
+  margin: clamp(2.5rem, 6vw, 4rem) auto 0;
+  position: relative;
+  width: min(420px, 100%);
+  height: 520px;
+  perspective: 1600px;
+}
+
+.onecx-auth__card-inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.85s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.onecx-auth__card-inner.is-flipped {
+  transform: rotateY(180deg);
+}
+
+.onecx-auth__face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  background: var(--onecx-card);
+  border-radius: 18px;
+  box-shadow: 0 30px 60px rgba(8, 34, 67, 0.32);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(2.25rem, 6vw, 3rem) clamp(1.5rem, 6vw, 3rem);
+  color: var(--onecx-text);
+  overflow: hidden;
+}
+
+.onecx-auth__face::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, rgba(11, 45, 85, 0.08) 0%, rgba(11, 45, 85, 0) 70%);
+  pointer-events: none;
+}
+
+.onecx-auth__face-content {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.onecx-auth__face-title {
+  font-size: clamp(1.75rem, 4vw, 2rem);
+  font-weight: 600;
+  color: var(--onecx-text);
+}
+
+.onecx-auth__face-subtitle {
+  font-size: 0.95rem;
+  color: var(--onecx-muted);
+  margin-top: -0.8rem;
+}
+
+.onecx-auth__form-group {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.onecx-auth__label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(11, 29, 85, 0.55);
+  text-align: left;
+}
+
+.onecx-auth__field {
+  position: relative;
+}
+
+.onecx-auth__field input {
+  width: 100%;
+  padding: 0.9rem 1rem 0.9rem 3.15rem;
+  border-radius: 14px;
+  border: 1px solid rgba(8, 34, 67, 0.1);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 12px 25px rgba(11, 45, 85, 0.08);
+  color: var(--onecx-text);
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.onecx-auth__field input::placeholder {
+  color: rgba(11, 29, 85, 0.4);
+}
+
+.onecx-auth__field input:focus {
+  outline: none;
+  border-color: var(--onecx-yellow);
+  box-shadow: 0 0 0 3px rgba(255, 204, 0, 0.25);
+}
+
+.onecx-auth__icon {
+  position: absolute;
+  top: 50%;
+  left: 1.25rem;
+  transform: translateY(-50%);
+  font-size: 1.35rem;
+  color: rgba(11, 29, 85, 0.35);
+  transition: color 0.25s ease;
+}
+
+.onecx-auth__field input:focus + .onecx-auth__icon {
+  color: var(--onecx-yellow);
+}
+
+.onecx-auth__actions {
+  display: grid;
+  gap: 0.75rem;
+  text-align: center;
+}
+
+.onecx-auth__button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--onecx-yellow);
+  color: var(--onecx-white);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  padding: 0.85rem 1.75rem;
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+  box-shadow: 0 15px 30px rgba(255, 204, 0, 0.35);
+}
+
+.onecx-auth__button:hover {
+  background: var(--onecx-yellow-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 20px 38px rgba(255, 204, 0, 0.35);
+}
+
+.onecx-auth__button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(255, 204, 0, 0.45);
+}
+
+.onecx-auth__link {
+  color: var(--onecx-blue);
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.25s ease;
+}
+
+.onecx-auth__link:hover {
+  color: var(--onecx-yellow-dark);
+}
+
+.onecx-auth__face--back {
+  transform: rotateY(180deg);
+}
+
+@media (max-width: 600px) {
+  .onecx-auth__card-wrap {
+    height: 500px;
+  }
+
+  .onecx-auth__face {
+    padding: 2rem 1.5rem;
+  }
+
+  .onecx-auth__description {
+    font-size: 0.95rem;
+  }
+}

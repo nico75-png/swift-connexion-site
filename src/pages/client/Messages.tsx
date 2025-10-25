@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { MessageCircle, Plus, Search } from "lucide-react";
@@ -45,6 +45,7 @@ const buildParticipantsMap = (participants: Participant[]) =>
 const ClientMessages = () => {
   const { participants, getConversationsFor, getParticipant } = useMessagesStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const params = useParams<{ threadId?: string }>();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [isComposerOpen, setIsComposerOpen] = useState(false);
@@ -62,6 +63,14 @@ const ClientMessages = () => {
   }, [getConversationsFor, getParticipant]);
 
   useEffect(() => {
+    const isNewMessageRoute = location.pathname.endsWith("/nouveau");
+
+    if (isNewMessageRoute) {
+      setIsComposerOpen(true);
+      setSelectedConversationId(null);
+      return;
+    }
+
     if (isComposerOpen) {
       return;
     }
@@ -87,7 +96,13 @@ const ClientMessages = () => {
     ) {
       setSelectedConversationId(clientConversations[0]?.conversation.id ?? null);
     }
-  }, [clientConversations, selectedConversationId, params.threadId, isComposerOpen]);
+  }, [
+    clientConversations,
+    selectedConversationId,
+    params.threadId,
+    isComposerOpen,
+    location.pathname,
+  ]);
 
   const selectedConversation: Conversation | null = useMemo(() => {
     if (!selectedConversationId) {
@@ -111,36 +126,38 @@ const ClientMessages = () => {
   const handleSelectConversation = (conversationId: string) => {
     setIsComposerOpen(false);
     setSelectedConversationId(conversationId);
-    navigate(`/espace-client/messages/${conversationId}`);
+    navigate(`/messages/${conversationId}`);
   };
 
   const handleStartNewConversation = () => {
     setSelectedConversationId(null);
     setIsComposerOpen(true);
-    navigate(`/espace-client/messages`);
+    navigate(`/messages/nouveau`);
   };
 
   const handleThreadCreated = (conversation: Conversation) => {
     setIsComposerOpen(false);
     setSelectedConversationId(conversation.id);
-    navigate(`/espace-client/messages/${conversation.id}`);
+    navigate(`/messages/${conversation.id}`);
   };
 
   const handleComposerClose = () => {
     setIsComposerOpen(false);
     if (selectedConversationId) {
-      navigate(`/espace-client/messages/${selectedConversationId}`);
+      navigate(`/messages/${selectedConversationId}`);
+    } else {
+      navigate(`/messages`);
     }
   };
 
   const handleMessageSent = (conversationId: string) => {
     setIsComposerOpen(false);
     setSelectedConversationId(conversationId);
-    navigate(`/espace-client/messages/${conversationId}`);
+    navigate(`/messages/${conversationId}`);
   };
 
   const handleBackToList = () => {
-    navigate(`/espace-client/messages`);
+    navigate(`/messages`);
     setSelectedConversationId(null);
   };
 

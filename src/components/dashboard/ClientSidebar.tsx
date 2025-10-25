@@ -93,7 +93,7 @@ const ClientSidebar = () => {
     }
 
     setIsMobileOpen(false);
-    navigate("/connexion");
+    navigate("/auth");
   };
 
   const toggleMobileSidebar = () => setIsMobileOpen(value => !value);
@@ -104,33 +104,33 @@ const ClientSidebar = () => {
   const primaryNavigation = [{
     icon: LayoutDashboard,
     label: "Tableau de bord",
-    path: "/espace-client"
+    path: "/dashboard"
   }, {
     icon: Package,
     label: "Mes commandes",
-    path: "/espace-client/commandes"
+    path: "/commandes"
   }, {
     icon: Truck,
     label: "Suivi en temps réel",
-    path: "/espace-client/suivi"
+    path: "/suivi"
   }, {
     icon: FileText,
     label: "Mes factures",
-    path: "/espace-client/factures"
+    path: "/factures"
   }, {
     icon: MessageSquare,
     label: "Messages",
-    path: "/espace-client/messages"
+    path: "/messages"
   }, {
     icon: Settings,
     label: "Paramètres",
-    path: "/espace-client/preferences"
+    path: "/parametres"
   }];
 
   const secondaryNavigation = [{
     icon: PhoneCall,
     label: "Client d'assistance",
-    path: "/contact"
+    path: "/support"
   }, {
     icon: HelpCircle,
     label: "Centre d'aide",
@@ -250,7 +250,7 @@ const ClientSidebar = () => {
                       const link = (
                         <NavLink
                           to={item.path}
-                          end={item.path === "/espace-client"}
+              end={item.path === "/dashboard"}
                           className={({ isActive }) =>
                             cn(
                               "group flex items-center gap-3 rounded-2xl border border-transparent px-4 py-3 text-sm font-medium text-white/80 transition-all duration-300",

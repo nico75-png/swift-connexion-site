@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import {
   ArrowRight,
@@ -10,8 +11,15 @@ import {
   ShieldCheck,
   Wrench,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
+
+const SLUG_TO_SECTION: Record<string, string> = {
+  sante: "sante-medical",
+  juridique: "juridique-administratif",
+  evenementiel: "evenementiel-media",
+  industrie: "industrie-services-proximite",
+};
 
 const expertisesSections = [
   {
@@ -147,6 +155,31 @@ const expertisesSections = [
 ];
 
 const Expertises = () => {
+  const { slug } = useParams<{ slug?: string }>();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const hash = location.hash?.replace("#", "") ?? "";
+    const targetId = hash || (slug ? SLUG_TO_SECTION[slug] : "");
+
+    if (!targetId) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      const element = document.getElementById(targetId);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 80);
+
+    return () => window.clearTimeout(timeout);
+  }, [location.hash, slug]);
+
   return (
     <Layout>
       <div className="bg-gray-50">
@@ -183,6 +216,7 @@ const Expertises = () => {
                 const Icon = section.icon;
                 return (
                   <article
+                    id={section.id}
                     key={section.id}
                     className="grid gap-12 rounded-3xl bg-white/80 p-6 shadow-xl backdrop-blur md:grid-cols-2 md:items-center lg:p-10"
                   >

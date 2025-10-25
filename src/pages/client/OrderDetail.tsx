@@ -365,7 +365,7 @@ const ClientOrderDetail = () => {
                   )}
                 </div>
                 <Button variant="cta" className="w-full" asChild disabled={!canContactDriver}>
-                  <Link to={canContactDriver ? `/espace-client/messages?driver=${order.driver?.id}` : "#"}>
+                  <Link to={canContactDriver ? `/messages?driver=${order.driver?.id}` : "#"}>
                     <MessageSquare className="mr-2 h-4 w-4" />
                     Contacter le chauffeur
                   </Link>

@@ -220,7 +220,7 @@ const ClientInvoicePayment = () => {
           <Card>
             <CardContent className="p-10 text-center text-muted-foreground">
               <p>La facture demandée est introuvable.</p>
-              <Button className="mt-4" variant="cta" onClick={() => navigate("/espace-client/factures")}>Retour aux factures</Button>
+              <Button className="mt-4" variant="cta" onClick={() => navigate("/factures")}>Retour aux factures</Button>
             </CardContent>
           </Card>
         )}

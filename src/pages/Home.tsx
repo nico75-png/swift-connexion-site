@@ -122,6 +122,7 @@ const benefits = [{
 }];
 const expertises = [{
   title: "Santé et médical",
+  slug: "sante",
   description: "Transport sécurisé de matériel, prélèvements et dossiers médicaux sensibles.",
   highlight: "Traçabilité & conformité 24/7",
   highlightClass: "text-sky-600",
@@ -130,6 +131,7 @@ const expertises = [{
   imagePrompt: "Clean clinic scene, doctor with stethoscope, soft light, brand color overlay, 4:3"
 }, {
   title: "Juridique et administratif",
+  slug: "juridique",
   description: "Acheminement sous scellés de dossiers, plis d’huissier et contrats urgents.",
   highlight: "Confidentialité garantie",
   highlightClass: "text-purple-600",
@@ -138,6 +140,7 @@ const expertises = [{
   imagePrompt: "Legal desk, contract and scales, minimal premium look, 4:3"
 }, {
   title: "Événementiel et médias",
+  slug: "evenementiel",
   description: "Logistique agile pour scènes, régies, kits presse et équipements audiovisuels.",
   highlight: "Gestion agile des temps forts",
   highlightClass: "text-rose-600",
@@ -162,6 +165,7 @@ const expertises = [{
   imagePrompt: "Luxury packaging with subtle e-commerce UI elements, 4:3"
 }, {
   title: "Industrie",
+  slug: "industrie",
   description: "Pièces critiques et prototypes livrés juste-à-temps pour éviter tout arrêt.",
   highlight: "Fiabilité logistique continue",
   highlightClass: "text-slate-600",
@@ -354,7 +358,7 @@ const Home = () => {
           <p className="max-w-2xl text-lg text-white/90">
             Service professionnel 24/7 pour vos colis urgents. Tarifs transparents, suivi en temps réel et prise en charge immédiate par nos coursiers dédiés.
           </p>
-          <div className="flex flex-col gap-4 sm:flex-row">
+          <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:justify-center">
             <Button variant="cta" size="lg" asChild>
               <Link to="/tarifs">
                 Voir nos tarifs
@@ -365,7 +369,17 @@ const Home = () => {
                 Commander maintenant
               </Link>
             </Button>
-        </div>
+            <Button variant="ghost" size="lg" className="bg-white/10 text-white hover:bg-white/20" asChild>
+              <a href="#formules">
+                Voir nos formules
+              </a>
+            </Button>
+            <Button variant="outline-light" size="lg" asChild>
+              <Link to="/contact">
+                Contactez-nous
+              </Link>
+            </Button>
+          </div>
         </div>
       </section>
 
@@ -393,11 +407,13 @@ const Home = () => {
             Des solutions de transport adaptées à chaque secteur professionnel
           </p>
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {expertises.map(expertise => (
-              <article
-                key={expertise.title}
-                className="group flex h-full flex-col gap-6 rounded-3xl border border-slate-200 bg-white/90 p-8 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
-              >
+            {expertises.map(expertise => {
+              const expertiseLink = expertise.slug ? `/expertises/${expertise.slug}` : "/expertises";
+              return (
+                <article
+                  key={expertise.title}
+                  className="group flex h-full flex-col gap-6 rounded-3xl border border-slate-200 bg-white/90 p-8 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+                >
                 <div className="overflow-hidden rounded-2xl">
                   <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-slate-100 md:aspect-[4/3]">
                     <img
@@ -414,26 +430,27 @@ const Home = () => {
                     <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/30" aria-hidden="true" />
                   </div>
                 </div>
-                <div className="space-y-3">
-                  <span className={cn("text-sm font-semibold uppercase tracking-wide", expertise.highlightClass)}>
-                    {expertise.highlight}
-                  </span>
-                  <h3 className="text-2xl font-semibold text-gray-900">{expertise.title}</h3>
-                  <p className="text-base text-gray-600">{expertise.description}</p>
-                </div>
-                <div className="mt-auto pt-2">
-                  <Link to="/expertises" className="inline-flex items-center font-semibold text-blue-600 transition hover:text-blue-700">
-                    Découvrir nos solutions
-                    <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-                  </Link>
-                </div>
-              </article>
-            ))}
+                  <div className="space-y-3">
+                    <span className={cn("text-sm font-semibold uppercase tracking-wide", expertise.highlightClass)}>
+                      {expertise.highlight}
+                    </span>
+                    <h3 className="text-2xl font-semibold text-gray-900">{expertise.title}</h3>
+                    <p className="text-base text-gray-600">{expertise.description}</p>
+                  </div>
+                  <div className="mt-auto pt-2">
+                    <Link to={expertiseLink} className="inline-flex items-center font-semibold text-blue-600 transition hover:text-blue-700">
+                      Découvrir nos solutions
+                      <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                    </Link>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      <section className="bg-muted py-24">
+      <section id="formules" className="bg-muted py-24">
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-3xl text-center">
             <h2 className="text-4xl font-semibold text-foreground md:text-5xl">Des formules adaptées à chaque étape</h2>
@@ -690,7 +707,7 @@ const Home = () => {
             <Link to="/commande-sans-compte" className="rounded-lg bg-blue-600 px-8 py-4 font-semibold text-white transition-transform duration-300 hover:scale-105 hover:bg-blue-700">
               Commander maintenant
             </Link>
-            <Link to="/inscription" className="rounded-lg border-2 border-white px-8 py-4 font-semibold text-white transition duration-300 hover:bg-white hover:text-blue-600">
+            <Link to="/auth?mode=signup" className="rounded-lg border-2 border-white px-8 py-4 font-semibold text-white transition duration-300 hover:bg-white hover:text-blue-600">
               Créer un compte
             </Link>
           </div>

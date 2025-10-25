@@ -224,7 +224,7 @@ const ClientDashboard = () => {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Dernières commandes</CardTitle>
             <Button variant="outline" asChild>
-              <Link to="/espace-client/commandes">Voir tout</Link>
+              <Link to="/commandes">Voir tout</Link>
             </Button>
           </CardHeader>
           <CardContent>
@@ -239,10 +239,9 @@ const ClientDashboard = () => {
             ) : (
               <div className="space-y-4">
                 {recentOrders.map((order) => (
-                  <Link
+                  <div
                     key={order.id}
-                    to={`/espace-client/commandes/${order.id}`}
-                    className="flex items-center justify-between rounded-lg border border-transparent bg-muted/30 p-4 transition hover:border-primary/40 hover:bg-primary/5"
+                    className="flex flex-col gap-3 rounded-lg border border-transparent bg-muted/30 p-4 transition hover:border-primary/40 hover:bg-primary/5 md:flex-row md:items-center md:justify-between"
                   >
                     <div>
                       <p className="font-medium">{order.orderNumber}</p>
@@ -251,10 +250,20 @@ const ClientDashboard = () => {
                         {order.createdAt && ` • ${formatDateTime(order.createdAt, "fr-FR")}`}
                       </p>
                     </div>
-                    <Badge className={getStatusColor(order.status.toLowerCase().includes("livr") ? "success" : "info")}>
-                      {order.status}
-                    </Badge>
-                  </Link>
+                    <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+                      <Badge className={getStatusColor(order.status.toLowerCase().includes("livr") ? "success" : "info")}>
+                        {order.status}
+                      </Badge>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <Button variant="outline" size="sm" asChild>
+                          <Link to={`/commandes/${order.id}`}>Voir le détail</Link>
+                        </Button>
+                        <Button variant="cta" size="sm" asChild>
+                          <Link to={`/suivi/${order.id}`}>Voir le suivi GPS</Link>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}

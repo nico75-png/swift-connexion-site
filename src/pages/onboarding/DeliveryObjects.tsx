@@ -66,7 +66,7 @@ export default function DeliveryObjects() {
 
   useEffect(() => {
     if (!session) {
-      navigate("/connexion");
+    navigate("/auth");
       return;
     }
 

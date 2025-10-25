@@ -1,9 +1,20 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import "./connexion.css";
 
 const Connexion = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isSignUp, setIsSignUp] = useState(false);
+
+  useEffect(() => {
+    const mode = searchParams.get("mode");
+    if (mode === "signup") {
+      setIsSignUp(true);
+    } else if (mode === "login") {
+      setIsSignUp(false);
+    }
+  }, [searchParams]);
 
   const handleLoginSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -15,6 +26,7 @@ const Connexion = () => {
 
   const handleToggle = (next: boolean) => {
     setIsSignUp(next);
+    setSearchParams(next ? { mode: "signup" } : { mode: "login" });
   };
 
   return (

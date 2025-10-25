@@ -8,13 +8,13 @@ export default function Address() {
 
   useEffect(() => {
     if (!session) {
-      navigate("/connexion");
+      navigate("/auth");
       return;
     }
 
     // Pour l'instant, redirection directe vers le dashboard
     // Cette page sera implémentée plus tard si nécessaire
-    navigate("/espace-client");
+    navigate("/dashboard");
   }, [session, navigate]);
 
   return (

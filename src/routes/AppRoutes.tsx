@@ -115,7 +115,6 @@ export function AppRoutes() {
         <Route path="mentions-legales" element={withGuards(MentionsLegales)} />
         <Route path="cgv" element={withGuards(CGV)} />
         <Route path="cookies" element={withGuards(Cookies)} />
-
         {/* B - ESPACE CLIENT */}
         <Route path="dashboard-client" element={withGuards(DashboardClient, { requiresAuth: true })} />
 

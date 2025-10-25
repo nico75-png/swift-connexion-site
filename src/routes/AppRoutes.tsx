@@ -116,43 +116,12 @@ export function AppRoutes() {
         <Route path="cgv" element={withGuards(CGV)} />
         <Route path="cookies" element={withGuards(Cookies)} />
 
-        {/* B - ESPACE CLIENT (une seule route) */}
+        {/* B - ESPACE CLIENT */}
         <Route path="dashboard-client" element={withGuards(DashboardClient, { requiresAuth: true })} />
-        
-        {/* Redirections pour anciennes routes client */}
-        <Route path="dashboard-client/commandes" element={<Navigate to="/dashboard-client?tab=commandes" replace />} />
-        <Route path="dashboard-client/commandes/nouvelle" element={<Navigate to="/dashboard-client?tab=commandes" replace />} />
-        <Route path="dashboard-client/commandes/:id" element={<Navigate to="/dashboard-client?tab=commandes" replace />} />
-        <Route path="dashboard-client/suivi" element={<Navigate to="/dashboard-client?tab=suivi" replace />} />
-        <Route path="dashboard-client/suivi/:id" element={<Navigate to="/dashboard-client?tab=suivi" replace />} />
-        <Route path="dashboard-client/factures" element={<Navigate to="/dashboard-client?tab=factures" replace />} />
-        <Route path="dashboard-client/factures/:id" element={<Navigate to="/dashboard-client?tab=factures" replace />} />
-        <Route path="dashboard-client/messages" element={<Navigate to="/dashboard-client?tab=messages" replace />} />
-        <Route path="dashboard-client/messages/:id" element={<Navigate to="/dashboard-client?tab=messages" replace />} />
-        <Route path="dashboard-client/profil" element={<Navigate to="/dashboard-client?tab=parametres" replace />} />
-        <Route path="dashboard-client/parametres" element={<Navigate to="/dashboard-client?tab=parametres" replace />} />
 
-        {/* C - ESPACE ADMIN (une seule route) */}
+        {/* C - ESPACE ADMIN */}
         <Route path="dashboard-admin" element={withGuards(DashboardAdmin, { requiresAuth: true, roles: ["admin"] })} />
         <Route path="admin" element={<Navigate to="/dashboard-admin" replace />} />
-        
-        {/* Redirections pour anciennes routes admin */}
-        <Route path="dashboard-admin/commandes" element={<Navigate to="/dashboard-admin?tab=commandes" replace />} />
-        <Route path="dashboard-admin/commandes/:id" element={<Navigate to="/dashboard-admin?tab=commandes" replace />} />
-        <Route path="dashboard-admin/chauffeurs" element={<Navigate to="/dashboard-admin?tab=chauffeurs" replace />} />
-        <Route path="dashboard-admin/clients" element={<Navigate to="/dashboard-admin?tab=clients" replace />} />
-        <Route path="dashboard-admin/clients/:id" element={<Navigate to="/dashboard-admin?tab=clients" replace />} />
-        <Route path="dashboard-admin/factures" element={<Navigate to="/dashboard-admin?tab=factures" replace />} />
-        <Route path="dashboard-admin/statistiques" element={<Navigate to="/dashboard-admin?tab=statistiques" replace />} />
-        <Route path="dashboard-admin/messages" element={<Navigate to="/dashboard-admin?tab=messages" replace />} />
-        <Route path="dashboard-admin/parametres" element={<Navigate to="/dashboard-admin?tab=parametres" replace />} />
-        <Route path="admin/commandes" element={<Navigate to="/dashboard-admin?tab=commandes" replace />} />
-        <Route path="admin/chauffeurs" element={<Navigate to="/dashboard-admin?tab=chauffeurs" replace />} />
-        <Route path="admin/clients" element={<Navigate to="/dashboard-admin?tab=clients" replace />} />
-        <Route path="admin/factures" element={<Navigate to="/dashboard-admin?tab=factures" replace />} />
-        <Route path="admin/messages" element={<Navigate to="/dashboard-admin?tab=messages" replace />} />
-        <Route path="admin/statistiques" element={<Navigate to="/dashboard-admin?tab=statistiques" replace />} />
-        <Route path="admin/parametres" element={<Navigate to="/dashboard-admin?tab=parametres" replace />} />
 
         {/* 404 */}
         <Route path="404" element={withGuards(NotFound)} />

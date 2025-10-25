@@ -148,11 +148,21 @@ All colors MUST be HSL.
     z-index: 30;
     display: flex;
     flex-direction: column;
-    width: minmax(0, var(--sidebar-w));
+    width: var(--sidebar-w);
   }
 
   .sidebar > * {
     flex: 1 1 auto;
+  }
+
+  @media (max-width: 767px) {
+    .app {
+      grid-template-columns: 0 minmax(0, 1fr);
+    }
+
+    .sidebar {
+      width: 0;
+    }
   }
 
   .content {

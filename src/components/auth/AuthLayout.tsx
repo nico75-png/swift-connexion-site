@@ -5,14 +5,14 @@ export interface AuthLayoutVisualProps {
   label: string;
   headline: string;
   description: string;
-  imageUrl: string;
-  imageAlt: string;
+  imageUrl?: string;
+  imageAlt?: string;
   imageSrcSet?: string;
   imageSizes?: string;
 }
 export interface AuthLayoutProps {
   children: ReactNode;
-  visual: AuthLayoutVisualProps;
+  visual?: AuthLayoutVisualProps;
   brandHref?: string;
   brand?: ReactNode;
   className?: string;
@@ -24,6 +24,7 @@ const AuthLayout = ({
   brandHref = "/",
   className
 }: AuthLayoutProps) => {
+  const hasVisual = Boolean(visual);
   return <div className={cn("relative flex min-h-screen flex-col bg-muted/30", className)}>
       <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-10 sm:px-6 lg:px-8">
         <div className="mb-8 flex justify-between">
@@ -38,18 +39,31 @@ const AuthLayout = ({
             </Link>}
         </div>
 
-        <div className="grid min-h-[680px] flex-1 overflow-hidden rounded-[44px] border border-border/60 bg-card shadow-large sm:rounded-[52px] md:grid-cols-[0.95fr_1.05fr]">
+        <div
+          className={cn(
+            "grid min-h-[680px] flex-1 overflow-hidden rounded-[44px] border border-border/60 bg-card shadow-large sm:rounded-[52px]",
+            hasVisual ? "md:grid-cols-[0.95fr_1.05fr]" : ""
+          )}
+        >
           <div className="order-2 flex flex-col justify-center bg-card px-6 py-10 sm:px-10 md:order-1">
             <div className="mx-auto w-full max-w-md">{children}</div>
           </div>
 
-          <div className="relative order-1 overflow-hidden md:order-2">
-            <img src={visual.imageUrl} srcSet={visual.imageSrcSet} sizes={visual.imageSizes} alt={visual.imageAlt} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
-            <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-br from-primary/45 via-primary-dark/60 to-black/75 mix-blend-multiply" />
-            <div aria-hidden="true" className="absolute inset-x-4 inset-y-3 rounded-[36px] border border-white/40 opacity-70 sm:inset-x-6 sm:inset-y-4 sm:rounded-[40px]" />
-
-            
-          </div>
+          {hasVisual ? (
+            <div className="relative order-1 overflow-hidden bg-gradient-to-br from-primary/40 via-primary-dark/60 to-background md:order-2">
+              {visual?.imageUrl ? (
+                <img
+                  src={visual.imageUrl}
+                  srcSet={visual.imageSrcSet}
+                  sizes={visual.imageSizes}
+                  alt={visual.imageAlt}
+                  loading="lazy"
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              ) : null}
+              <div aria-hidden="true" className="absolute inset-x-4 inset-y-3 rounded-[36px] border border-white/40 opacity-40 sm:inset-x-6 sm:inset-y-4 sm:rounded-[40px]" />
+            </div>
+          ) : null}
         </div>
       </div>
     </div>;

@@ -54,7 +54,7 @@ export default function Expertise() {
 
   useEffect(() => {
     if (!session) {
-      navigate("/connexion");
+    navigate("/auth");
       return;
     }
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   BarChart3,
   Package,
@@ -14,6 +14,7 @@ import {
   X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Sidebar pour le dashboard admin
@@ -21,6 +22,7 @@ import { cn } from "@/lib/utils";
  */
 const AdminSidebar = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const navigate = useNavigate();
 
   const toggleMobileSidebar = () => {
     setIsMobileOpen((prev) => !prev);
@@ -28,6 +30,15 @@ const AdminSidebar = () => {
 
   const closeMobileSidebar = () => {
     setIsMobileOpen(false);
+  };
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("Erreur lors de la déconnexion", error);
+    }
+    closeMobileSidebar();
+    navigate("/auth");
   };
 
   const menuItems = [
@@ -104,15 +115,16 @@ const AdminSidebar = () => {
           ))}
         </nav>
 
-        <div className="border-t border-border px-4 py-5">
-          <button
-            className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-sm text-primary-foreground/80 transition-colors duration-200 hover:bg-primary-foreground/10 hover:text-primary-foreground"
-            type="button"
-          >
-            <LogOut className="h-5 w-5" />
-            <span>Déconnexion</span>
-          </button>
-        </div>
+          <div className="border-t border-border px-4 py-5">
+            <button
+              className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-sm text-primary-foreground/80 transition-colors duration-200 hover:bg-primary-foreground/10 hover:text-primary-foreground"
+              type="button"
+              onClick={handleLogout}
+            >
+              <LogOut className="h-5 w-5" />
+              <span>Déconnexion</span>
+            </button>
+          </div>
       </aside>
     </>
   );

@@ -212,7 +212,7 @@ const CreateOrder = () => {
         toast.success("Commande confirmée", {
           description: "Votre commande a été enregistrée avec succès.",
         });
-        navigate(`/espace-client/commandes/${response.orderId}`);
+        navigate(`/commandes/${response.orderId}`);
         return;
       }
 

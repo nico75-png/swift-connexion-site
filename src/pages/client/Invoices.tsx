@@ -231,10 +231,16 @@ const ClientInvoices = () => {
                               variant="ghost"
                               size="sm"
                               className="rounded-full bg-transparent px-4 text-[#0B2D55] transition hover:bg-[rgba(255,204,0,0.2)]"
-                              onClick={() => handleDownload(invoice.invoice_number)}
+                              asChild
                             >
-                              <Download className="mr-2 h-4 w-4" />
-                              Télécharger
+                              <Link
+                                to={`/factures/${invoice.id}`}
+                                state={{ invoice }}
+                                onClick={() => handleDownload(invoice.invoice_number)}
+                              >
+                                <Download className="mr-2 h-4 w-4" />
+                                Télécharger
+                              </Link>
                             </Button>
                             {invoice.status === "pending" && (
                               <Button
@@ -243,7 +249,7 @@ const ClientInvoices = () => {
                                 className="rounded-full bg-[#FFCC00] px-4 py-2 text-sm font-semibold text-[#0B2D55] shadow-[0_6px_16px_rgba(255,204,0,0.25)] transition hover:bg-[#FFD84D] hover:shadow-[0_8px_20px_rgba(255,204,0,0.3)]"
                                 asChild
                               >
-                                <Link to={`/espace-client/factures/${invoice.id}/paiement`} state={{ invoice }}>
+                                <Link to={`/factures/${invoice.id}`} state={{ invoice }}>
                                   Régler
                                 </Link>
                               </Button>

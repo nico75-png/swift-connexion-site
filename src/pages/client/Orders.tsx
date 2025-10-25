@@ -473,7 +473,7 @@ const ClientOrders = () => {
                               <td className="p-4">
                                 <div className="flex justify-end gap-2">
                                   <Button variant="ghost" size="sm" asChild>
-                                    <Link to={`/espace-client/commandes/${order.id}`}>
+                                    <Link to={`/commandes/${order.id}`}>
                                       <Eye className="h-4 w-4" />
                                       <span className="sr-only">Voir la commande {displayNumber}</span>
                                     </Link>

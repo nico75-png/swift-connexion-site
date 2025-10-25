@@ -19,15 +19,17 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const computeDisplayName = (session: Session | null, profile: Profile | null): string | null => {
+const computeDisplayName = (session: Session | null, profile: any | null): string | null => {
   const fromProfile = profile?.display_name?.trim();
   if (fromProfile) {
     return fromProfile;
   }
 
-  const composed = `${profile?.first_name ?? ""} ${profile?.last_name ?? ""}`.trim();
-  if (composed) {
-    return composed;
+  if (profile?.first_name || profile?.last_name) {
+    const composed = `${profile?.first_name ?? ""} ${profile?.last_name ?? ""}`.trim();
+    if (composed) {
+      return composed;
+    }
   }
 
   const email = session?.user?.email?.trim();
@@ -135,7 +137,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const value = useMemo<AuthContextValue>(() => {
     const resolvedDisplayName = computeDisplayName(session, profile);
     const fallbackEmail = session?.user?.email ?? null;
-    const isProfileComplete = Boolean(profile?.display_name?.trim());
+    const isProfileComplete = Boolean(profile && (profile as any).display_name?.trim());
 
     return {
       session,

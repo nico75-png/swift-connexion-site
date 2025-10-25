@@ -102,6 +102,29 @@ const Login = () => {
     }
   };
 
+  const handleTestLogin = async (email: string, password: string, redirectPath: string) => {
+    setLoginError(null);
+    setIsLoggingIn(true);
+    
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      navigate(redirectPath, { replace: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "La connexion de test a échoué.";
+      setLoginError(message);
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
   const handleSignUpSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isSigningUp) {
@@ -276,6 +299,49 @@ const Login = () => {
               <button type="submit" className="onecx-auth__primary" disabled={isLoggingIn}>
                 {isLoggingIn ? "Connexion…" : "Se connecter"}
               </button>
+
+              {/* BOUTONS TEMPORAIRES DE TEST - À SUPPRIMER */}
+              <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: 'hsl(var(--muted))', borderRadius: '8px', border: '2px dashed hsl(var(--warning))' }}>
+                <p style={{ fontSize: '0.75rem', color: 'hsl(var(--warning))', marginBottom: '0.5rem', fontWeight: 600 }}>
+                  ⚠️ BOUTONS DE TEST - À SUPPRIMER APRÈS PHASE DE TEST
+                </p>
+                <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleTestLogin('admin@test.com', 'testpassword123', '/dashboard-admin')}
+                    disabled={isLoggingIn}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: 'hsl(var(--destructive))',
+                      color: 'hsl(var(--destructive-foreground))',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      cursor: isLoggingIn ? 'not-allowed' : 'pointer',
+                      opacity: isLoggingIn ? 0.5 : 1
+                    }}
+                  >
+                    🔧 Connexion Admin (Temporaire)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTestLogin('client@test.com', 'testpassword123', '/dashboard-client')}
+                    disabled={isLoggingIn}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: 'hsl(var(--secondary))',
+                      color: 'hsl(var(--secondary-foreground))',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      cursor: isLoggingIn ? 'not-allowed' : 'pointer',
+                      opacity: isLoggingIn ? 0.5 : 1
+                    }}
+                  >
+                    👤 Connexion Client (Temporaire)
+                  </button>
+                </div>
+              </div>
 
               <div className="onecx-auth__aux">
                 <span>Pas encore de compte ?</span>

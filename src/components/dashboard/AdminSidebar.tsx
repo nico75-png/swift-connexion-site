@@ -74,7 +74,7 @@ const AdminSidebar = () => {
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex h-full w-64 flex-col border-r border-border bg-primary text-primary-foreground shadow-large transition-transform duration-300 md:relative md:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex h-full w-full flex-col border-r border-border bg-primary text-primary-foreground shadow-large transition-transform duration-300 md:relative md:w-[216px] md:translate-x-0",
           isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         )}
       >

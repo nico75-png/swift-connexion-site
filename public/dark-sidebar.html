@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sidebar Moderne</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600&display=swap"
+    />
+    <style>
+      :root {
+        --bg-gradient: radial-gradient(circle at top left, rgba(27, 120, 222, 0.55), transparent 55%),
+          radial-gradient(circle at bottom right, rgba(29, 190, 160, 0.4), transparent 60%),
+          linear-gradient(160deg, #081022 0%, #03060f 100%);
+        --card-background: rgba(18, 26, 47, 0.7);
+        --card-border: rgba(255, 255, 255, 0.08);
+        --text-primary: #f1f5ff;
+        --text-muted: rgba(241, 245, 255, 0.6);
+        --icon-color: #ffffff;
+        --accent-primary: #6c5ce7;
+        --accent-hover: #7d6df3;
+        --toggle-background: rgba(255, 255, 255, 0.12);
+        --toggle-dot: #ffffff;
+        --separator: rgba(255, 255, 255, 0.12);
+        --logout-background: linear-gradient(135deg, #ffd000 0%, #ffb400 100%);
+        --logout-hover: linear-gradient(135deg, #ffda33 0%, #ffc233 100%);
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-gradient);
+        font-family: "Manrope", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--text-primary);
+      }
+
+      body.light-mode {
+        --bg-gradient: linear-gradient(160deg, #f4f7ff 0%, #e0f2ff 100%);
+        --card-background: rgba(255, 255, 255, 0.9);
+        --card-border: rgba(15, 23, 42, 0.08);
+        --text-primary: #111827;
+        --text-muted: rgba(15, 23, 42, 0.6);
+        --icon-color: #111827;
+        --accent-primary: #5b21b6;
+        --accent-hover: #6d28d9;
+        --toggle-background: rgba(17, 24, 39, 0.1);
+        --toggle-dot: #5b21b6;
+        --separator: rgba(17, 24, 39, 0.1);
+        --logout-background: linear-gradient(135deg, #ffc107 0%, #ffa000 100%);
+        --logout-hover: linear-gradient(135deg, #ffd54f 0%, #ffb300 100%);
+      }
+
+      .layout {
+        width: min(360px, 92vw);
+        padding: 1.5rem;
+        backdrop-filter: blur(18px);
+        background: var(--card-background);
+        border-radius: 1.75rem;
+        border: 1px solid var(--card-border);
+        box-shadow: 0 32px 60px rgba(2, 8, 20, 0.45);
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .layout::before,
+      .layout::after {
+        content: "";
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(110px);
+        opacity: 0.7;
+        pointer-events: none;
+      }
+
+      .layout::before {
+        width: 240px;
+        height: 240px;
+        top: -80px;
+        right: -120px;
+        background: rgba(108, 92, 231, 0.65);
+      }
+
+      .layout::after {
+        width: 200px;
+        height: 200px;
+        bottom: -100px;
+        left: -60px;
+        background: rgba(30, 204, 179, 0.5);
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      .profile {
+        position: relative;
+        width: 58px;
+        height: 58px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        font-weight: 600;
+        font-size: 1.25rem;
+        letter-spacing: 0.02em;
+        color: var(--text-primary);
+        box-shadow: inset 0 2px 12px rgba(255, 255, 255, 0.05), inset 0 -2px 12px rgba(0, 0, 0, 0.35);
+      }
+
+      .profile::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        opacity: 0.4;
+      }
+
+      .user-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+      }
+
+      .user-info span:first-child {
+        font-size: 1.05rem;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+      }
+
+      .user-info span:last-child {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        letter-spacing: 0.04em;
+      }
+
+      nav {
+        display: grid;
+        gap: 0.85rem;
+      }
+
+      .menu {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 0.4rem;
+      }
+
+      .menu-item {
+        display: flex;
+        align-items: center;
+        gap: 0.95rem;
+        padding: 0.75rem 1rem;
+        border-radius: 0.95rem;
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 0.95rem;
+        font-weight: 400;
+        letter-spacing: 0.02em;
+        background: transparent;
+        transition: background 260ms ease, color 260ms ease, transform 260ms ease, box-shadow 260ms ease;
+        position: relative;
+        overflow: hidden;
+        isolation: isolate;
+      }
+
+      .menu-item::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: linear-gradient(120deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 65%);
+        opacity: 0;
+        transition: opacity 260ms ease;
+        z-index: -1;
+      }
+
+      .menu-item:hover {
+        color: var(--text-primary);
+        background: rgba(255, 255, 255, 0.06);
+        transform: translateY(-1px);
+        box-shadow: 0 18px 35px rgba(3, 8, 23, 0.32);
+      }
+
+      .menu-item:hover::after {
+        opacity: 1;
+      }
+
+      .menu-item svg {
+        width: 20px;
+        height: 20px;
+        stroke-width: 1.8;
+        flex-shrink: 0;
+        color: var(--icon-color);
+        filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.2));
+      }
+
+      .menu-item.primary {
+        background: linear-gradient(140deg, var(--accent-primary) 0%, rgba(125, 104, 255, 0.85) 100%);
+        color: #ffffff;
+        font-weight: 500;
+        box-shadow: 0 25px 35px rgba(84, 72, 195, 0.35);
+      }
+
+      .menu-item.primary:hover {
+        background: linear-gradient(140deg, var(--accent-hover) 0%, rgba(145, 124, 255, 0.9) 100%);
+      }
+
+      .menu-item.active {
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text-primary);
+        font-weight: 500;
+      }
+
+      .section-label {
+        margin-top: 0.75rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.22em;
+        color: var(--text-muted);
+      }
+
+      .separator {
+        height: 1px;
+        width: 100%;
+        background: var(--separator);
+        margin-block: 0.75rem 0.25rem;
+      }
+
+      .footer {
+        display: grid;
+        gap: 0.9rem;
+        margin-top: 0.5rem;
+      }
+
+      .support-card {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        padding: 1rem;
+        border-radius: 1rem;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: #ffffff;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .support-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(150deg, rgba(108, 92, 231, 0.25) 0%, rgba(29, 190, 160, 0.12) 100%);
+        opacity: 0.85;
+        z-index: -1;
+      }
+
+      .support-card strong {
+        font-weight: 500;
+        letter-spacing: 0.01em;
+      }
+
+      .support-card span {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.75);
+        letter-spacing: 0.02em;
+      }
+
+      .toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.85rem 1rem;
+        border-radius: 0.95rem;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        transition: background 260ms ease, border-color 260ms ease;
+      }
+
+      body.light-mode .toggle {
+        background: rgba(255, 255, 255, 0.65);
+        border-color: rgba(17, 24, 39, 0.08);
+      }
+
+      .toggle label {
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        color: var(--text-primary);
+      }
+
+      .toggle label svg {
+        color: var(--icon-color);
+      }
+
+      .switch {
+        width: 48px;
+        height: 26px;
+        border-radius: 999px;
+        background: var(--toggle-background);
+        position: relative;
+        transition: background 240ms ease;
+      }
+
+      .switch::after {
+        content: "";
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--toggle-dot);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        transition: transform 240ms ease;
+      }
+
+      #theme-toggle:checked + .switch::after {
+        transform: translateX(22px);
+      }
+
+      #theme-toggle {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .logout {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.6rem;
+        border: none;
+        padding: 0.85rem 1rem;
+        border-radius: 999px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: #1d1b00;
+        background: var(--logout-background);
+        cursor: pointer;
+        transition: transform 220ms ease, box-shadow 220ms ease, background 220ms ease;
+        box-shadow: 0 22px 35px rgba(255, 204, 0, 0.35);
+      }
+
+      .logout:hover {
+        background: var(--logout-hover);
+        transform: translateY(-1px);
+        box-shadow: 0 28px 40px rgba(255, 204, 0, 0.4);
+      }
+
+      .logout svg {
+        color: #1d1b00;
+      }
+
+      @media (max-width: 480px) {
+        .layout {
+          padding: 1.25rem;
+          border-radius: 1.5rem;
+        }
+
+        .menu-item {
+          gap: 0.85rem;
+          padding: 0.7rem 0.85rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <aside class="layout" aria-label="Navigation principale du tableau de bord">
+      <header>
+        <div class="profile" aria-hidden="true">OC</div>
+        <div class="user-info">
+          <span>Olivia Crest</span>
+          <span>Compte Premium</span>
+        </div>
+      </header>
+
+      <nav>
+        <ul class="menu" aria-label="Navigation principale">
+          <li>
+            <a class="menu-item primary" href="#tableau-de-bord">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                <path d="M3 13h8V3H3v10Zm10 8h8v-8h-8v8Zm0-18v6h8V3h-8ZM3 21h8v-6H3v6Z" />
+              </svg>
+              Tableau de bord
+            </a>
+          </li>
+          <li>
+            <a class="menu-item" href="#mes-commandes">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                <path d="m3 7 9-4 9 4-9 4-9-4Zm18 4-9 4-9-4M21 17l-9 4-9-4" />
+              </svg>
+              Mes commandes
+            </a>
+          </li>
+          <li>
+            <a class="menu-item" href="#suivi-temps-reel">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                <path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              </svg>
+              Suivi en temps réel
+            </a>
+          </li>
+          <li>
+            <a class="menu-item" href="#mes-factures">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                <path d="M7 3h10a2 2 0 0 1 2 2v14l-4-2-3 2-3-2-4 2V5a2 2 0 0 1 2-2Zm3 4h4" />
+              </svg>
+              Mes factures
+            </a>
+          </li>
+          <li>
+            <a class="menu-item" href="#messages">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10Z" />
+              </svg>
+              Messages
+            </a>
+          </li>
+          <li>
+            <a class="menu-item" href="#parametres">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+                <path d="m19.4 15-.9-.5a1 1 0 0 1-.5-.9v-1.2a1 1 0 0 1 .5-.9l.9-.5a1 1 0 0 0 .5-.9v-1a1 1 0 0 0-.8-1l-1-.2a1 1 0 0 1-.7-.6l-.4-1a1 1 0 0 0-1.1-.6l-1 .2a1 1 0 0 1-1-.3l-.7-.7a1 1 0 0 0-1.4 0l-.7.7a1 1 0 0 1-1 .3l-1-.2a1 1 0 0 0-1.1.6l-.4 1a1 1 0 0 1-.7.6l-1 .2a1 1 0 0 0-.8 1v1a1 1 0 0 0 .5.9l.9.5a1 1 0 0 1 .5.9v1.2a1 1 0 0 1-.5.9l-.9.5a1 1 0 0 0-.5.9v1a1 1 0 0 0 .8 1l1 .2a1 1 0 0 1 .7.6l.4 1a1 1 0 0 0 1.1.6l1-.2a1 1 0 0 1 1 .3l.7.7a1 1 0 0 0 1.4 0l.7-.7a1 1 0 0 1 1-.3l1 .2a1 1 0 0 0 1.1-.6l.4-1a1 1 0 0 1 .7-.6l1-.2a1 1 0 0 0 .8-1v-1a1 1 0 0 0-.5-.9Z" />
+              </svg>
+              Paramètres
+            </a>
+          </li>
+        </ul>
+
+        <div class="separator" role="presentation"></div>
+
+        <div class="section-label" aria-hidden="true">Assistance</div>
+        <ul class="menu" aria-label="Navigation assistance">
+          <li>
+            <a class="menu-item" href="#client-assistance">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 0c-3.3 0-6 2.7-6 6v2h12v-2c0-3.3-2.7-6-6-6Z" />
+              </svg>
+              Client d'assistance
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="footer">
+        <div class="toggle">
+          <label for="theme-toggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+              <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+            </svg>
+            Mode clair
+          </label>
+          <div>
+            <input id="theme-toggle" type="checkbox" aria-label="Basculer le mode clair" />
+            <span class="switch" aria-hidden="true"></span>
+          </div>
+        </div>
+
+        <div class="support-card" role="status">
+          <strong>Besoin d'aide ?</strong>
+          <span>Notre équipe répond en moins de 15 minutes.</span>
+        </div>
+
+        <button class="logout" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l-5-5 5-5M4 12h11" />
+          </svg>
+          Déconnexion
+        </button>
+      </div>
+    </aside>
+
+    <script>
+      const toggle = document.getElementById("theme-toggle");
+      const prefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
+
+      if (prefersLight) {
+        toggle.checked = true;
+        document.body.classList.add("light-mode");
+      }
+
+      toggle.addEventListener("change", () => {
+        document.body.classList.toggle("light-mode", toggle.checked);
+      });
+    </script>
+  </body>
+</html>

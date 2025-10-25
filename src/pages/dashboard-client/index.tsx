@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import ClientSidebar from "@/components/dashboard/ClientSidebar";
-import TableauDeBord from "@/components/dashboard-client/TableauDeBord";
-import Commandes from "@/components/dashboard-client/Commandes";
-import Factures from "@/components/dashboard-client/Factures";
-import Suivi from "@/components/dashboard-client/Suivi";
-import Messages from "@/components/dashboard-client/Messages";
-import Parametres from "@/components/dashboard-client/Parametres";
+import TableauDeBord from "@/components/dashboard-client/tableau-de-bord";
+import Commandes from "@/components/dashboard-client/commandes";
+import Factures from "@/components/dashboard-client/factures";
+import Suivi from "@/components/dashboard-client/suivi";
+import Messages from "@/components/dashboard-client/messages";
+import Parametres from "@/components/dashboard-client/parametres";
 
 type Section =
   | "tableau-de-bord"

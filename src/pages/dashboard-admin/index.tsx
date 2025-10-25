@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import AdminSidebar from "@/components/dashboard/AdminSidebar";
-import TableauDeBord from "@/components/dashboard-admin/TableauDeBord";
-import Commandes from "@/components/dashboard-admin/Commandes";
-import Clients from "@/components/dashboard-admin/Clients";
-import Chauffeurs from "@/components/dashboard-admin/Chauffeurs";
-import Factures from "@/components/dashboard-admin/Factures";
-import Statistiques from "@/components/dashboard-admin/Statistiques";
-import Messages from "@/components/dashboard-admin/Messages";
-import Parametres from "@/components/dashboard-admin/Parametres";
+import TableauDeBord from "@/components/dashboard-admin/tableau-de-bord";
+import Commandes from "@/components/dashboard-admin/commandes";
+import Clients from "@/components/dashboard-admin/clients";
+import Chauffeurs from "@/components/dashboard-admin/chauffeurs";
+import Factures from "@/components/dashboard-admin/factures";
+import Statistiques from "@/components/dashboard-admin/statistiques";
+import Messages from "@/components/dashboard-admin/messages";
+import Parametres from "@/components/dashboard-admin/parametres";
 
 type Section = "tableau-de-bord" | "commandes" | "clients" | "chauffeurs" | "factures" | "statistiques" | "messages" | "parametres";
 

@@ -15,8 +15,7 @@ import {
   PhoneCall,
   HelpCircle,
   Sun,
-  Moon,
-  Square
+  Moon
 } from "lucide-react";
 import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -132,11 +131,6 @@ const ClientSidebar = () => {
       icon: Settings,
       label: "Paramètres",
       path: "/dashboard-client?tab=parametres",
-    },
-    {
-      icon: Square,
-      label: "Page vierge",
-      path: "/dashboard-client?tab=page-vierge",
     },
   ];
 

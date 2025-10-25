@@ -1,12 +1,4 @@
-import {
-  type ChangeEvent,
-  type FormEvent,
-  type MouseEvent as ReactMouseEvent,
-  type TouchEvent as ReactTouchEvent,
-  useEffect,
-  useRef,
-  useState
-} from "react";
+import { type ChangeEvent, type FormEvent, useState } from "react";
 import Layout from "@/components/layout/Layout";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -26,7 +18,6 @@ import {
   Star,
   X
 } from "lucide-react";
-import { AnimatePresence, motion, useMotionValue, useScroll, useSpring } from "framer-motion";
 type ServiceType = "Standard" | "Express" | "Flash Express";
 const servicePricing: Record<ServiceType, {
   base: number;
@@ -271,120 +262,6 @@ const Home = () => {
   const [isCalculating, setIsCalculating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [estimate, setEstimate] = useState<EstimateResult | null>(null);
-  const [isHeroReady, setIsHeroReady] = useState(false);
-  const heroSectionRef = useRef<HTMLElement | null>(null);
-  const parallaxX = useMotionValue(0);
-  const parallaxY = useMotionValue(0);
-  const scrollOffsetRef = useRef(0);
-  const { scrollYProgress } = useScroll({
-    target: heroSectionRef,
-    offset: ["start start", "end start"]
-  });
-  const backgroundX = useSpring(parallaxX, {
-    stiffness: 60,
-    damping: 18,
-    mass: 0.6
-  });
-  const backgroundY = useSpring(parallaxY, {
-    stiffness: 60,
-    damping: 18,
-    mass: 0.6
-  });
-  useEffect(() => {
-    const timer = window.setTimeout(() => setIsHeroReady(true), 1200);
-    return () => window.clearTimeout(timer);
-  }, []);
-  useEffect(() => {
-    const unsubscribe = scrollYProgress.on("change", value => {
-      const offset = value * -30;
-      scrollOffsetRef.current = offset;
-      parallaxY.set(offset);
-    });
-    return () => unsubscribe();
-  }, [parallaxY, scrollYProgress]);
-  const handleHeroMouseMove = (event: ReactMouseEvent<HTMLElement>) => {
-    const element = heroSectionRef.current;
-    if (!element) return;
-    const rect = element.getBoundingClientRect();
-    const relativeX = ((event.clientX - rect.left) / rect.width - 0.5) * 12;
-    const relativeY = ((event.clientY - rect.top) / rect.height - 0.5) * 12;
-    parallaxX.set(relativeX);
-    parallaxY.set(scrollOffsetRef.current + relativeY);
-  };
-  const handleHeroTouchMove = (event: ReactTouchEvent<HTMLElement>) => {
-    const touch = event.touches[0];
-    if (!touch) return;
-    const element = heroSectionRef.current;
-    if (!element) return;
-    const rect = element.getBoundingClientRect();
-    const relativeX = ((touch.clientX - rect.left) / rect.width - 0.5) * 10;
-    const relativeY = ((touch.clientY - rect.top) / rect.height - 0.5) * 10;
-    parallaxX.set(relativeX);
-    parallaxY.set(scrollOffsetRef.current + relativeY);
-  };
-  const handleHeroMouseLeave = () => {
-    parallaxX.set(0);
-    parallaxY.set(scrollOffsetRef.current);
-  };
-  const handleHeroTouchEnd = () => {
-    parallaxX.set(0);
-    parallaxY.set(scrollOffsetRef.current);
-  };
-  const heroContentVariants = {
-    hidden: {
-      opacity: 1
-    },
-    visible: {
-      opacity: 1,
-      transition: {
-        delayChildren: 0.4,
-        staggerChildren: 0.2
-      }
-    }
-  };
-  const heroItemVariants = {
-    hidden: {
-      opacity: 0,
-      y: 40
-    },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.6,
-        ease: [0.22, 1, 0.36, 1]
-      }
-    }
-  };
-  const heroCtaContainerVariants = {
-    hidden: {
-      opacity: 0,
-      y: 40
-    },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.6,
-        ease: [0.22, 1, 0.36, 1],
-        staggerChildren: 0.2
-      }
-    }
-  };
-  const heroCtaItemVariants = {
-    hidden: {
-      opacity: 0,
-      y: 20
-    },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.5,
-        ease: [0.22, 1, 0.36, 1]
-      }
-    }
-  };
   const computeEstimate = (distanceKm: number, service: ServiceType, pickupDate: string, pickupTime: string): EstimateResult => {
     const pricing = servicePricing[service];
     const extraKm = Math.max(0, distanceKm - PALIER_KM);
@@ -465,114 +342,32 @@ const Home = () => {
       setIsCalculating(false);
     }
   };
-  return <>
-    <AnimatePresence>
-      {!isHeroReady && (
-        <motion.div
-          key="hero-loader"
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0B2D55]"
-          initial={{ opacity: 1 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <motion.div
-            className="flex items-center gap-3"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <motion.span
-              aria-hidden="true"
-              className="text-4xl"
-              initial={{ x: "-120%" }}
-              animate={{ x: "120%" }}
-              transition={{ duration: 1.1, ease: "easeInOut", repeat: Infinity, repeatType: "mirror" }}
-            >
-              🛵
-            </motion.span>
-            <span className="text-xl font-semibold tracking-[0.2em] text-[#FFCC00]">
-              ONE CONNEXION
-            </span>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-    <Layout>
-      <motion.section
-        ref={heroSectionRef}
-        className="relative flex min-h-[calc(100vh-5rem)] items-center justify-center overflow-hidden bg-gray-950 text-white"
-        onMouseMove={handleHeroMouseMove}
-        onMouseLeave={handleHeroMouseLeave}
-        onTouchMove={handleHeroTouchMove}
-        onTouchEnd={handleHeroTouchEnd}
-        onTouchCancel={handleHeroTouchEnd}
-      >
-        <motion.div
-          className="absolute inset-0"
-          style={{ x: backgroundX, y: backgroundY }}
-          initial={{ opacity: 0, scale: 1.1 }}
-          animate={isHeroReady ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 1.1 }}
-          transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <motion.img
-            src="https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=2400&q=80"
-            alt="Vue aérienne de Paris au coucher du soleil"
-            className="h-full w-full object-cover"
-            initial={{ scale: 1.08 }}
-            animate={isHeroReady ? { scale: 1 } : { scale: 1.08 }}
-            transition={{ duration: 1.6, ease: [0.16, 1, 0.3, 1] }}
-          />
-          <div className="absolute inset-0 bg-[#0B2D55]/70" />
-        </motion.div>
-        <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#0B2D55]/20 via-[#0B2D55]/40 to-[#0B2D55]/80 mix-blend-multiply"
-          aria-hidden="true"
-        />
-        <motion.div
-          className="relative z-10 mx-auto flex w-full max-w-4xl flex-col items-center gap-8 px-6 py-24 text-center font-['Poppins',sans-serif]"
-          variants={heroContentVariants}
-          initial="hidden"
-          animate={isHeroReady ? "visible" : "hidden"}
-        >
-          <motion.h1 className="text-4xl font-semibold md:text-6xl" variants={heroItemVariants}>
-            One Connexion Express
-          </motion.h1>
-          <motion.p className="text-xl text-white/90 md:text-2xl" variants={heroItemVariants}>
-            Livraison urgente et programmée en Île-de-France
-          </motion.p>
-          <motion.p className="max-w-2xl text-lg text-white/80" variants={heroItemVariants}>
+  return <Layout>
+      <section className="relative flex min-h-[calc(100vh-5rem)] items-center justify-center overflow-hidden bg-gray-950 text-white">
+        <div className="absolute inset-0">
+          <img src="https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=2400&q=80" alt="Vue aérienne de Paris au coucher du soleil" className="h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-black/60" />
+        </div>
+        <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-col items-center gap-8 px-6 py-24 text-center">
+          <h1 className="text-4xl font-bold md:text-6xl">One Connexion Express</h1>
+          <p className="text-xl md:text-2xl">Livraison urgente et programmée en Île-de-France</p>
+          <p className="max-w-2xl text-lg text-white/90">
             Service professionnel 24/7 pour vos colis urgents. Tarifs transparents, suivi en temps réel et prise en charge immédiate par nos coursiers dédiés.
-          </motion.p>
-          <motion.div className="flex w-full flex-col gap-4 sm:flex-row sm:justify-center" variants={heroCtaContainerVariants}>
-            <motion.div className="flex justify-center" variants={heroCtaItemVariants}>
-              <Button
-                variant="cta"
-                size="lg"
-                className="w-full sm:w-auto transition-transform duration-300 hover:shadow-[0_0_35px_rgba(255,204,0,0.45)] focus-visible:scale-105 focus-visible:shadow-[0_0_35px_rgba(255,204,0,0.55)]"
-                asChild
-              >
-                <Link to="/tarifs">
-                  Voir nos tarifs
-                </Link>
-              </Button>
-            </motion.div>
-            <motion.div className="flex justify-center" variants={heroCtaItemVariants}>
-              <Button
-                variant="outline-light"
-                size="lg"
-                className="w-full border-white/60 text-white transition-colors duration-300 hover:bg-[#FFCC00] hover:text-[#0B2D55] focus-visible:bg-[#FFCC00] focus-visible:text-[#0B2D55] sm:w-auto"
-                asChild
-              >
-                <Link to="/commande-sans-compte">
-                  Commander maintenant
-                </Link>
-              </Button>
-            </motion.div>
-          </motion.div>
-        </motion.div>
-      </motion.section>
+          </p>
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <Button variant="cta" size="lg" asChild>
+              <Link to="/tarifs">
+                Voir nos tarifs
+              </Link>
+            </Button>
+            <Button variant="outline-light" size="lg" asChild>
+              <Link to="/commande-sans-compte">
+                Commander maintenant
+              </Link>
+            </Button>
+        </div>
+        </div>
+      </section>
 
       <section className="bg-gradient-to-b from-[#e4ecff] via-white to-white py-20">
         <div className="container mx-auto px-4">
@@ -901,7 +696,6 @@ const Home = () => {
           </div>
         </div>
       </section>
-    </Layout>
-  </>;
+    </Layout>;
 };
 export default Home;

@@ -11,14 +11,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import heroVisualDesktop from "@/assets/hero-courier.jpg";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthProfile } from "@/providers/AuthProvider";
 import { toast } from "sonner";
-
-const heroVisual = heroVisualDesktop;
-const heroVisualSrcSet = `${heroVisualDesktop} 640w, ${heroVisualDesktop} 1024w, ${heroVisualDesktop} 1440w`;
-const heroVisualSizes = "(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 45vw";
 
 const rememberIdentifierStorageKey = "auth:remember-identifier";
 const forgotPasswordRoute = "/mot-de-passe-oublie"; // Ajustez cette route selon votre configuration.
@@ -154,10 +149,6 @@ const Connexion = () => {
         label: "SHARP. FAST.",
         headline: "Gardez une longueur d'avance sur chaque tournée",
         description: "Supervisez vos équipes et vos flux en temps réel avec une interface pensée pour les opérations critiques.",
-        imageUrl: heroVisual,
-        imageAlt: "Responsable logistique coordonnant une tournée de livraisons depuis un entrepôt moderne",
-        imageSrcSet: heroVisualSrcSet,
-        imageSizes: heroVisualSizes,
       }}
       className="dark bg-background text-foreground"
     >

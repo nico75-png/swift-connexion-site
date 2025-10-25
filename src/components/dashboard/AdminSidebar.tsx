@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
+  BarChart,
   CalendarCheck2,
   CheckCircle2,
   ChevronDown,
@@ -15,6 +16,7 @@ import {
   Receipt,
   Settings,
   Sun,
+  Users,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -50,11 +52,13 @@ const AdminSidebar = () => {
   const menuItems = useMemo(
     () => [
       { icon: LayoutDashboard, label: "Tableau de bord", path: "/dashboard-admin" },
-      { icon: ClipboardList, label: "Mes commandes", path: "/dashboard-admin/commandes" },
-      { icon: Radar, label: "Suivi en temps réel", path: "/dashboard-admin/statistiques" },
-      { icon: Receipt, label: "Mes factures", path: "/dashboard-admin/factures" },
-      { icon: MessageCircle, label: "Messages", path: "/dashboard-admin/messages" },
-      { icon: Settings, label: "Paramètres", path: "/dashboard-admin/parametres" },
+      { icon: ClipboardList, label: "Commandes", path: "/dashboard-admin?tab=commandes" },
+      { icon: Users, label: "Clients", path: "/dashboard-admin?tab=clients" },
+      { icon: Radar, label: "Chauffeurs", path: "/dashboard-admin?tab=chauffeurs" },
+      { icon: Receipt, label: "Factures", path: "/dashboard-admin?tab=factures" },
+      { icon: BarChart, label: "Statistiques", path: "/dashboard-admin?tab=statistiques" },
+      { icon: MessageCircle, label: "Messages", path: "/dashboard-admin?tab=messages" },
+      { icon: Settings, label: "Paramètres", path: "/dashboard-admin?tab=parametres" },
     ],
     [],
   );

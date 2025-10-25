@@ -20,30 +20,11 @@ const CGV = lazy(() => import("@/pages/public/CGV"));
 const Cookies = lazy(() => import("@/pages/public/Cookies"));
 const NotFound = lazy(() => import("@/pages/public/NotFound"));
 
-// Pages Espace Client
+// Pages Espace Client (une seule page principale)
 const DashboardClient = lazy(() => import("@/pages/dashboard-client"));
-const DashboardClientCommandes = lazy(() => import("@/pages/dashboard-client/commandes"));
-const DashboardClientCommandeNouvelle = lazy(() => import("@/pages/dashboard-client/commandes/nouvelle"));
-const DashboardClientCommandeDetails = lazy(() => import("@/pages/dashboard-client/commandes/details"));
-const DashboardClientSuivi = lazy(() => import("@/pages/dashboard-client/suivi"));
-const DashboardClientFactures = lazy(() => import("@/pages/dashboard-client/factures"));
-const DashboardClientFactureDetails = lazy(() => import("@/pages/dashboard-client/factures/details"));
-const DashboardClientMessages = lazy(() => import("@/pages/dashboard-client/messages"));
-const DashboardClientMessageDetails = lazy(() => import("@/pages/dashboard-client/messages/details"));
-const DashboardClientProfil = lazy(() => import("@/pages/dashboard-client/profil"));
-const DashboardClientParametres = lazy(() => import("@/pages/dashboard-client/parametres"));
 
-// Pages Espace Admin
+// Pages Espace Admin (une seule page principale)
 const DashboardAdmin = lazy(() => import("@/pages/dashboard-admin"));
-const DashboardAdminCommandes = lazy(() => import("@/pages/dashboard-admin/commandes"));
-const DashboardAdminCommandeDetails = lazy(() => import("@/pages/dashboard-admin/commandes/details"));
-const DashboardAdminChauffeurs = lazy(() => import("@/pages/dashboard-admin/chauffeurs"));
-const DashboardAdminClients = lazy(() => import("@/pages/dashboard-admin/clients"));
-const DashboardAdminClientDetails = lazy(() => import("@/pages/dashboard-admin/clients/details"));
-const DashboardAdminFactures = lazy(() => import("@/pages/dashboard-admin/factures"));
-const DashboardAdminStatistiques = lazy(() => import("@/pages/dashboard-admin/statistiques"));
-const DashboardAdminMessages = lazy(() => import("@/pages/dashboard-admin/messages"));
-const DashboardAdminParametres = lazy(() => import("@/pages/dashboard-admin/parametres"));
 
 const Layout = () => <Outlet />;
 
@@ -126,42 +107,52 @@ export function AppRoutes() {
         <Route path="contact" element={withGuards(Contact)} />
         <Route path="commande-sans-compte" element={withGuards(CommandeSansCompte)} />
         <Route path="login" element={withGuards(Login)} />
+        <Route path="se-connecter" element={<Navigate to="/login" replace />} />
         <Route path="register" element={withGuards(Register)} />
+        <Route path="registre" element={<Navigate to="/register" replace />} />
         <Route path="forgot-password" element={withGuards(ForgotPassword)} />
+        <Route path="mot-de-passe-oublie" element={<Navigate to="/forgot-password" replace />} />
         <Route path="mentions-legales" element={withGuards(MentionsLegales)} />
         <Route path="cgv" element={withGuards(CGV)} />
         <Route path="cookies" element={withGuards(Cookies)} />
 
-        {/* B - ESPACE CLIENT */}
+        {/* B - ESPACE CLIENT (une seule route) */}
         <Route path="dashboard-client" element={withGuards(DashboardClient, { requiresAuth: true })} />
-        <Route path="dashboard-client/commandes" element={withGuards(DashboardClientCommandes, { requiresAuth: true })} />
-        <Route path="dashboard-client/commandes/nouvelle" element={withGuards(DashboardClientCommandeNouvelle, { requiresAuth: true })} />
-        <Route path="dashboard-client/commandes/:id" element={withGuards(DashboardClientCommandeDetails, { requiresAuth: true })} />
-        <Route path="dashboard-client/suivi/:id" element={withGuards(DashboardClientSuivi, { requiresAuth: true })} />
-        <Route path="dashboard-client/factures" element={withGuards(DashboardClientFactures, { requiresAuth: true })} />
-        <Route path="dashboard-client/factures/:id" element={withGuards(DashboardClientFactureDetails, { requiresAuth: true })} />
-        <Route path="dashboard-client/messages" element={withGuards(DashboardClientMessages, { requiresAuth: true })} />
-        <Route path="dashboard-client/messages/:id" element={withGuards(DashboardClientMessageDetails, { requiresAuth: true })} />
-        <Route path="dashboard-client/profil" element={withGuards(DashboardClientProfil, { requiresAuth: true })} />
-        <Route path="dashboard-client/parametres" element={withGuards(DashboardClientParametres, { requiresAuth: true })} />
+        
+        {/* Redirections pour anciennes routes client */}
+        <Route path="dashboard-client/commandes" element={<Navigate to="/dashboard-client?tab=commandes" replace />} />
+        <Route path="dashboard-client/commandes/nouvelle" element={<Navigate to="/dashboard-client?tab=commandes" replace />} />
+        <Route path="dashboard-client/commandes/:id" element={<Navigate to="/dashboard-client?tab=commandes" replace />} />
+        <Route path="dashboard-client/suivi" element={<Navigate to="/dashboard-client?tab=suivi" replace />} />
+        <Route path="dashboard-client/suivi/:id" element={<Navigate to="/dashboard-client?tab=suivi" replace />} />
+        <Route path="dashboard-client/factures" element={<Navigate to="/dashboard-client?tab=factures" replace />} />
+        <Route path="dashboard-client/factures/:id" element={<Navigate to="/dashboard-client?tab=factures" replace />} />
+        <Route path="dashboard-client/messages" element={<Navigate to="/dashboard-client?tab=messages" replace />} />
+        <Route path="dashboard-client/messages/:id" element={<Navigate to="/dashboard-client?tab=messages" replace />} />
+        <Route path="dashboard-client/profil" element={<Navigate to="/dashboard-client?tab=parametres" replace />} />
+        <Route path="dashboard-client/parametres" element={<Navigate to="/dashboard-client?tab=parametres" replace />} />
 
-        {/* C - ESPACE ADMIN */}
+        {/* C - ESPACE ADMIN (une seule route) */}
         <Route path="dashboard-admin" element={withGuards(DashboardAdmin, { requiresAuth: true, roles: ["admin"] })} />
-        <Route path="dashboard-admin/commandes" element={withGuards(DashboardAdminCommandes, { requiresAuth: true, roles: ["admin"] })} />
-        <Route
-          path="dashboard-admin/commandes/:id"
-          element={withGuards(DashboardAdminCommandeDetails, { requiresAuth: true, roles: ["admin"] })}
-        />
-        <Route path="dashboard-admin/chauffeurs" element={withGuards(DashboardAdminChauffeurs, { requiresAuth: true, roles: ["admin"] })} />
-        <Route path="dashboard-admin/clients" element={withGuards(DashboardAdminClients, { requiresAuth: true, roles: ["admin"] })} />
-        <Route
-          path="dashboard-admin/clients/:id"
-          element={withGuards(DashboardAdminClientDetails, { requiresAuth: true, roles: ["admin"] })}
-        />
-        <Route path="dashboard-admin/factures" element={withGuards(DashboardAdminFactures, { requiresAuth: true, roles: ["admin"] })} />
-        <Route path="dashboard-admin/statistiques" element={withGuards(DashboardAdminStatistiques, { requiresAuth: true, roles: ["admin"] })} />
-        <Route path="dashboard-admin/messages" element={withGuards(DashboardAdminMessages, { requiresAuth: true, roles: ["admin"] })} />
-        <Route path="dashboard-admin/parametres" element={withGuards(DashboardAdminParametres, { requiresAuth: true, roles: ["admin"] })} />
+        <Route path="admin" element={<Navigate to="/dashboard-admin" replace />} />
+        
+        {/* Redirections pour anciennes routes admin */}
+        <Route path="dashboard-admin/commandes" element={<Navigate to="/dashboard-admin?tab=commandes" replace />} />
+        <Route path="dashboard-admin/commandes/:id" element={<Navigate to="/dashboard-admin?tab=commandes" replace />} />
+        <Route path="dashboard-admin/chauffeurs" element={<Navigate to="/dashboard-admin?tab=chauffeurs" replace />} />
+        <Route path="dashboard-admin/clients" element={<Navigate to="/dashboard-admin?tab=clients" replace />} />
+        <Route path="dashboard-admin/clients/:id" element={<Navigate to="/dashboard-admin?tab=clients" replace />} />
+        <Route path="dashboard-admin/factures" element={<Navigate to="/dashboard-admin?tab=factures" replace />} />
+        <Route path="dashboard-admin/statistiques" element={<Navigate to="/dashboard-admin?tab=statistiques" replace />} />
+        <Route path="dashboard-admin/messages" element={<Navigate to="/dashboard-admin?tab=messages" replace />} />
+        <Route path="dashboard-admin/parametres" element={<Navigate to="/dashboard-admin?tab=parametres" replace />} />
+        <Route path="admin/commandes" element={<Navigate to="/dashboard-admin?tab=commandes" replace />} />
+        <Route path="admin/chauffeurs" element={<Navigate to="/dashboard-admin?tab=chauffeurs" replace />} />
+        <Route path="admin/clients" element={<Navigate to="/dashboard-admin?tab=clients" replace />} />
+        <Route path="admin/factures" element={<Navigate to="/dashboard-admin?tab=factures" replace />} />
+        <Route path="admin/messages" element={<Navigate to="/dashboard-admin?tab=messages" replace />} />
+        <Route path="admin/statistiques" element={<Navigate to="/dashboard-admin?tab=statistiques" replace />} />
+        <Route path="admin/parametres" element={<Navigate to="/dashboard-admin?tab=parametres" replace />} />
 
         {/* 404 */}
         <Route path="404" element={withGuards(NotFound)} />

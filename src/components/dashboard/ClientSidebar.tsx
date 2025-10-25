@@ -110,27 +110,27 @@ const ClientSidebar = () => {
     {
       icon: Package,
       label: "Mes commandes",
-      path: "/dashboard-client/commandes",
+      path: "/dashboard-client?tab=commandes",
     },
     {
       icon: Truck,
       label: "Suivi en temps réel",
-      path: "/dashboard-client/suivi/dernier",
+      path: "/dashboard-client?tab=suivi",
     },
     {
       icon: FileText,
       label: "Mes factures",
-      path: "/dashboard-client/factures",
+      path: "/dashboard-client?tab=factures",
     },
     {
       icon: MessageSquare,
       label: "Messages",
-      path: "/dashboard-client/messages",
+      path: "/dashboard-client?tab=messages",
     },
     {
       icon: Settings,
       label: "Paramètres",
-      path: "/dashboard-client/parametres",
+      path: "/dashboard-client?tab=parametres",
     },
   ];
 

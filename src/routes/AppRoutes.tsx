@@ -41,6 +41,7 @@ const MentionsLegales = lazy(() => import("@/pages/MentionsLegales"));
 const CGV = lazy(() => import("@/pages/CGV"));
 const Cookies = lazy(() => import("@/pages/Cookies"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
+const PromptDashboard = lazy(() => import("@/pages/PromptDashboard"));
 
 const Layout = () => <Outlet />;
 
@@ -170,6 +171,7 @@ export function AppRoutes() {
         <Route path="mentions-legales" element={withGuards(MentionsLegales)} />
         <Route path="cgv" element={withGuards(CGV)} />
         <Route path="cookies" element={withGuards(Cookies)} />
+        <Route path="prompt-dashboard" element={withGuards(PromptDashboard)} />
         <Route path="client/espace" element={<Navigate to="/espace-client" replace />} />
         <Route path="connexion" element={<Navigate to="/auth" replace />} />
         <Route path="404" element={withGuards(NotFound)} />

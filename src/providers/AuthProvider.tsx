@@ -19,6 +19,46 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+const shouldBypassSupabase = import.meta.env.VITE_BYPASS_AUTH === "true";
+
+const bypassTimestamp = "2024-01-01T00:00:00.000Z";
+
+const bypassSession: Session = {
+  access_token: "bypass-token",
+  token_type: "bearer",
+  expires_in: 3600,
+  expires_at: Math.round(Date.now() / 1000) + 3600,
+  refresh_token: "bypass-refresh",
+  provider_token: null,
+  provider_refresh_token: null,
+  user: {
+    id: "bypass-user",
+    app_metadata: { provider: "email" },
+    user_metadata: { full_name: "Dashboard Test" },
+    aud: "authenticated",
+    confirmation_sent_at: bypassTimestamp,
+    confirmed_at: bypassTimestamp,
+    created_at: bypassTimestamp,
+    email: "dashboard@test.local",
+    email_confirmed_at: bypassTimestamp,
+    factors: [],
+    identities: [],
+    last_sign_in_at: bypassTimestamp,
+    phone: null,
+    phone_confirmed_at: null,
+    role: "authenticated",
+    updated_at: bypassTimestamp,
+  },
+};
+
+const bypassProfile = {
+  id: "bypass-profile",
+  user_id: bypassSession.user.id,
+  display_name: "Dashboard Test",
+  created_at: bypassTimestamp,
+  updated_at: bypassTimestamp,
+} as Profile;
+
 const computeDisplayName = (session: Session | null, profile: Profile | null): string | null => {
   const fromProfile = profile?.display_name?.trim();
   if (fromProfile) {
@@ -71,6 +111,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isRefreshingProfile, setIsRefreshingProfile] = useState(false);
 
   const loadProfileForSession = useCallback(async (nextSession: Session | null) => {
+    if (shouldBypassSupabase) {
+      setProfile(bypassProfile);
+      applyAuthState(bypassSession, bypassProfile);
+      return;
+    }
+
     if (!nextSession) {
       setProfile(null);
       applyAuthState(null, null);
@@ -89,6 +135,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   useEffect(() => {
+    if (shouldBypassSupabase) {
+      setSession(bypassSession);
+      setProfile(bypassProfile);
+      applyAuthState(bypassSession, bypassProfile);
+      setIsLoading(false);
+      return;
+    }
+
     let mounted = true;
 
     const initialise = async () => {

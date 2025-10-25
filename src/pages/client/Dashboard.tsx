@@ -188,19 +188,19 @@ const ClientDashboard = () => {
         </div>
 
         {/* Stats KPI */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="minw0 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
           {stats.map((stat, i) => (
             <StatsCard key={i} {...stat} />
           ))}
         </div>
 
         {/* Graphique activité (placeholder) */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Activité des 30 derniers jours</CardTitle>
+        <Card className="minw0">
+          <CardHeader className="minw0">
+            <CardTitle className="wrap-any">Activité des 30 derniers jours</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="h-64 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-lg p-6">
+          <CardContent className="minw0">
+            <div className="minw0 h-64 rounded-lg bg-gradient-to-br from-primary/5 to-secondary/5 p-6">
               <div className="grid h-full w-full grid-cols-15 items-end gap-1">
                 {Array.from({ length: 15 }).map((_, index) => {
                   const factor = lastThirtyDaysOrders[index]?.amountTTC ?? 0;
@@ -220,14 +220,14 @@ const ClientDashboard = () => {
         </Card>
 
         {/* Dernières commandes */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Dernières commandes</CardTitle>
-            <Button variant="outline" asChild>
+        <Card className="minw0">
+          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="wrap-any">Dernières commandes</CardTitle>
+            <Button variant="outline" asChild className="wrap-any">
               <Link to="/commandes">Voir tout</Link>
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="minw0">
             {isLoading ? (
               <p className="rounded-lg border border-dashed border-muted-foreground/40 p-6 text-center text-sm text-muted-foreground">
                 Chargement des dernières commandes…
@@ -237,15 +237,15 @@ const ClientDashboard = () => {
                 Aucune commande récente à afficher.
               </p>
             ) : (
-              <div className="space-y-4">
+              <div className="minw0 space-y-4">
                 {recentOrders.map((order) => (
                   <div
                     key={order.id}
-                    className="flex flex-col gap-3 rounded-lg border border-transparent bg-muted/30 p-4 transition hover:border-primary/40 hover:bg-primary/5 md:flex-row md:items-center md:justify-between"
+                    className="flex minw0 flex-col gap-3 rounded-lg border border-transparent bg-muted/30 p-4 transition hover:border-primary/40 hover:bg-primary/5 md:flex-row md:items-center md:justify-between"
                   >
-                    <div>
-                      <p className="font-medium">{order.orderNumber}</p>
-                      <p className="text-sm text-muted-foreground">
+                    <div className="minw0 space-y-1">
+                      <p className="wrap-any font-medium">{order.orderNumber}</p>
+                      <p className="wrap-any text-sm text-muted-foreground">
                         {order.transportLabel}
                         {order.createdAt && ` • ${formatDateTime(order.createdAt, "fr-FR")}`}
                       </p>
@@ -255,10 +255,10 @@ const ClientDashboard = () => {
                         {order.status}
                       </Badge>
                       <div className="flex flex-col gap-2 sm:flex-row">
-                        <Button variant="outline" size="sm" asChild>
+                        <Button variant="outline" size="sm" asChild className="wrap-any">
                           <Link to={`/commandes/${order.id}`}>Voir le détail</Link>
                         </Button>
-                        <Button variant="cta" size="sm" asChild>
+                        <Button variant="cta" size="sm" asChild className="wrap-any">
                           <Link to={`/suivi/${order.id}`}>Voir le suivi GPS</Link>
                         </Button>
                       </div>
@@ -271,11 +271,11 @@ const ClientDashboard = () => {
         </Card>
 
         {/* Notifications récentes */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Notifications récentes</CardTitle>
+        <Card className="minw0">
+          <CardHeader className="minw0">
+            <CardTitle className="wrap-any">Notifications récentes</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="minw0">
             {isLoading ? (
               <p className="rounded-lg border border-dashed border-muted-foreground/40 p-4 text-center text-sm text-muted-foreground">
                 Chargement des notifications…

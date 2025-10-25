@@ -36,14 +36,19 @@ const Topbar = ({ userName, title, notifications = [] }: TopbarProps) => {
   };
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6 md:px-10">
+    <header
+      className="safe-area sticky top-0 z-[var(--z-sticky)] flex w-full flex-wrap items-center justify-between gap-4 border-b border-border/60 bg-card/95 px-4 py-3 shadow-[0_4px_12px_rgba(11,45,85,0.08)] backdrop-blur supports-[backdrop-filter]:bg-card/80 md:flex-nowrap md:px-8"
+      style={{ minHeight: "var(--dashboard-topbar-height)" }}
+    >
       {/* Titre de page ou breadcrumb */}
-      <div>
-        <h2 className="text-lg font-semibold">{title || `Bienvenue, ${finalName}`}</h2>
+      <div className="minw0">
+        <h2 className="wrap-any text-lg font-semibold text-foreground md:text-xl">
+          {title || `Bienvenue, ${finalName}`}
+        </h2>
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-4">
+      <div className="minw0 flex flex-wrap items-center gap-3 md:justify-end">
         {/* Toggle thème */}
         <Button
           variant="ghost"

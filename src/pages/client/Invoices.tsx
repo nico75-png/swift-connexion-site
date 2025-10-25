@@ -340,36 +340,42 @@ const ClientInvoices = () => {
                 </div>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              <div className="scroll-x max-w-full">
+                <table className="w-full min-w-[720px] text-sm" data-testid="invoice-table">
                   <thead className="border-b border-[#E0E8F3] bg-[#E9F1FB]">
                     <tr>
-                      <th className="p-4 text-left font-semibold uppercase tracking-[0.18em] text-[#0B2D55]">N° Facture</th>
-                      <th className="p-4 text-left font-semibold uppercase tracking-[0.18em] text-[#0B2D55]">Client</th>
-                      <th className="p-4 text-left font-semibold uppercase tracking-[0.18em] text-[#0B2D55]">Période</th>
-                      <th className="p-4 text-right font-semibold uppercase tracking-[0.18em] text-[#0B2D55]">Montant</th>
-                      <th className="p-4 text-left font-semibold uppercase tracking-[0.18em] text-[#0B2D55]">Échéance</th>
-                      <th className="p-4 text-left font-semibold uppercase tracking-[0.18em] text-[#0B2D55]">Statut</th>
-                      <th className="p-4 text-right font-semibold uppercase tracking-[0.18em] text-[#0B2D55]">Actions</th>
+                      <th className="wrap-any p-4 text-left font-semibold uppercase tracking-[0.18em] text-[#0B2D55]">
+                        N° Facture
+                      </th>
+                      <th className="wrap-any p-4 text-left font-semibold uppercase tracking-[0.18em] text-[#0B2D55]">Client</th>
+                      <th className="wrap-any p-4 text-left font-semibold uppercase tracking-[0.18em] text-[#0B2D55]">Période</th>
+                      <th className="wrap-any p-4 text-right font-semibold uppercase tracking-[0.18em] text-[#0B2D55]">Montant</th>
+                      <th className="wrap-any p-4 text-left font-semibold uppercase tracking-[0.18em] text-[#0B2D55]">Échéance</th>
+                      <th className="wrap-any p-4 text-left font-semibold uppercase tracking-[0.18em] text-[#0B2D55]">Statut</th>
+                      <th className="wrap-any p-4 text-right font-semibold uppercase tracking-[0.18em] text-[#0B2D55]">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredInvoices.map((invoice) => (
                       <tr key={invoice.id} className="border-b border-[#EEF3FA] transition-colors hover:bg-[#F5F9FF]">
-                        <td className="p-4 font-mono text-sm font-semibold text-[#0B2D55]">{invoice.invoice_number}</td>
-                        <td className="p-4 text-sm text-[#0B2D55]/80">{currentClient?.company ?? "Compte principal"}</td>
-                        <td className="p-4 text-sm capitalize text-[#0B2D55]/80">{formatPeriod(invoice.created_at)}</td>
-                        <td className="p-4 text-right text-base font-semibold text-[#0B2D55]">
+                        <td className="wrap-any p-4 font-mono text-sm font-semibold text-[#0B2D55]">
+                          {invoice.invoice_number}
+                        </td>
+                        <td className="wrap-any p-4 text-sm text-[#0B2D55]/80">
+                          {currentClient?.company ?? "Compte principal"}
+                        </td>
+                        <td className="wrap-any p-4 text-sm capitalize text-[#0B2D55]/80">{formatPeriod(invoice.created_at)}</td>
+                        <td className="wrap-any p-4 text-right text-base font-semibold text-[#0B2D55]">
                           {invoice.amount.toFixed(2)} {invoice.currency}
                         </td>
-                        <td className="p-4 text-sm text-[#4A4A4A]">{formatDate(invoice.due_date)}</td>
+                        <td className="wrap-any p-4 text-sm text-[#4A4A4A]">{formatDate(invoice.due_date)}</td>
                         <td className="p-4">
                           <Badge variant="outline" className={`${getStatusColor(invoice.status)} px-3 py-1 text-xs font-semibold`}>
                             {getStatusLabel(invoice.status)}
                           </Badge>
                         </td>
                         <td className="p-4">
-                          <div className="flex justify-end gap-2">
+                          <div className="flex flex-wrap justify-end gap-2">
                             <Button
                               variant="ghost"
                               size="sm"
@@ -381,8 +387,8 @@ const ClientInvoices = () => {
                                 state={{ invoice }}
                                 onClick={() => handleDownload(invoice.invoice_number)}
                               >
-                                <Download className="mr-2 h-4 w-4" />
-                                Télécharger
+                                <Download className="mr-2 h-4 w-4" aria-hidden="true" />
+                                <span className="wrap-any">Télécharger</span>
                               </Link>
                             </Button>
                             {invoice.status === "pending" && (
@@ -393,7 +399,7 @@ const ClientInvoices = () => {
                                 asChild
                               >
                                 <Link to={`/factures/${invoice.id}`} state={{ invoice }}>
-                                  Régler
+                                  <span className="wrap-any">Régler</span>
                                 </Link>
                               </Button>
                             )}

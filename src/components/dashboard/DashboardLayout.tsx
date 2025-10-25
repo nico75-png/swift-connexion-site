@@ -195,11 +195,11 @@ const DashboardLayout = ({ children, sidebar, topbar, showProfileReminder = fals
 
   return (
     <DashboardDrawerContext.Provider value={contextValue}>
-      <div className={cn("app", drawerState.isOpen && "drawer-open")}>        
-        <aside className="sidebar">{sidebar}</aside>
-        <div className="content">
+      <div className={cn("app", drawerState.isOpen && "drawer-open")}>
+        <aside className="sidebar minw0">{sidebar}</aside>
+        <div className="content minw0">
           {topbar}
-          <div className="content-inner">
+          <div className="content-inner minw0">
             {shouldShowReminder && (
               <Alert className="mb-6 border-amber-300 bg-amber-50 text-amber-900">
                 <Info className="h-4 w-4 text-amber-500" />

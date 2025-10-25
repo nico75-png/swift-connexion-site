@@ -85,6 +85,7 @@ All colors MUST be HSL.
     --sidebar-ring: 217.2 91.2% 59.8%;
     --sidebar-w: 216px;
     --drawer-w: 420px;
+    --dashboard-topbar-height: 4rem;
   }
 
   .dark {
@@ -145,14 +146,18 @@ All colors MUST be HSL.
     position: sticky;
     top: 0;
     height: 100vh;
-    z-index: 30;
+    z-index: var(--z-sticky);
     display: flex;
     flex-direction: column;
-    width: minmax(0, var(--sidebar-w));
+    flex: 0 0 var(--sidebar-w);
+    width: var(--sidebar-w);
+    max-width: min(100vw, var(--sidebar-w));
+    background: hsl(var(--sidebar-background));
   }
 
   .sidebar > * {
     flex: 1 1 auto;
+    min-height: 0;
   }
 
   .content {
@@ -161,21 +166,20 @@ All colors MUST be HSL.
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    overflow: hidden;
     background: hsl(var(--background));
   }
 
   .content-inner {
+    position: relative;
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
-    padding: 1.5rem;
+    padding: clamp(1.25rem, 1vw + 1rem, 2.5rem);
+    scroll-padding-top: var(--dashboard-topbar-height);
   }
 
-  @media (min-width: 768px) {
-    .content-inner {
-      padding: 2.5rem;
-    }
+  .content-inner:focus-visible {
+    outline-offset: 4px;
   }
 
   .drawer {
@@ -186,7 +190,7 @@ All colors MUST be HSL.
     width: var(--drawer-w);
     transform: translateX(100%);
     transition: transform 0.25s ease;
-    z-index: 40;
+    z-index: var(--z-modal);
     background: hsl(var(--card));
     color: hsl(var(--card-foreground));
     box-shadow: -16px 0 32px rgba(11, 45, 85, 0.12);
@@ -200,7 +204,7 @@ All colors MUST be HSL.
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.35);
-    z-index: 35;
+    z-index: var(--z-overlay);
     border: 0;
     margin: 0;
     padding: 0;
@@ -223,6 +227,15 @@ All colors MUST be HSL.
   @media (max-width: 1200px) {
     .app {
       grid-template-columns: minmax(0, 1fr);
+    }
+
+    .sidebar {
+      position: relative;
+      height: auto;
+      flex: none;
+      width: 100%;
+      max-width: 100%;
+      z-index: var(--z-base);
     }
 
     .app.drawer-open .content {

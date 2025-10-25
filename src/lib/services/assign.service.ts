@@ -19,6 +19,7 @@ import {
   saveOrders,
   saveScheduledAssignments,
 } from "@/lib/stores/driversOrders.store";
+import { ensureOrderNumberFormat } from "@/lib/orderSequence";
 
 interface ServiceResult {
   success: boolean;
@@ -36,7 +37,12 @@ const nowIso = () => new Date().toISOString();
 
 const resolveDriver = (driverId: string, drivers: Driver[]) => drivers.find((driver) => driver.id === driverId);
 
-const resolveOrder = (orderId: string, orders: Order[]) => orders.find((order) => order.id === orderId);
+const normalizeOrderId = (value: string) => ensureOrderNumberFormat(value) || value;
+
+const resolveOrder = (orderId: string, orders: Order[]) => {
+  const normalized = normalizeOrderId(orderId);
+  return orders.find((order) => normalizeOrderId(order.id) === normalized);
+};
 
 export const cancelScheduledAssignmentsForInterval = (
   driverId: string,
@@ -169,7 +175,8 @@ export const assignDriver = (
   const orders = getOrders();
   const drivers = getDrivers();
 
-  const orderIndex = orders.findIndex((item) => item.id === orderId);
+  const normalizedOrderId = normalizeOrderId(orderId);
+  const orderIndex = orders.findIndex((item) => normalizeOrderId(item.id) === normalizedOrderId);
   if (orderIndex === -1) {
     return { success: false, error: "Commande introuvable" };
   }
@@ -182,7 +189,7 @@ export const assignDriver = (
 
   const assignability = isDriverAssignable(driver, order.schedule.start, order.schedule.end, {
     ignoreScheduledId: options.ignoreScheduledId,
-    currentOrderId: order.id,
+    currentOrderId: normalizeOrderId(order.id),
   });
   if (!assignability.assignable) {
     return {
@@ -197,20 +204,24 @@ export const assignDriver = (
     driverId: driver.id,
     driverAssignedAt: nowIso(),
     status: order.status === "En attente" ? "En attente" : order.status,
+    formattedId: normalizeOrderId(order.formattedId ?? order.id),
+    legacyId: order.legacyId ?? order.id,
   };
 
-  const updatedOrders = orders.map((item) => (item.id === order.id ? updatedOrder : item));
+  const updatedOrders = orders.map((item) =>
+    normalizeOrderId(item.id) === normalizedOrderId ? updatedOrder : item,
+  );
   saveOrders(updatedOrders);
 
   updateAssignmentsAfterAssign({
     id: generateId(),
-    orderId: order.id,
+    orderId: normalizedOrderId,
     driverId: driver.id,
     start: order.schedule.start,
     end: order.schedule.end,
   });
 
-  generateActivity(order.id, driver.id, "ASSIGN");
+  generateActivity(normalizeOrderId(order.id), driver.id, "ASSIGN");
   pushAssignmentNotifications(updatedOrder, driver, "ASSIGN");
 
   return { success: true, driver, order: updatedOrder };
@@ -218,7 +229,8 @@ export const assignDriver = (
 
 export const unassignDriver = (orderId: string): ServiceResult => {
   const orders = getOrders();
-  const orderIndex = orders.findIndex((item) => item.id === orderId);
+  const normalizedOrderId = normalizeOrderId(orderId);
+  const orderIndex = orders.findIndex((item) => normalizeOrderId(item.id) === normalizedOrderId);
   if (orderIndex === -1) {
     return { success: false, error: "Commande introuvable" };
   }
@@ -237,13 +249,17 @@ export const unassignDriver = (orderId: string): ServiceResult => {
     driverAssignedAt: null,
   };
 
-  const updatedOrders = orders.map((item) => (item.id === orderId ? updatedOrder : item));
+  const updatedOrders = orders.map((item) =>
+    normalizeOrderId(item.id) === normalizedOrderId ? updatedOrder : item,
+  );
   saveOrders(updatedOrders);
 
-  const assignments = getAssignments().filter((assignment) => assignment.orderId !== orderId);
+  const assignments = getAssignments().filter(
+    (assignment) => assignment.orderId !== normalizedOrderId,
+  );
   saveAssignments(assignments);
 
-  generateActivity(orderId, driverId, "UNASSIGN");
+  generateActivity(normalizedOrderId, driverId, "UNASSIGN");
   if (driver) {
     pushAssignmentNotifications(order, driver, "UNASSIGN");
   }
@@ -252,12 +268,15 @@ export const unassignDriver = (orderId: string): ServiceResult => {
 };
 
 export const reassignDriver = (orderId: string, newDriverId: string): ServiceResult => {
-  const currentOrder = getOrders().find((order) => order.id === orderId);
+  const normalizedOrderId = normalizeOrderId(orderId);
+  const currentOrder = getOrders().find(
+    (order) => normalizeOrderId(order.id) === normalizedOrderId,
+  );
   const currentDriverId = currentOrder?.driverId || undefined;
   if (currentDriverId) {
-    unassignDriver(orderId);
+    unassignDriver(normalizedOrderId);
   }
-  return assignDriver(orderId, newDriverId);
+  return assignDriver(normalizedOrderId, newDriverId);
 };
 
 export const scheduleDriverAssignment = (
@@ -283,8 +302,10 @@ export const scheduleDriverAssignment = (
     return { success: false, error: "La planification doit être programmée dans le futur" };
   }
 
+  const normalizedOrderId = normalizeOrderId(order.id);
+
   const assignability = isDriverAssignable(driver, order.schedule.start, order.schedule.end, {
-    currentOrderId: order.id,
+    currentOrderId: normalizedOrderId,
   });
   if (!assignability.assignable) {
     return {
@@ -296,7 +317,7 @@ export const scheduleDriverAssignment = (
 
   const scheduledAssignment: ScheduledAssignment = {
     id: generateId(),
-    orderId: order.id,
+    orderId: normalizedOrderId,
     driverId: driver.id,
     start: order.schedule.start,
     end: order.schedule.end,

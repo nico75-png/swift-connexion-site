@@ -17,19 +17,20 @@ interface StatsCardProps {
  */
 const StatsCard = ({ label, value, icon: Icon, color = "text-primary", trend }: StatsCardProps) => {
   return (
-    <Card className="border border-border bg-card shadow-soft">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="mb-1 text-sm text-muted-foreground">{label}</p>
-            <p className="text-3xl font-bold text-foreground">{value}</p>
+    <Card className="minw0 border border-border bg-card shadow-soft" data-testid="stats-card">
+      <CardContent className="flex min-h-[160px] flex-col justify-between gap-4 p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="minw0 space-y-2">
+            <p className="wrap-any text-sm text-muted-foreground">{label}</p>
+            <p className="wrap-any text-3xl font-bold leading-tight text-foreground">{value}</p>
             {trend && (
-              <p className={`mt-2 text-xs ${trend.isPositive ? "text-success" : "text-destructive"}`}>
-                {trend.isPositive ? "+" : ""}{trend.value}% vs mois dernier
+              <p className={`wrap-any text-xs ${trend.isPositive ? "text-success" : "text-destructive"}`}>
+                {trend.isPositive ? "+" : ""}
+                {trend.value}% vs mois dernier
               </p>
             )}
           </div>
-          <Icon className={`h-10 w-10 ${color}`} />
+          <Icon className={`h-10 w-10 shrink-0 ${color}`} aria-hidden="true" />
         </div>
       </CardContent>
     </Card>

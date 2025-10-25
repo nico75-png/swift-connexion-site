@@ -73,6 +73,8 @@ export interface OrderSchedule {
 
 export interface Order {
   id: string;
+  legacyId?: string | null;
+  formattedId?: string | null;
   client: string;
   sector: string;
   type: string;
@@ -205,10 +207,10 @@ const STORAGE_KEYS = {
   notifications: "oc_notifications",
 } as const;
 
-const isBrowser = typeof window !== "undefined";
+const isBrowser = () => typeof window !== "undefined";
 
 const purgeStoredDrivers = () => {
-  if (!isBrowser) {
+  if (!isBrowser()) {
     return;
   }
 
@@ -229,9 +231,76 @@ export const generateId = () => {
   return `id-${Math.random().toString(36).slice(2, 11)}`;
 };
 
-export const defaultDrivers: Driver[] = [];
+const fallbackDrivers: Driver[] = [
+  {
+    id: "DRV-101",
+    name: "Alice Martin",
+    phone: "+33123456780",
+    vehicle: { type: "Fourgon", capacity: "8 m³" },
+    status: "AVAILABLE",
+    nextFreeSlot: new Date().toISOString(),
+    active: true,
+    lifecycleStatus: "ACTIF",
+    workflowStatus: "ACTIF",
+    coversAllZones: true,
+  },
+  {
+    id: "DRV-102",
+    name: "Karim Lopez",
+    phone: "+33123456781",
+    vehicle: { type: "Utilitaire", capacity: "6 m³" },
+    status: "ON_TRIP",
+    nextFreeSlot: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    active: true,
+    lifecycleStatus: "ACTIF",
+    workflowStatus: "EN_COURSE",
+    coversAllZones: true,
+  },
+  {
+    id: "DRV-103",
+    name: "Sophie Bernard",
+    phone: "+33123456782",
+    vehicle: { type: "Break", capacity: "4 m³" },
+    status: "PAUSED",
+    nextFreeSlot: new Date().toISOString(),
+    active: true,
+    lifecycleStatus: "ACTIF",
+    workflowStatus: "EN_PAUSE",
+    coversAllZones: true,
+  },
+];
 
-const defaultOrders: Order[] = ADMIN_ORDER_SEEDS.map(buildOrderFromSeed);
+export const defaultDrivers: Driver[] = fallbackDrivers;
+
+const fallbackOrders: Order[] = [
+  {
+    id: "1000",
+    formattedId: "ORD-1000",
+    legacyId: "1000",
+    client: "Client Express",
+    sector: "B2B Express",
+    type: "Livraison express",
+    status: "En attente",
+    amount: 125,
+    schedule: {
+      start: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+      end: new Date(Date.now() + 90 * 60 * 1000).toISOString(),
+    },
+    pickupAddress: "10 Rue de Rivoli, 75001 Paris",
+    dropoffAddress: "25 Avenue de la République, 75011 Paris",
+    zoneRequirement: "INTRA_PARIS",
+    volumeRequirement: "1.0 m³",
+    weight: "5.0 kg",
+    instructions: "Laisser à l'accueil",
+    options: { express: true },
+    driverId: null,
+    driverAssignedAt: null,
+  },
+];
+
+const defaultOrders: Order[] = ADMIN_ORDER_SEEDS.length
+  ? ADMIN_ORDER_SEEDS.map(buildOrderFromSeed)
+  : fallbackOrders;
 
 const getOrderSchedule = (orderId: string) => {
   const match = defaultOrders.find((order) => order.id === orderId);
@@ -273,7 +342,7 @@ const safeParse = <T,>(value: string | null, fallback: T): T => {
 };
 
 const initStore = <T,>(key: string, defaultValue: T) => {
-  if (!isBrowser) {
+  if (!isBrowser()) {
     return defaultValue;
   }
   const existing = window.localStorage.getItem(key);
@@ -296,7 +365,7 @@ const ensureInitialized = () => {
 };
 
 const readStore = <T,>(key: string, fallback: T): T => {
-  if (!isBrowser) {
+  if (!isBrowser()) {
     return fallback;
   }
   ensureInitialized();
@@ -304,23 +373,47 @@ const readStore = <T,>(key: string, fallback: T): T => {
 };
 
 const writeStore = <T,>(key: string, value: T) => {
-  if (!isBrowser) {
+  if (!isBrowser()) {
     return;
   }
   window.localStorage.setItem(key, JSON.stringify(value));
 };
 
 export const getOrders = (): Order[] =>
-  readStore(STORAGE_KEYS.orders, defaultOrders).map((order) => ({
-    ...order,
-    id: ensureOrderNumberFormat(order.id) || order.id,
-  }));
+  readStore(STORAGE_KEYS.orders, defaultOrders).map((order) => {
+    const formatted = ensureOrderNumberFormat(order.formattedId ?? order.id) || order.id;
+    const legacyCandidate =
+      typeof order.legacyId === "string" && order.legacyId.trim()
+        ? order.legacyId.trim()
+        : order.id;
+    const numericMatch = formatted.match(/\d+$/);
+    const legacyId = legacyCandidate || (numericMatch ? numericMatch[0] : formatted);
+
+    return {
+      ...order,
+      id: legacyId,
+      legacyId,
+      formattedId: formatted,
+    } satisfies Order;
+  });
 
 export const saveOrders = (list: Order[]) => {
-  const normalized = list.map((order) => ({
-    ...order,
-    id: ensureOrderNumberFormat(order.id) || order.id,
-  }));
+  const normalized = list.map((order) => {
+    const formatted = ensureOrderNumberFormat(order.formattedId ?? order.id) || order.id;
+    const legacyCandidate =
+      typeof order.legacyId === "string" && order.legacyId.trim()
+        ? order.legacyId.trim()
+        : order.id;
+    const numericMatch = formatted.match(/\d+$/);
+    const legacyId = legacyCandidate || (numericMatch ? numericMatch[0] : formatted);
+
+    return {
+      ...order,
+      id: formatted,
+      formattedId: formatted,
+      legacyId,
+    } satisfies Order;
+  });
   writeStore(STORAGE_KEYS.orders, normalized);
 };
 
@@ -594,7 +687,10 @@ const sanitizeDriverEntry = (value: Partial<Driver>): Driver | null => {
     ? (value.status as DriverStatus)
     : "AVAILABLE";
 
-  const active = lifecycleStatus !== "INACTIF" && status !== "PAUSED";
+  const active =
+    typeof value.active === "boolean"
+      ? value.active
+      : lifecycleStatus !== "INACTIF" && status !== "PAUSED";
 
   const createdAt =
     typeof value.createdAt === "string" && value.createdAt.trim()
@@ -904,7 +1000,7 @@ export const isDriverAssignable = (
 };
 
 export const resetMockStores = () => {
-  if (!isBrowser) return;
+  if (!isBrowser()) return;
   writeStore(STORAGE_KEYS.orders, defaultOrders);
   writeStore(STORAGE_KEYS.drivers, defaultDrivers);
   writeStore(STORAGE_KEYS.assignments, defaultAssignments);

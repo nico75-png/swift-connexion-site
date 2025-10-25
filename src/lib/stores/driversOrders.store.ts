@@ -92,6 +92,7 @@ export interface Order {
   };
   driverId?: string | null;
   driverAssignedAt?: string | null;
+  formattedId?: string;
 }
 
 export type ScheduledAssignmentStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "CANCELLED" | "FAILED";
@@ -205,10 +206,10 @@ const STORAGE_KEYS = {
   notifications: "oc_notifications",
 } as const;
 
-const isBrowser = typeof window !== "undefined";
+const isBrowser = () => typeof window !== "undefined";
 
 const purgeStoredDrivers = () => {
-  if (!isBrowser) {
+  if (!isBrowser()) {
     return;
   }
 
@@ -229,7 +230,60 @@ export const generateId = () => {
   return `id-${Math.random().toString(36).slice(2, 11)}`;
 };
 
-export const defaultDrivers: Driver[] = [];
+const DRIVER_SEED_TIMESTAMP = "2025-01-15T08:00:00.000Z";
+
+export const defaultDrivers: Driver[] = [
+  {
+    id: "DRV-101",
+    name: "Paul Martin",
+    fullname: "Paul Martin",
+    phone: "+33 6 45 12 34 56",
+    phoneNormalized: "33645123456",
+    email: "paul.martin@one-connexion.test",
+    vehicle: {
+      type: "Fourgon 12m³",
+      capacity: "12 m³",
+      capacityKg: 1200,
+      registration: "AA-123-AA",
+    },
+    plate: "AA-123-AA",
+    plateNormalized: "AA123AA",
+    status: "AVAILABLE",
+    workflowStatus: "ACTIF",
+    nextFreeSlot: DRIVER_SEED_TIMESTAMP,
+    active: true,
+    lifecycleStatus: "ACTIF",
+    unavailabilities: [],
+    createdAt: DRIVER_SEED_TIMESTAMP,
+    updatedAt: DRIVER_SEED_TIMESTAMP,
+    coversAllZones: true,
+  },
+  {
+    id: "DRV-103",
+    name: "Sophie Renard",
+    fullname: "Sophie Renard",
+    phone: "+33 7 11 22 33 44",
+    phoneNormalized: "33711223344",
+    email: "sophie.renard@one-connexion.test",
+    vehicle: {
+      type: "Camionnette 6m³",
+      capacity: "6 m³",
+      capacityKg: 800,
+      registration: "BB-456-BB",
+    },
+    plate: "BB-456-BB",
+    plateNormalized: "BB456BB",
+    status: "PAUSED",
+    workflowStatus: "EN_PAUSE",
+    nextFreeSlot: "2025-01-15T12:00:00.000Z",
+    active: true,
+    lifecycleStatus: "ACTIF",
+    unavailabilities: [],
+    createdAt: DRIVER_SEED_TIMESTAMP,
+    updatedAt: DRIVER_SEED_TIMESTAMP,
+    coversAllZones: true,
+  },
+];
 
 const defaultOrders: Order[] = ADMIN_ORDER_SEEDS.map(buildOrderFromSeed);
 
@@ -273,7 +327,7 @@ const safeParse = <T,>(value: string | null, fallback: T): T => {
 };
 
 const initStore = <T,>(key: string, defaultValue: T) => {
-  if (!isBrowser) {
+  if (!isBrowser()) {
     return defaultValue;
   }
   const existing = window.localStorage.getItem(key);
@@ -296,7 +350,7 @@ const ensureInitialized = () => {
 };
 
 const readStore = <T,>(key: string, fallback: T): T => {
-  if (!isBrowser) {
+  if (!isBrowser()) {
     return fallback;
   }
   ensureInitialized();
@@ -304,17 +358,22 @@ const readStore = <T,>(key: string, fallback: T): T => {
 };
 
 const writeStore = <T,>(key: string, value: T) => {
-  if (!isBrowser) {
+  if (!isBrowser()) {
     return;
   }
   window.localStorage.setItem(key, JSON.stringify(value));
 };
 
 export const getOrders = (): Order[] =>
-  readStore(STORAGE_KEYS.orders, defaultOrders).map((order) => ({
-    ...order,
-    id: ensureOrderNumberFormat(order.id) || order.id,
-  }));
+  readStore(STORAGE_KEYS.orders, defaultOrders).map((order) => {
+    const canonical = ensureOrderNumberFormat(order.id) || order.id;
+    const displayId = canonical.replace(/^ORD-/i, "");
+    return {
+      ...order,
+      id: displayId,
+      formattedId: canonical,
+    };
+  });
 
 export const saveOrders = (list: Order[]) => {
   const normalized = list.map((order) => ({
@@ -850,12 +909,12 @@ export const isDriverAssignable = (
     return { assignable: false, reason: "Ce chauffeur est inactif" };
   }
 
-  if (!driver.active) {
-    return { assignable: false, reason: "Ce chauffeur est indisponible sur ce créneau" };
-  }
-
   if (driver.status === "PAUSED") {
     return { assignable: false, reason: "Chauffeur en pause — sélection impossible" };
+  }
+
+  if (!driver.active) {
+    return { assignable: false, reason: "Ce chauffeur est indisponible sur ce créneau" };
   }
 
   const blockingUnavailability = (driver.unavailabilities ?? []).find((item) =>
@@ -904,7 +963,7 @@ export const isDriverAssignable = (
 };
 
 export const resetMockStores = () => {
-  if (!isBrowser) return;
+  if (!isBrowser()) return;
   writeStore(STORAGE_KEYS.orders, defaultOrders);
   writeStore(STORAGE_KEYS.drivers, defaultDrivers);
   writeStore(STORAGE_KEYS.assignments, defaultAssignments);

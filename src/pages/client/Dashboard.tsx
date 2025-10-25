@@ -1,28 +1,45 @@
 import { useEffect, useMemo, useState } from "react";
 import { differenceInDays, isAfter, subDays } from "date-fns";
-import { Activity, Package, TrendingUp, Wallet } from "lucide-react";
+import { Activity, CheckCircle2, Download, FileText, Package, TrendingUp, Wallet2 } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import ClientSidebar from "@/components/dashboard/ClientSidebar";
-import Topbar from "@/components/dashboard/Topbar";
+import Header from "@/components/dashboard/Header";
 import CreateOrderButton from "@/components/dashboard/CreateOrderButton";
-import StatsCard from "@/components/dashboard/StatsCard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import StatCard from "@/components/dashboard/StatCard";
+import DataTable, { type DataTableColumn } from "@/components/dashboard/DataTable";
+import EmptyState from "@/components/dashboard/EmptyState";
 import { Link } from "react-router-dom";
 import {
   ClientOrderListItem,
   listOrdersByClient,
 } from "@/lib/stores/clientOrders.store";
-import { ensureStoragePrimitives, formatDateTime } from "@/lib/reorder";
+import { ensureStoragePrimitives } from "@/lib/reorder";
 import { useAuth } from "@/lib/stores/auth.store";
 import { getNotifications } from "@/lib/stores/driversOrders.store";
 import type { NotificationEntry } from "@/lib/stores/driversOrders.store";
+import { formatCurrencyEUR, formatDateFR } from "@/lib/formatters";
 
-/**
- * Dashboard principal du client
- * Vue d'ensemble avec stats, graphique et dernières commandes
- */
+const statusStyles: Record<string, string> = {
+  delivered: "bg-[color:rgba(15,157,88,0.14)] text-[color:var(--brand-success)]",
+  pending: "bg-[color:rgba(245,158,11,0.18)] text-[color:var(--brand-warning)]",
+  cancelled: "bg-[color:rgba(220,38,38,0.14)] text-[color:#dc2626]",
+  default: "bg-[color:var(--bg-subtle)] text-[color:var(--text-secondary)]",
+};
+
+const resolveStatusClass = (status: string) => {
+  const normalized = status.toLowerCase();
+  if (normalized.includes("livr")) {
+    return statusStyles.delivered;
+  }
+  if (normalized.includes("attente") || normalized.includes("cours")) {
+    return statusStyles.pending;
+  }
+  if (normalized.includes("annul")) {
+    return statusStyles.cancelled;
+  }
+  return statusStyles.default;
+};
+
 const ClientDashboard = () => {
   const { currentClient, currentUser } = useAuth();
   const [orders, setOrders] = useState<ClientOrderListItem[]>([]);
@@ -61,8 +78,6 @@ const ClientDashboard = () => {
     };
   }, [currentClient?.id]);
 
-  const recentOrders = useMemo(() => orders.slice(0, 4), [orders]);
-
   const lastThirtyDaysOrders = useMemo(() => {
     const cutoff = subDays(new Date(), 30);
     return orders.filter((order) => {
@@ -98,53 +113,41 @@ const ClientDashboard = () => {
 
     return [
       {
-        label: "Commandes sur 30 jours",
+        title: "Commandes (30 jours)",
         value: lastThirtyDaysOrders.length,
+        description: "Commandes validées sur les trente derniers jours",
         icon: Package,
-        color: "text-primary",
         trend: {
-          value: Math.min(120, lastThirtyDaysOrders.length * 12),
-          isPositive: lastThirtyDaysOrders.length >= 1,
-        },
-      },
-      {
-        label: "Taux de livraison",
-        value: `${deliveredRatio}%`,
-        icon: Activity,
-        color: "text-success",
-        trend: {
-          value: deliveredRatio - 60,
+          value: deliveredRatio,
+          label: "livrées",
           isPositive: deliveredRatio >= 60,
         },
       },
       {
-        label: "Montant dépensé",
-        value: `${totalAmountLast30Days.toFixed(2)} €`,
-        icon: Wallet,
-        color: "text-secondary",
+        title: "Montant facturé",
+        value: formatCurrencyEUR(totalAmountLast30Days),
+        description: "Montant TTC cumulé sur la période",
+        icon: Wallet2,
       },
       {
-        label: "Délai moyen",
+        title: "Taux de livraison",
+        value: `${deliveredRatio} %`,
+        description: "Livraisons réussies vs commandes créées",
+        icon: CheckCircle2,
+        trend: {
+          value: deliveredRatio >= 80 ? "Objectif atteint" : "À surveiller",
+        },
+      },
+      {
+        title: "Délai moyen",
         value: `${averageDeliveryDelay} j`,
+        description: "Délai observé entre création et livraison",
         icon: TrendingUp,
-        color: "text-info",
       },
     ];
-  }, [
-    lastThirtyDaysOrders.length,
-    deliveredOrdersLast30Days.length,
-    totalAmountLast30Days,
-    averageDeliveryDelay,
-  ]);
+  }, [averageDeliveryDelay, deliveredOrdersLast30Days.length, lastThirtyDaysOrders.length, totalAmountLast30Days]);
 
-  const getStatusColor = (color: string) => {
-    const colors: Record<string, string> = {
-      info: "bg-info/10 text-info border-info/20",
-      success: "bg-success/10 text-success border-success/20",
-      warning: "bg-warning/10 text-warning border-warning/20",
-    };
-    return colors[color] || colors.info;
-  };
+  const recentOrders = useMemo(() => orders.slice(0, 5), [orders]);
 
   const formattedNotifications = useMemo(
     () =>
@@ -152,150 +155,207 @@ const ClientDashboard = () => {
         .filter((notif) => notif.createdAt)
         .map((notif) => {
           const date = new Date(notif.createdAt);
-          const isValidDate = !isNaN(date.getTime());
-          
+          const isValidDate = !Number.isNaN(date.getTime());
+
           return {
             id: notif.id,
             message: notif.message,
-            time: isValidDate
-              ? new Intl.DateTimeFormat("fr-FR", {
-                  day: "2-digit",
-                  month: "long",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                }).format(date)
-              : "Date inconnue",
+            time: isValidDate ? formatDateFR(date, { withTime: true }) : "Date inconnue",
             read: notif.read,
           };
         }),
     [notifications],
   );
 
+  const invoiceColumns: Array<DataTableColumn<ClientOrderListItem & { amount: string; createdLabel: string }>> = [
+    {
+      key: "orderNumber",
+      header: "N° facture",
+      sortable: true,
+    },
+    {
+      key: "createdLabel",
+      header: "Date",
+      sortable: true,
+      sortAccessor: (item) => new Date(item.createdAt ?? 0),
+    },
+    {
+      key: "status",
+      header: "Statut",
+      render: (item) => (
+        <span
+          className={`inline-flex items-center justify-center rounded-[var(--radius-pill)] px-[var(--space-2)] py-[2px] text-xs font-semibold ${resolveStatusClass(item.status)}`}
+        >
+          {item.status}
+        </span>
+      ),
+    },
+    {
+      key: "amount",
+      header: "Montant",
+      align: "right",
+      sortable: true,
+      sortAccessor: (item) => item.amountTTC ?? 0,
+      render: (item) => <span className="font-medium text-[color:var(--text-primary)]">{item.amount}</span>,
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      render: (item) => (
+        <Link
+          to={`/factures/${item.id}`}
+          className="inline-flex min-h-[36px] items-center justify-center rounded-[var(--radius-sm)] border border-[color:var(--border-subtle)] px-[var(--space-2)] py-[var(--space-1)] text-xs font-medium text-[color:var(--brand-primary)] transition-colors duration-150 hover:bg-[color:rgba(11,45,99,0.08)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-accent)]"
+        >
+          Voir
+        </Link>
+      ),
+    },
+  ];
+
+  const invoiceRows = useMemo(
+    () =>
+      orders.map((order) => ({
+        ...order,
+        amount: formatCurrencyEUR(order.amountTTC ?? 0),
+        createdLabel: order.createdAt ? formatDateFR(order.createdAt) : "—",
+      })),
+    [orders],
+  );
+
   return (
     <DashboardLayout
       sidebar={<ClientSidebar />}
-      topbar={<Topbar userName={currentUser?.name ?? undefined} notifications={formattedNotifications} />}
+      topbar={
+        <Header
+          title="Tableau de bord"
+          subtitle="Suivez vos commandes et factures en un coup d’œil"
+          userName={currentUser?.name ?? undefined}
+          userEmail={currentUser?.email ?? undefined}
+          notifications={formattedNotifications}
+          cta={<CreateOrderButton className="inline-flex" />}
+        />
+      }
       showProfileReminder
     >
-      <div className="space-y-6">
-        {/* En-tête */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Tableau de bord</h1>
-            <p className="text-muted-foreground">Aperçu de votre activité</p>
-          </div>
-          <CreateOrderButton className="mt-3 sm:mt-0" />
-        </div>
-
-        {/* Stats KPI */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat, i) => (
-            <StatsCard key={i} {...stat} />
+      <div className="flex flex-col gap-[var(--space-6)]">
+        <section className="grid grid-cols-1 gap-[var(--space-4)] sm:grid-cols-2 xl:grid-cols-4">
+          {stats.map((stat) => (
+            <StatCard
+              key={stat.title}
+              title={stat.title}
+              value={stat.value}
+              description={stat.description}
+              icon={stat.icon}
+              trend={stat.trend}
+              isLoading={isLoading}
+            />
           ))}
-        </div>
+        </section>
 
-        {/* Graphique activité (placeholder) */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Activité des 30 derniers jours</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-lg p-6">
-              <div className="grid h-full w-full grid-cols-15 items-end gap-1">
-                {Array.from({ length: 15 }).map((_, index) => {
-                  const factor = lastThirtyDaysOrders[index]?.amountTTC ?? 0;
-                  const height = Math.min(100, Math.round((factor / 120) * 100));
-                  return (
+        <section className="grid grid-cols-1 gap-[var(--space-6)] xl:grid-cols-12">
+          <div className="xl:col-span-8">
+            <DataTable
+              data={invoiceRows}
+              columns={invoiceColumns}
+              caption="Mes factures"
+              isLoading={isLoading}
+              pageSize={6}
+              initialSortKey="createdLabel"
+              initialSortDirection="desc"
+              getRowId={(row) => row.id}
+              emptyState={{
+                icon: <FileText className="h-8 w-8" aria-hidden />,
+                title: "Aucune facture disponible",
+                description: "Créez votre première commande pour générer automatiquement vos factures.",
+                actionLabel: "Créer une commande",
+                onAction: () => window.scrollTo({ top: 0, behavior: "smooth" }),
+              }}
+            />
+          </div>
+
+          <div className="flex flex-col gap-[var(--space-4)] xl:col-span-4">
+            <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-[var(--space-5)] shadow-[var(--elevation-1)]">
+              <div className="mb-[var(--space-3)] flex items-center justify-between">
+                <h2 className="text-base font-semibold text-[color:var(--text-primary)]">Activité récente</h2>
+                <Activity className="h-5 w-5 text-[color:var(--brand-primary)]" aria-hidden />
+              </div>
+              {isLoading ? (
+                <div className="space-y-[var(--space-2)]">
+                  {Array.from({ length: 3 }).map((_, index) => (
                     <div
                       // eslint-disable-next-line react/no-array-index-key
-                      key={index}
-                      className="bg-primary/60 transition-all duration-500 rounded-t"
-                      style={{ height: `${height}%` }}
+                      key={`recent-skeleton-${index}`}
+                      className="h-4 w-full animate-pulse rounded-[var(--radius-sm)] bg-[color:var(--bg-subtle)]"
                     />
-                  );
-                })}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Dernières commandes */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Dernières commandes</CardTitle>
-            <Button variant="outline" asChild>
-              <Link to="/commandes">Voir tout</Link>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <p className="rounded-lg border border-dashed border-muted-foreground/40 p-6 text-center text-sm text-muted-foreground">
-                Chargement des dernières commandes…
-              </p>
-            ) : recentOrders.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-muted-foreground/40 p-6 text-center text-sm text-muted-foreground">
-                Aucune commande récente à afficher.
-              </p>
-            ) : (
-              <div className="space-y-4">
-                {recentOrders.map((order) => (
-                  <div
-                    key={order.id}
-                    className="flex flex-col gap-3 rounded-lg border border-transparent bg-muted/30 p-4 transition hover:border-primary/40 hover:bg-primary/5 md:flex-row md:items-center md:justify-between"
-                  >
-                    <div>
-                      <p className="font-medium">{order.orderNumber}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {order.transportLabel}
-                        {order.createdAt && ` • ${formatDateTime(order.createdAt, "fr-FR")}`}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-                      <Badge className={getStatusColor(order.status.toLowerCase().includes("livr") ? "success" : "info")}>
-                        {order.status}
-                      </Badge>
-                      <div className="flex flex-col gap-2 sm:flex-row">
-                        <Button variant="outline" size="sm" asChild>
-                          <Link to={`/commandes/${order.id}`}>Voir le détail</Link>
-                        </Button>
-                        <Button variant="cta" size="sm" asChild>
-                          <Link to={`/suivi/${order.id}`}>Voir le suivi GPS</Link>
-                        </Button>
+                  ))}
+                </div>
+              ) : recentOrders.length === 0 ? (
+                <EmptyState
+                  icon={<Download className="h-6 w-6" aria-hidden />}
+                  title="Aucune commande récente"
+                  description="Vos futures commandes apparaîtront ici dès leur création."
+                  className="border-none bg-transparent p-0"
+                />
+              ) : (
+                <ul className="space-y-[var(--space-3)]">
+                  {recentOrders.map((order) => (
+                    <li key={order.id} className="flex flex-col gap-[var(--space-1)]">
+                      <div className="flex items-center justify-between gap-[var(--space-2)]">
+                        <Link
+                          to={`/commandes/${order.id}`}
+                          className="text-sm font-semibold text-[color:var(--brand-primary)] hover:underline"
+                        >
+                          {order.orderNumber}
+                        </Link>
+                        <span className="text-xs text-[color:var(--text-muted)]">
+                          {order.createdAt ? formatDateFR(order.createdAt, { withTime: true }) : "Date inconnue"}
+                        </span>
                       </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                      <p className="text-sm text-[color:var(--text-secondary)]">{order.transportLabel}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
 
-        {/* Notifications récentes */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Notifications récentes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <p className="rounded-lg border border-dashed border-muted-foreground/40 p-4 text-center text-sm text-muted-foreground">
-                Chargement des notifications…
-              </p>
-            ) : formattedNotifications.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-muted-foreground/40 p-4 text-center text-sm text-muted-foreground">
-                Aucune notification récente.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {formattedNotifications.slice(0, 5).map((notif) => (
-                  <div key={notif.id} className={`rounded-lg p-3 ${!notif.read ? "bg-primary/5" : "bg-muted/30"}`}>
-                    <p className="text-sm">{notif.message}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{notif.time}</p>
-                  </div>
-                ))}
+            <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-[var(--space-5)] shadow-[var(--elevation-1)]">
+              <div className="mb-[var(--space-3)] flex items-center justify-between">
+                <h2 className="text-base font-semibold text-[color:var(--text-primary)]">Notifications</h2>
+                <Download className="h-5 w-5 text-[color:var(--brand-primary)]" aria-hidden />
               </div>
-            )}
-          </CardContent>
-        </Card>
+              {isLoading ? (
+                <div className="space-y-[var(--space-2)]">
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <div
+                      // eslint-disable-next-line react/no-array-index-key
+                      key={`notif-skeleton-${index}`}
+                      className="h-3 w-full animate-pulse rounded-[var(--radius-sm)] bg-[color:var(--bg-subtle)]"
+                    />
+                  ))}
+                </div>
+              ) : formattedNotifications.length === 0 ? (
+                <EmptyState
+                  icon={<Download className="h-6 w-6" aria-hidden />}
+                  title="Rien à signaler"
+                  description="Vous serez averti ici des mises à jour importantes."
+                  className="border-none bg-transparent p-0"
+                />
+              ) : (
+                <ul className="space-y-[var(--space-3)]" aria-live="polite">
+                  {formattedNotifications.slice(0, 5).map((notif) => (
+                    <li
+                      key={notif.id}
+                      className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-subtle)] px-[var(--space-3)] py-[var(--space-2)]"
+                    >
+                      <p className="text-sm text-[color:var(--text-secondary)]">{notif.message}</p>
+                      <p className="text-xs text-[color:var(--text-muted)]">{notif.time}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </section>
       </div>
     </DashboardLayout>
   );

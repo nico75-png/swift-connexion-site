@@ -478,13 +478,7 @@ export const formatDateTime = (value: string | undefined, locale = "fr-FR") => {
   }
 };
 
-export const formatCurrencyEUR = (value: number) => {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 2,
-  }).format(value);
-};
+export { formatCurrencyEUR } from "./formatters";
 
 export const computeDurationMinutes = (startISO: string, endISO: string) => {
   try {

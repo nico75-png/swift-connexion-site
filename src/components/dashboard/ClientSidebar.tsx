@@ -93,7 +93,7 @@ const ClientSidebar = () => {
     }
 
     setIsMobileOpen(false);
-    navigate("/auth");
+    navigate("/login");
   };
 
   const toggleMobileSidebar = () => setIsMobileOpen(value => !value);
@@ -101,41 +101,51 @@ const ClientSidebar = () => {
   const toggleCollapse = () => setIsCollapsed(value => !value);
   const toggleTheme = () => setTheme(value => (value === "light" ? "dark" : "light"));
 
-  const primaryNavigation = [{
-    icon: LayoutDashboard,
-    label: "Tableau de bord",
-    path: "/dashboard"
-  }, {
-    icon: Package,
-    label: "Mes commandes",
-    path: "/commandes"
-  }, {
-    icon: Truck,
-    label: "Suivi en temps réel",
-    path: "/suivi"
-  }, {
-    icon: FileText,
-    label: "Mes factures",
-    path: "/factures"
-  }, {
-    icon: MessageSquare,
-    label: "Messages",
-    path: "/messages"
-  }, {
-    icon: Settings,
-    label: "Paramètres",
-    path: "/parametres"
-  }];
+  const primaryNavigation = [
+    {
+      icon: LayoutDashboard,
+      label: "Tableau de bord",
+      path: "/dashboard-client",
+    },
+    {
+      icon: Package,
+      label: "Mes commandes",
+      path: "/dashboard-client/commandes",
+    },
+    {
+      icon: Truck,
+      label: "Suivi en temps réel",
+      path: "/dashboard-client/suivi/dernier",
+    },
+    {
+      icon: FileText,
+      label: "Mes factures",
+      path: "/dashboard-client/factures",
+    },
+    {
+      icon: MessageSquare,
+      label: "Messages",
+      path: "/dashboard-client/messages",
+    },
+    {
+      icon: Settings,
+      label: "Paramètres",
+      path: "/dashboard-client/parametres",
+    },
+  ];
 
-  const secondaryNavigation = [{
-    icon: PhoneCall,
-    label: "Client d'assistance",
-    path: "/support"
-  }, {
-    icon: HelpCircle,
-    label: "Centre d'aide",
-    path: "/aide"
-  }];
+  const secondaryNavigation = [
+    {
+      icon: PhoneCall,
+      label: "Client d'assistance",
+      path: "/contact",
+    },
+    {
+      icon: HelpCircle,
+      label: "Centre d'aide",
+      path: "/faq",
+    },
+  ];
 
   const { scrollYProgress } = useScroll();
   const parallaxY = useTransform(scrollYProgress, [0, 1], [0, 12]);
@@ -250,7 +260,7 @@ const ClientSidebar = () => {
                       const link = (
                         <NavLink
                           to={item.path}
-              end={item.path === "/dashboard"}
+                          end={item.path === "/dashboard-client"}
                           className={({ isActive }) =>
                             cn(
                               "group flex items-center gap-3 rounded-2xl border border-transparent px-4 py-3 text-sm font-medium text-white/80 transition-all duration-300",

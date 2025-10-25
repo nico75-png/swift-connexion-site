@@ -5,8 +5,9 @@ import { ErrorBoundary, type FallbackProps } from "./ErrorBoundary";
 import { useAuth, type UserRole } from "@/lib/stores/auth.store";
 import { useAuthProfile } from "@/providers/AuthProvider";
 
-const Home = lazy(() => import("@/pages/public/Home"));
-const Expertises = lazy(() => import("@/pages/public/Expertises"));
+const Home = lazy(() => import("@/pages/public"));
+const Expertises = lazy(() => import("@/pages/public/expertises"));
+const ExpertiseDetail = lazy(() => import("@/pages/public/expertises/[slug]"));
 const Tarifs = lazy(() => import("@/pages/public/Tarifs"));
 const FAQ = lazy(() => import("@/pages/public/FAQ"));
 const Contact = lazy(() => import("@/pages/public/Contact"));
@@ -19,26 +20,26 @@ const CGV = lazy(() => import("@/pages/public/CGV"));
 const Cookies = lazy(() => import("@/pages/public/Cookies"));
 const NotFound = lazy(() => import("@/pages/public/NotFound"));
 const DashboardClient = lazy(() => import("@/pages/dashboard-client"));
-const DashboardClientCommandes = lazy(() => import("@/pages/dashboard-client/Commandes"));
-const DashboardClientCommandeNouvelle = lazy(() => import("@/pages/dashboard-client/CommandesNouvelle"));
-const DashboardClientCommandeDetail = lazy(() => import("@/pages/dashboard-client/CommandesDetail"));
-const DashboardClientSuiviDetail = lazy(() => import("@/pages/dashboard-client/SuiviDetail"));
-const DashboardClientFactures = lazy(() => import("@/pages/dashboard-client/Factures"));
-const DashboardClientFactureDetail = lazy(() => import("@/pages/dashboard-client/FactureDetail"));
-const DashboardClientMessages = lazy(() => import("@/pages/dashboard-client/Messages"));
-const DashboardClientMessageDetail = lazy(() => import("@/pages/dashboard-client/MessageDetail"));
-const DashboardClientProfil = lazy(() => import("@/pages/dashboard-client/Profil"));
-const DashboardClientParametres = lazy(() => import("@/pages/dashboard-client/Parametres"));
+const DashboardClientCommandes = lazy(() => import("@/pages/dashboard-client/commandes"));
+const DashboardClientCommandeNouvelle = lazy(() => import("@/pages/dashboard-client/commandes/nouvelle"));
+const DashboardClientCommandeDetail = lazy(() => import("@/pages/dashboard-client/commandes/[id]"));
+const DashboardClientSuiviDetail = lazy(() => import("@/pages/dashboard-client/suivi/[id]"));
+const DashboardClientFactures = lazy(() => import("@/pages/dashboard-client/factures"));
+const DashboardClientFactureDetail = lazy(() => import("@/pages/dashboard-client/factures/[id]"));
+const DashboardClientMessages = lazy(() => import("@/pages/dashboard-client/messages"));
+const DashboardClientMessageDetail = lazy(() => import("@/pages/dashboard-client/messages/[id]"));
+const DashboardClientProfil = lazy(() => import("@/pages/dashboard-client/profil"));
+const DashboardClientParametres = lazy(() => import("@/pages/dashboard-client/parametres"));
 const DashboardAdmin = lazy(() => import("@/pages/dashboard-admin"));
-const DashboardAdminCommandes = lazy(() => import("@/pages/dashboard-admin/Commandes"));
-const DashboardAdminCommandeDetail = lazy(() => import("@/pages/dashboard-admin/CommandeDetail"));
-const DashboardAdminChauffeurs = lazy(() => import("@/pages/dashboard-admin/Chauffeurs"));
-const DashboardAdminClients = lazy(() => import("@/pages/dashboard-admin/Clients"));
-const DashboardAdminClientDetail = lazy(() => import("@/pages/dashboard-admin/ClientDetail"));
-const DashboardAdminFactures = lazy(() => import("@/pages/dashboard-admin/Factures"));
-const DashboardAdminStatistiques = lazy(() => import("@/pages/dashboard-admin/Statistiques"));
-const DashboardAdminMessages = lazy(() => import("@/pages/dashboard-admin/Messages"));
-const DashboardAdminParametres = lazy(() => import("@/pages/dashboard-admin/Parametres"));
+const DashboardAdminCommandes = lazy(() => import("@/pages/dashboard-admin/commandes"));
+const DashboardAdminCommandeDetail = lazy(() => import("@/pages/dashboard-admin/commandes/[id]"));
+const DashboardAdminChauffeurs = lazy(() => import("@/pages/dashboard-admin/chauffeurs"));
+const DashboardAdminClients = lazy(() => import("@/pages/dashboard-admin/clients"));
+const DashboardAdminClientDetail = lazy(() => import("@/pages/dashboard-admin/clients/[id]"));
+const DashboardAdminFactures = lazy(() => import("@/pages/dashboard-admin/factures"));
+const DashboardAdminStatistiques = lazy(() => import("@/pages/dashboard-admin/statistiques"));
+const DashboardAdminMessages = lazy(() => import("@/pages/dashboard-admin/messages"));
+const DashboardAdminParametres = lazy(() => import("@/pages/dashboard-admin/parametres"));
 
 const Layout = () => <Outlet />;
 
@@ -115,6 +116,7 @@ export function AppRoutes() {
       <Route path="/" element={<Layout />}>
         <Route index element={withGuards(Home)} />
         <Route path="expertises" element={withGuards(Expertises)} />
+        <Route path="expertises/:slug" element={withGuards(ExpertiseDetail)} />
         <Route path="tarifs" element={withGuards(Tarifs)} />
         <Route path="faq" element={withGuards(FAQ)} />
         <Route path="contact" element={withGuards(Contact)} />

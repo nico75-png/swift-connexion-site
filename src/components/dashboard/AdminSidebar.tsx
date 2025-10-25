@@ -44,17 +44,17 @@ const AdminSidebar = () => {
       console.error("Erreur lors de la déconnexion", error);
     }
     closeMobileSidebar();
-    navigate("/auth");
+    navigate("/login");
   };
 
   const menuItems = useMemo(
     () => [
-      { icon: LayoutDashboard, label: "Tableau de bord", path: "/admin" },
-      { icon: ClipboardList, label: "Mes commandes", path: "/admin/commandes" },
-      { icon: Radar, label: "Suivi en temps réel", path: "/admin/statistiques" },
-      { icon: Receipt, label: "Mes factures", path: "/admin/factures" },
-      { icon: MessageCircle, label: "Messages", path: "/admin/messages" },
-      { icon: Settings, label: "Paramètres", path: "/admin/parametres" },
+      { icon: LayoutDashboard, label: "Tableau de bord", path: "/dashboard-admin" },
+      { icon: ClipboardList, label: "Mes commandes", path: "/dashboard-admin/commandes" },
+      { icon: Radar, label: "Suivi en temps réel", path: "/dashboard-admin/statistiques" },
+      { icon: Receipt, label: "Mes factures", path: "/dashboard-admin/factures" },
+      { icon: MessageCircle, label: "Messages", path: "/dashboard-admin/messages" },
+      { icon: Settings, label: "Paramètres", path: "/dashboard-admin/parametres" },
     ],
     [],
   );
@@ -167,7 +167,7 @@ const AdminSidebar = () => {
                 <li key={item.path}>
                   <NavLink
                     to={item.path}
-                    end={item.path === "/admin"}
+                    end={item.path === "/dashboard-admin"}
                     className={({ isActive }) =>
                       cn(
                         "group flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-semibold transition-all duration-300",

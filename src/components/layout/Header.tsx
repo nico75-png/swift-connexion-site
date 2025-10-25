@@ -52,7 +52,7 @@ const Header = () => {
               <Link to="/commande-sans-compte">Commander une course</Link>
             </Button>
             <Button variant="outline" size="default" asChild>
-              <Link to="/auth">Connexion</Link>
+              <Link to="/login">Connexion</Link>
             </Button>
           </div>
 
@@ -97,7 +97,7 @@ const Header = () => {
                 </Link>
               </Button>
               <Button variant="outline" size="default" className="w-full" asChild>
-                <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
+                <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
                   Connexion
                 </Link>
               </Button>

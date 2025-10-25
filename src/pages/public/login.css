@@ -98,6 +98,90 @@
   gap: clamp(0.55rem, 2vh, 0.9rem);
 }
 
+.onecx-auth__quick-access {
+  width: min(620px, 100%);
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(11, 45, 85, 0.1);
+  border-radius: 18px;
+  padding: clamp(1rem, 2.8vw, 1.5rem);
+  box-shadow: 0 20px 40px rgba(11, 45, 85, 0.15);
+  display: grid;
+  gap: 0.75rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.onecx-auth__quick-access::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(255, 204, 0, 0.1), rgba(11, 45, 85, 0.05));
+  opacity: 0.6;
+}
+
+.onecx-auth__quick-actions {
+  display: grid;
+  gap: 0.65rem;
+  position: relative;
+  z-index: 1;
+}
+
+@media (min-width: 640px) {
+  .onecx-auth__quick-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.onecx-auth__quick-button {
+  border: none;
+  border-radius: 12px;
+  padding: 0.75rem 1.25rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #ffffff;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.onecx-auth__quick-button:focus-visible {
+  outline: 3px solid rgba(255, 204, 0, 0.65);
+  outline-offset: 2px;
+}
+
+.onecx-auth__quick-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 32px rgba(11, 45, 85, 0.18);
+}
+
+.onecx-auth__quick-button:active {
+  transform: translateY(0);
+}
+
+.onecx-auth__quick-button--admin {
+  background: linear-gradient(135deg, rgba(11, 45, 85, 0.95), rgba(11, 45, 85, 0.75));
+}
+
+.onecx-auth__quick-button--client {
+  background: linear-gradient(135deg, rgba(255, 204, 0, 0.95), rgba(255, 204, 0, 0.75));
+  color: var(--onecx-text);
+}
+
+.onecx-auth__quick-note {
+  font-size: 0.75rem;
+  color: rgba(11, 45, 85, 0.65);
+  margin: 0;
+  font-style: italic;
+  position: relative;
+  z-index: 1;
+}
+
 .onecx-auth__eyebrow {
   text-transform: uppercase;
   font-size: 0.78rem;

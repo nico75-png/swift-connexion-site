@@ -102,29 +102,6 @@ const Login = () => {
     }
   };
 
-  const handleTestLogin = async (email: string, password: string, redirectPath: string) => {
-    setLoginError(null);
-    setIsLoggingIn(true);
-    
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      navigate(redirectPath, { replace: true });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "La connexion de test a échoué.";
-      setLoginError(message);
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
-
   const handleSignUpSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isSigningUp) {
@@ -200,6 +177,10 @@ const Login = () => {
     }
   };
 
+  const handleQuickAccess = (path: string) => {
+    window.location.href = path;
+  };
+
   return (
     <div className="onecx-auth">
       <div className="onecx-auth__ambient" aria-hidden="true" />
@@ -217,6 +198,28 @@ const Login = () => {
             Accédez à une expérience premium pour piloter vos flux logistiques en toute fluidité.
           </p>
         </div>
+
+        <section className="onecx-auth__quick-access" aria-label="Accès rapide de test">
+          <div className="onecx-auth__quick-actions">
+            <button
+              type="button"
+              className="onecx-auth__quick-button onecx-auth__quick-button--admin"
+              onClick={() => handleQuickAccess("/admin-dashboard")}
+            >
+              Se connecter en tant qu’administrateur
+            </button>
+            <button
+              type="button"
+              className="onecx-auth__quick-button onecx-auth__quick-button--client"
+              onClick={() => handleQuickAccess("/client-dashboard")}
+            >
+              Se connecter en tant que client (test)
+            </button>
+          </div>
+          <p className="onecx-auth__quick-note">
+            Accès rapide de test — Aucun identifiant requis. Sera supprimé plus tard.
+          </p>
+        </section>
 
         <div
           className="onecx-auth__toggle"
@@ -299,49 +302,6 @@ const Login = () => {
               <button type="submit" className="onecx-auth__primary" disabled={isLoggingIn}>
                 {isLoggingIn ? "Connexion…" : "Se connecter"}
               </button>
-
-              {/* BOUTONS TEMPORAIRES DE TEST - À SUPPRIMER */}
-              <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: 'hsl(var(--muted))', borderRadius: '8px', border: '2px dashed hsl(var(--warning))' }}>
-                <p style={{ fontSize: '0.75rem', color: 'hsl(var(--warning))', marginBottom: '0.5rem', fontWeight: 600 }}>
-                  ⚠️ BOUTONS DE TEST - À SUPPRIMER APRÈS PHASE DE TEST
-                </p>
-                <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
-                  <button
-                    type="button"
-                    onClick={() => handleTestLogin('admin@test.com', 'testpassword123', '/dashboard-admin')}
-                    disabled={isLoggingIn}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      backgroundColor: 'hsl(var(--destructive))',
-                      color: 'hsl(var(--destructive-foreground))',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '0.875rem',
-                      cursor: isLoggingIn ? 'not-allowed' : 'pointer',
-                      opacity: isLoggingIn ? 0.5 : 1
-                    }}
-                  >
-                    🔧 Connexion Admin (Temporaire)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleTestLogin('client@test.com', 'testpassword123', '/dashboard-client')}
-                    disabled={isLoggingIn}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      backgroundColor: 'hsl(var(--secondary))',
-                      color: 'hsl(var(--secondary-foreground))',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '0.875rem',
-                      cursor: isLoggingIn ? 'not-allowed' : 'pointer',
-                      opacity: isLoggingIn ? 0.5 : 1
-                    }}
-                  >
-                    👤 Connexion Client (Temporaire)
-                  </button>
-                </div>
-              </div>
 
               <div className="onecx-auth__aux">
                 <span>Pas encore de compte ?</span>

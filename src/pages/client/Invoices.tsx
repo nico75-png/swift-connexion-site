@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Download, FileText, Wallet } from "lucide-react";
+import { Download, FileText, Loader2, Wallet } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -185,34 +185,35 @@ const ClientInvoices = () => {
 
         {/* Tableau des factures */}
         <Card className="rounded-3xl border border-[rgba(0,0,0,0.08)] bg-white shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
-          <CardContent className="overflow-hidden p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="border-b bg-[#E3EDF8]">
-                  <tr>
-                    <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide text-[#0B2D55]">N° Facture</th>
-                    <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide text-[#0B2D55]">Date de création</th>
-                    <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide text-[#0B2D55]">Date d'échéance</th>
-                    <th className="p-4 text-right text-sm font-semibold uppercase tracking-wide text-[#0B2D55]">Montant</th>
-                    <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide text-[#0B2D55]">Statut</th>
-                    <th className="p-4 text-right text-sm font-semibold uppercase tracking-wide text-[#0B2D55]">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {isLoading ? (
+          <CardContent className="p-0">
+            {isLoading ? (
+              <div className="empty-state" role="status" aria-live="polite">
+                <Loader2 className="h-8 w-8 animate-spin text-[#0B2D55]" aria-hidden="true" />
+                <p className="text-sm text-[#4A4A4A]">Chargement des factures…</p>
+              </div>
+            ) : filteredInvoices.length === 0 ? (
+              <div className="empty-state" role="status">
+                <FileText className="h-10 w-10 text-[#0B2D55]" aria-hidden="true" />
+                <div className="space-y-1">
+                  <p className="text-base font-semibold text-[#0B2D55]">Aucune facture disponible pour le moment.</p>
+                  <p className="text-sm text-[#4A4A4A]">Vos factures s’afficheront ici dès qu’elles seront générées.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="border-b bg-[#E3EDF8]">
                     <tr>
-                      <td colSpan={6} className="p-6 text-center text-sm text-[#4A4A4A]">
-                        Chargement...
-                      </td>
+                      <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide text-[#0B2D55]">N° Facture</th>
+                      <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide text-[#0B2D55]">Date de création</th>
+                      <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide text-[#0B2D55]">Date d'échéance</th>
+                      <th className="p-4 text-right text-sm font-semibold uppercase tracking-wide text-[#0B2D55]">Montant</th>
+                      <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide text-[#0B2D55]">Statut</th>
+                      <th className="p-4 text-right text-sm font-semibold uppercase tracking-wide text-[#0B2D55]">Actions</th>
                     </tr>
-                  ) : filteredInvoices.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="p-6 text-center text-sm text-[#4A4A4A]">
-                        Aucune facture disponible pour le moment.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredInvoices.map((invoice) => (
+                  </thead>
+                  <tbody>
+                    {filteredInvoices.map((invoice) => (
                       <tr key={invoice.id} className="border-b transition-colors hover:bg-[#F0F6FD]">
                         <td className="p-4 font-mono text-sm font-semibold text-[#0B2D55]">{invoice.invoice_number}</td>
                         <td className="p-4 text-sm text-[#4A4A4A]">{formatDate(invoice.created_at)}</td>
@@ -257,11 +258,11 @@ const ClientInvoices = () => {
                           </div>
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

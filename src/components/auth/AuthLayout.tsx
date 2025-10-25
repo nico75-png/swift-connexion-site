@@ -5,8 +5,8 @@ export interface AuthLayoutVisualProps {
   label: string;
   headline: string;
   description: string;
-  imageUrl: string;
-  imageAlt: string;
+  imageUrl?: string;
+  imageAlt?: string;
   imageSrcSet?: string;
   imageSizes?: string;
 }
@@ -43,12 +43,18 @@ const AuthLayout = ({
             <div className="mx-auto w-full max-w-md">{children}</div>
           </div>
 
-          <div className="relative order-1 overflow-hidden md:order-2">
-            <img src={visual.imageUrl} srcSet={visual.imageSrcSet} sizes={visual.imageSizes} alt={visual.imageAlt} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
-            <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-br from-primary/45 via-primary-dark/60 to-black/75 mix-blend-multiply" />
-            <div aria-hidden="true" className="absolute inset-x-4 inset-y-3 rounded-[36px] border border-white/40 opacity-70 sm:inset-x-6 sm:inset-y-4 sm:rounded-[40px]" />
-
-            
+          <div className="relative order-1 overflow-hidden bg-gradient-to-br from-primary/40 via-primary-dark/60 to-background md:order-2">
+            {visual.imageUrl ? (
+              <img
+                src={visual.imageUrl}
+                srcSet={visual.imageSrcSet}
+                sizes={visual.imageSizes}
+                alt={visual.imageAlt}
+                loading="lazy"
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            ) : null}
+            <div aria-hidden="true" className="absolute inset-x-4 inset-y-3 rounded-[36px] border border-white/40 opacity-40 sm:inset-x-6 sm:inset-y-4 sm:rounded-[40px]" />
           </div>
         </div>
       </div>

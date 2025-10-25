@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Apple, Eye, EyeOff, Loader2 } from "lucide-react";
 import { z } from "zod";
 
 import AuthLayout from "@/components/auth/AuthLayout";
@@ -11,14 +11,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import heroVisualDesktop from "@/assets/hero-courier.jpg";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthProfile } from "@/providers/AuthProvider";
 import { toast } from "sonner";
-
-const heroVisual = heroVisualDesktop;
-const heroVisualSrcSet = `${heroVisualDesktop} 640w, ${heroVisualDesktop} 1024w, ${heroVisualDesktop} 1440w`;
-const heroVisualSizes = "(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 45vw";
 
 const rememberIdentifierStorageKey = "auth:remember-identifier";
 const forgotPasswordRoute = "/mot-de-passe-oublie"; // Ajustez cette route selon votre configuration.
@@ -46,6 +41,7 @@ const Connexion = () => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isAppleLoading, setIsAppleLoading] = useState(false);
 
   const form = useForm<SignInValues>({
     resolver: zodResolver(signInSchema),
@@ -126,48 +122,85 @@ const Connexion = () => {
     }
   };
 
+  const handleAppleSignIn = async () => {
+    setIsAppleLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "apple",
+        options: {
+          redirectTo: `${window.location.origin}/espace-client`,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Impossible de se connecter avec Apple.";
+      toast.error(message);
+    } finally {
+      setIsAppleLoading(false);
+    }
+  };
+
   return (
     <AuthLayout
       visual={{
         label: "SHARP. FAST.",
         headline: "Gardez une longueur d'avance sur chaque tournée",
         description: "Supervisez vos équipes et vos flux en temps réel avec une interface pensée pour les opérations critiques.",
-        imageUrl: heroVisual,
-        imageAlt: "Responsable logistique coordonnant une tournée de livraisons depuis un entrepôt moderne",
-        imageSrcSet: heroVisualSrcSet,
-        imageSizes: heroVisualSizes,
       }}
+      className="dark bg-background text-foreground"
     >
-      <div className="space-y-8">
-        <div className="space-y-3 text-left">
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">Se connecter</h1>
-          <p className="text-base text-muted-foreground">
+      <div className="space-y-10">
+        <div className="space-y-4 text-left">
+          <h1 className="text-4xl font-semibold tracking-tight text-foreground md:text-5xl">Se connecter</h1>
+          <p className="text-base text-muted-foreground/90">
             Retrouvons-nous pour piloter vos opérations logistiques en toute sérénité.
           </p>
         </div>
 
         <Form {...form}>
-          <form className="space-y-6" onSubmit={form.handleSubmit(handleSubmit)} noValidate>
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              className="w-full justify-center gap-2"
-              onClick={handleGoogleSignIn}
-              disabled={isSubmitting || isGoogleLoading}
-            >
-              {isGoogleLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <GoogleIcon />
-              )}
-              <span>Se connecter avec Google</span>
-            </Button>
+          <form className="space-y-8" onSubmit={form.handleSubmit(handleSubmit)} noValidate>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                className="h-14 justify-center rounded-[calc(var(--radius)*1.6)] border-border/70 bg-card/20 text-card-foreground shadow-soft transition-smooth hover:border-accent hover:bg-accent/10 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+                onClick={handleGoogleSignIn}
+                disabled={isSubmitting || isGoogleLoading || isAppleLoading}
+              >
+                {isGoogleLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <GoogleIcon />
+                )}
+                <span className="text-sm font-semibold">Google</span>
+              </Button>
 
-            <div className="flex items-center gap-4">
-              <Separator className="h-px flex-1" />
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">ou</span>
-              <Separator className="h-px flex-1" />
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                className="h-14 justify-center rounded-[calc(var(--radius)*1.6)] border-border/70 bg-card/20 text-card-foreground shadow-soft transition-smooth hover:border-accent hover:bg-accent/10 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+                onClick={handleAppleSignIn}
+                disabled={isSubmitting || isAppleLoading || isGoogleLoading}
+                aria-label="Se connecter avec Apple"
+              >
+                {isAppleLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Apple className="h-5 w-5" aria-hidden="true" />
+                )}
+                <span className="text-sm font-semibold">Apple</span>
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-3 text-muted-foreground/70">
+              <Separator className="h-px flex-1 bg-border/60" />
+              <span className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground/70">— OR —</span>
+              <Separator className="h-px flex-1 bg-border/60" />
             </div>
 
             <FormField
@@ -175,7 +208,7 @@ const Connexion = () => {
               name="identifier"
               render={({ field }) => (
                 <FormItem className="space-y-2">
-                  <FormLabel className="text-sm font-semibold text-foreground">Email ou Nom d&apos;utilisateur</FormLabel>
+                  <FormLabel className="text-sm font-semibold text-muted-foreground/80">Email ou Nom d&apos;utilisateur</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
@@ -183,6 +216,7 @@ const Connexion = () => {
                       inputMode="email"
                       autoComplete="username"
                       placeholder="vous@entreprise.fr ou pseudo"
+                      className="h-14 rounded-[calc(var(--radius)*1.6)] border-border/70 bg-card/10 px-4 text-base text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-card"
                     />
                   </FormControl>
                   <FormMessage className="text-sm font-medium" />
@@ -195,7 +229,7 @@ const Connexion = () => {
               name="password"
               render={({ field }) => (
                 <FormItem className="space-y-2">
-                  <FormLabel className="text-sm font-semibold text-foreground">Mot de passe</FormLabel>
+                  <FormLabel className="text-sm font-semibold text-muted-foreground/80">Mot de passe</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Input
@@ -203,11 +237,12 @@ const Connexion = () => {
                         type={isPasswordVisible ? "text" : "password"}
                         autoComplete="current-password"
                         placeholder="••••••••"
+                        className="h-14 rounded-[calc(var(--radius)*1.6)] border-border/70 bg-card/10 px-4 text-base text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-card"
                       />
                       <button
                         type="button"
                         onClick={() => setIsPasswordVisible((previous) => !previous)}
-                        className="absolute inset-y-0 right-3 flex items-center text-muted-foreground transition-smooth hover:text-foreground"
+                        className="absolute inset-y-0 right-3 flex items-center text-muted-foreground/70 transition-smooth hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-card"
                         aria-label={isPasswordVisible ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                         aria-pressed={isPasswordVisible}
                       >
@@ -220,7 +255,7 @@ const Connexion = () => {
               )}
             />
 
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 text-muted-foreground/80">
               <FormField
                 control={form.control}
                 name="rememberMe"
@@ -242,7 +277,7 @@ const Connexion = () => {
 
               <Link
                 to={forgotPasswordRoute}
-                className="text-sm font-semibold text-primary transition-smooth hover:text-primary-dark hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2"
+                className="text-sm font-semibold text-accent transition-smooth hover:text-accent/80 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-card"
               >
                 Mot de passe oublié ?
               </Link>
@@ -252,7 +287,7 @@ const Connexion = () => {
               type="submit"
               variant="cta"
               size="lg"
-              className="w-full"
+              className="h-14 w-full rounded-[calc(var(--radius)*1.6)] bg-gradient-to-r from-primary to-accent text-white shadow-large transition-smooth hover:from-primary-dark hover:to-accent focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-card disabled:opacity-70"
               disabled={isSubmitting || !isFormValid}
             >
               {isSubmitting ? (
@@ -267,11 +302,11 @@ const Connexion = () => {
           </form>
         </Form>
 
-        <p className="text-center text-sm text-muted-foreground">
+        <p className="text-center text-sm text-muted-foreground/80">
           Nouveau ?{" "}
           <Link
             to="/inscription"
-            className="font-semibold text-primary transition-smooth hover:text-primary-dark hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2"
+            className="font-semibold text-accent underline underline-offset-4 transition-smooth hover:text-accent/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-card"
           >
             Créer un compte
           </Link>

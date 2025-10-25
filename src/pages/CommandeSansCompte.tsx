@@ -1156,8 +1156,9 @@ const CommandeSansCompte = () => {
                         </div>
                         <Button
                           type="submit"
+                          variant="cta"
                           disabled={isSubmitting}
-                          className="w-full rounded-full bg-yellow-400 px-6 py-4 text-sm font-semibold text-slate-900 shadow-lg transition hover:bg-yellow-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-2"
+                          className="w-full rounded-full px-6 py-4 text-sm font-semibold text-slate-900"
                         >
                           {isSubmitting ? (
                             <span className="flex items-center justify-center gap-2">

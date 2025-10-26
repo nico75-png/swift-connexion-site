@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
-import { MapPin, Phone, FileDown, Truck } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { MapPin, Phone, FileDown } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -10,173 +9,149 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-const STATUS_CONFIG = {
-  transit: {
-    label: "En transit",
-    badgeClass: "bg-sky-100 text-sky-700 border border-sky-200",
-    iconColor: "text-sky-500",
-    actions: { map: true, call: true, pdf: true },
-  },
-  pending: {
-    label: "En attente",
-    badgeClass: "bg-amber-100 text-amber-700 border border-amber-200",
-    iconColor: "text-amber-500",
-    actions: { map: false, call: false, pdf: false },
-  },
-  delivered: {
-    label: "Livrée",
-    badgeClass: "bg-emerald-100 text-emerald-700 border border-emerald-200",
-    iconColor: "text-emerald-500",
-    actions: { map: false, call: false, pdf: true },
-  },
-  cancelled: {
-    label: "Annulée",
-    badgeClass: "bg-rose-100 text-rose-700 border border-rose-200",
-    iconColor: "text-rose-500",
-    actions: { map: false, call: false, pdf: true },
-  },
-};
-
-const DEFAULT_STATUS = {
-  label: "Suivi",
-  badgeClass: "bg-slate-100 text-slate-700 border border-slate-200",
-  iconColor: "text-slate-500",
-  actions: { map: false, call: false, pdf: true },
-};
-
-const ACTIONS = [
-  {
-    key: "map",
-    label: "Ouvrir la carte en direct",
-    icon: MapPin,
-    variant: "default",
-  },
-  {
-    key: "call",
-    label: "Appeler le chauffeur",
-    icon: Phone,
-    variant: "secondary",
-  },
-  {
-    key: "pdf",
-    label: "Télécharger le bon de commande",
-    icon: FileDown,
-    variant: "outline",
-  },
-];
-
 const statusKeyFromValue = (status = "") => {
   const normalized = status.toLowerCase();
   if (normalized.includes("livr")) return "delivered";
-  if (normalized.includes("transit") || normalized.includes("cours")) return "transit";
   if (normalized.includes("annul")) return "cancelled";
   if (normalized.includes("attente") || normalized.includes("préparation")) return "pending";
+  if (normalized.includes("transit") || normalized.includes("cours")) return "transit";
   return normalized;
 };
+
+const baseButtonClasses =
+  "flex h-11 flex-1 min-w-0 items-center justify-center gap-2 rounded-lg font-medium transition-all duration-150 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#93C5FD] focus-visible:outline-offset-2";
+
+const variantClasses = {
+  primary: "bg-[#2563EB] text-white hover:bg-[#1D4ED8] shadow-sm",
+  secondary: "border border-[#2563EB] text-[#2563EB] hover:bg-[#EFF6FF]",
+  tertiary: "bg-[#F9FAFB] text-[#1F2937] hover:bg-[#F3F4F6]",
+};
+
+const disabledClasses =
+  "disabled:cursor-not-allowed disabled:bg-[#E5E7EB] disabled:text-[#9CA3AF] disabled:border-[#D1D5DB] disabled:shadow-none disabled:hover:bg-[#E5E7EB] disabled:hover:text-[#9CA3AF]";
 
 const OrderActionsBar = ({
   status,
   onOpenMap,
   onCallDriver,
   onDownloadPdf,
-  isDownloading,
+  isDownloading = false,
   driverPhone,
+  deliveryNoteAvailable = true,
 }) => {
-  const statusConfig = useMemo(() => {
-    const key = statusKeyFromValue(status);
-    return STATUS_CONFIG[key] ?? DEFAULT_STATUS;
-  }, [status]);
+  const statusKey = useMemo(() => statusKeyFromValue(status), [status]);
 
-  const renderButton = ({ key, label, icon: Icon, variant }) => {
-    const isActionAvailable = statusConfig.actions[key] ?? true;
-    const isDisabled = !isActionAvailable || (key === "call" && !driverPhone);
+  const isPending = statusKey === "pending";
+  const isTransit = statusKey === "transit";
+  const isDelivered = statusKey === "delivered";
+  const isCancelled = statusKey === "cancelled";
 
-    const button = (
-      <Button
-        key={key}
-        onClick={
-          key === "map"
-            ? onOpenMap
-            : key === "call"
-            ? onCallDriver
-            : onDownloadPdf
-        }
-        variant={variant}
-        size="lg"
-        disabled={isDisabled || (key === "pdf" && isDownloading)}
-        className={cn(
-          "h-14 flex-1 rounded-xl text-sm font-semibold shadow-none transition-all duration-150",
-          "focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-sky-300",
-          {
-            "opacity-60 cursor-not-allowed": isDisabled,
-            "bg-slate-900 text-white hover:bg-slate-800": variant === "default",
-          },
-        )}
-      >
-        <Icon className="mr-2 h-5 w-5" />
-        {key === "pdf" && isDownloading ? "Génération..." : label}
-      </Button>
-    );
+  const canInitiateCall = Boolean(onCallDriver || driverPhone);
 
-    if (statusConfig.label === STATUS_CONFIG.pending.label && !isActionAvailable) {
-      return (
-        <Tooltip key={key}>
-          <TooltipTrigger asChild>{button}</TooltipTrigger>
-          <TooltipContent className="max-w-xs text-center">
-            Disponible après attribution du chauffeur
-          </TooltipContent>
-        </Tooltip>
-      );
+  const trackDisabled = !isTransit || isPending;
+  const showCallButton = !isDelivered && !isCancelled;
+  const callDisabled = isPending || !canInitiateCall;
+  const downloadDisabled = isPending || !deliveryNoteAvailable || isDownloading;
+  const showDownloadTooltip = !deliveryNoteAvailable;
+
+  const handleOpenMap = () => {
+    if (trackDisabled) return;
+    if (onOpenMap) {
+      onOpenMap();
     }
-
-    return button;
   };
 
+  const handleCallDriver = () => {
+    if (callDisabled) return;
+    if (onCallDriver) {
+      onCallDriver();
+      return;
+    }
+    if (driverPhone && typeof window !== "undefined") {
+      const sanitized = driverPhone.replace(/\s+/g, "");
+      window.open(`tel:${sanitized}`);
+    }
+  };
+
+  const handleDownload = () => {
+    if (downloadDisabled) return;
+    if (onDownloadPdf) {
+      onDownloadPdf();
+    }
+  };
+
+  const renderActionButton = ({
+    label,
+    icon: Icon,
+    variant,
+    onClick,
+    disabled,
+    ariaLabel,
+  }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={ariaLabel}
+      disabled={disabled}
+      className={cn(baseButtonClasses, variantClasses[variant], disabledClasses)}
+    >
+      <Icon className="h-5 w-5" aria-hidden />
+      <span className="truncate">{label}</span>
+    </button>
+  );
+
+  const downloadButton = renderActionButton({
+    label: isDownloading ? "Téléchargement..." : "Télécharger le bon de livraison",
+    icon: FileDown,
+    variant: "tertiary",
+    onClick: handleDownload,
+    disabled: downloadDisabled,
+    ariaLabel: "Télécharger le bon de livraison",
+  });
+
   return (
-    <TooltipProvider delayDuration={100}>
+    <TooltipProvider delayDuration={120}>
       <motion.aside
-        layout
-        transition={{ type: "spring", damping: 20, stiffness: 180 }}
-        className={cn(
-          "z-30 flex w-full flex-col gap-3 rounded-2xl bg-white/95 p-4 shadow-md backdrop-blur",
-          "md:sticky md:top-4 md:flex-row md:items-center md:gap-4 md:p-5",
-          "md:shadow-sm md:backdrop-blur-none",
-          "fixed bottom-6 left-4 right-4 md:relative md:bottom-auto md:left-auto md:right-auto",
-        )}
+        initial={{ opacity: 0, y: -6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: "easeOut" }}
+        className="rounded-xl bg-white p-4 shadow-[0_2px_6px_rgba(0,0,0,0.05)] sm:p-5"
       >
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span
-              className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-full",
-                statusConfig.iconColor,
-                "bg-slate-100",
-              )}
-              aria-hidden
-            >
-              <Truck className="h-5 w-5" />
-            </span>
-            <div>
-              <p className="text-xs uppercase tracking-wider text-slate-500">Statut</p>
-              <p className="text-base font-semibold text-slate-900">{statusConfig.label}</p>
-            </div>
-          </div>
-          <span
-            className={cn(
-              "hidden items-center rounded-full px-3 py-1 text-xs font-semibold md:inline-flex",
-              statusConfig.badgeClass,
-            )}
-          >
-            {statusConfig.label}
-          </span>
+        <div className="flex flex-col gap-2 sm:flex-row sm:gap-3 sm:justify-between">
+          {renderActionButton({
+            label: "Suivre ma livraison",
+            icon: MapPin,
+            variant: "primary",
+            onClick: handleOpenMap,
+            disabled: trackDisabled,
+            ariaLabel: "Suivre la livraison en temps réel",
+          })}
+
+          {showCallButton
+            ? renderActionButton({
+                label: "Appeler le chauffeur",
+                icon: Phone,
+                variant: "secondary",
+                onClick: handleCallDriver,
+                disabled: callDisabled,
+                ariaLabel: "Appeler le chauffeur",
+              })
+            : null}
+
+          {showDownloadTooltip ? (
+            <Tooltip>
+              <TooltipTrigger asChild>{downloadButton}</TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-[220px] text-center text-xs font-medium">
+                Disponible après validation.
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            downloadButton
+          )}
         </div>
 
-        <div className="flex flex-col gap-3 md:flex-1 md:flex-row">
-          {ACTIONS.map(renderButton)}
-        </div>
-
-        <p className="text-center text-xs font-medium text-slate-500 md:text-right">
-          Le bon de livraison est disponible après validation.
+        <p className="mt-4 text-center text-[13px] leading-5 text-[#6B7280]">
+          <strong>Le bon de livraison est disponible après validation.</strong>
         </p>
       </motion.aside>
     </TooltipProvider>

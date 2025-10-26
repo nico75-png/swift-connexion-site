@@ -32,6 +32,11 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import {
+  ModalCommandesAssociees,
+  type AssociatedOrder,
+  type OrderStatus,
+} from "./ModalCommandesAssociees";
 
 type InvoiceStatus = "Payée" | "En attente" | "En retard";
 
@@ -66,6 +71,7 @@ type Invoice = {
   issuer: InvoiceCompany;
   items: InvoiceItem[];
   notes?: string;
+  associatedOrders?: AssociatedOrder[];
 };
 
 type PeriodFilter = "month" | "quarter" | "year";
@@ -163,6 +169,38 @@ const getPaymentEmoji = (paymentMethod: string) => {
   return "💶";
 };
 
+const INVOICE_TO_ORDER_STATUS: Record<InvoiceStatus, OrderStatus> = {
+  Payée: "Livrée",
+  "En attente": "En attente",
+  "En retard": "En transit",
+};
+
+const FALLBACK_ASSOCIATED_ORDERS: Record<string, AssociatedOrder[]> = {
+  "FAC-2025-032": [
+    {
+      id: "CMD-2025-441",
+      code: "CMD-2025-441",
+      date: "2025-10-12",
+      status: "Livrée",
+      total: 648,
+    },
+    {
+      id: "CMD-2025-445",
+      code: "CMD-2025-445",
+      date: "2025-10-14",
+      status: "En attente",
+      total: 320,
+    },
+    {
+      id: "CMD-2025-456",
+      code: "CMD-2025-456",
+      date: "2025-10-16",
+      status: "En transit",
+      total: 480,
+    },
+  ],
+};
+
 const Factures = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -173,6 +211,8 @@ const Factures = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [paymentInvoice, setPaymentInvoice] = useState<Invoice | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [ordersModalInvoice, setOrdersModalInvoice] = useState<Invoice | null>(null);
+  const [isOrdersModalOpen, setIsOrdersModalOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -346,6 +386,77 @@ const Factures = () => {
     },
     [toast],
   );
+
+  const resolveAssociatedOrders = useCallback(
+    (invoice: Invoice): AssociatedOrder[] => {
+      if (invoice.associatedOrders && invoice.associatedOrders.length) {
+        return invoice.associatedOrders;
+      }
+
+      if (FALLBACK_ASSOCIATED_ORDERS[invoice.invoice_number]) {
+        return FALLBACK_ASSOCIATED_ORDERS[invoice.invoice_number];
+      }
+
+      return [
+        {
+          id: invoice.order_number,
+          code: invoice.order_number,
+          date: invoice.date_issued,
+          status: INVOICE_TO_ORDER_STATUS[invoice.status],
+          total: invoice.total,
+        },
+      ];
+    },
+    [],
+  );
+
+  const handleOpenOrder = useCallback(
+    (orderId: string) => {
+      toast({
+        title: "Commande ouverte",
+        description: `Ouverture de la commande ${orderId}.`,
+      });
+    },
+    [toast],
+  );
+
+  const handleOrdersModalClose = useCallback(() => {
+    setIsOrdersModalOpen(false);
+    setOrdersModalInvoice(null);
+  }, []);
+
+  const handleViewAllOrders = useCallback(
+    (invoice: Invoice) => {
+      toast({
+        title: "Commandes du mois",
+        description: `Affichage des commandes associées au cycle de facturation ${formatDate(
+          invoice.date_issued,
+        )}.`,
+      });
+    },
+    [toast],
+  );
+
+  const ordersModalData = useMemo(() => {
+    if (!ordersModalInvoice) {
+      return { orders: [] as AssociatedOrder[], total: 0 };
+    }
+
+    const orders = resolveAssociatedOrders(ordersModalInvoice);
+    const total = orders.reduce((sum, order) => sum + order.total, 0);
+
+    return { orders, total };
+  }, [ordersModalInvoice, resolveAssociatedOrders]);
+
+  const selectedInvoiceOrders = useMemo(() => {
+    if (!selectedInvoice) {
+      return [] as AssociatedOrder[];
+    }
+
+    return resolveAssociatedOrders(selectedInvoice);
+  }, [resolveAssociatedOrders, selectedInvoice]);
+
+  const hasMultipleSelectedOrders = selectedInvoiceOrders.length > 1;
 
 
 
@@ -642,20 +753,40 @@ const Factures = () => {
                     </p>
                   </div>
                 </div>
-                <div>
-                  <Button
-                    type="button"
-                    variant="link"
-                    className="px-0 text-sm text-[#1D4ED8]"
-                    onClick={() =>
-                      toast({
-                        title: "Redirection vers la commande",
-                        description: `Ouverture de la commande ${selectedInvoice.order_number}.`,
-                      })
-                    }
-                  >
-                    Accéder à la commande associée →
-                  </Button>
+                <div className="space-y-2">
+                  {hasMultipleSelectedOrders ? (
+                    <Button
+                      type="button"
+                      className="px-0 text-sm font-semibold text-[#2563EB] hover:text-[#1D4ED8]"
+                      variant="link"
+                      onClick={() => {
+                        setOrdersModalInvoice(selectedInvoice);
+                        setIsOrdersModalOpen(true);
+                      }}
+                    >
+                      Accéder aux commandes associées →
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      className="px-0 text-sm font-semibold text-[#2563EB] hover:text-[#1D4ED8]"
+                      variant="link"
+                      onClick={() => {
+                        const [singleOrder] = selectedInvoiceOrders;
+                        if (singleOrder) {
+                          handleOpenOrder(singleOrder.id);
+                        }
+                      }}
+                    >
+                      Accéder à la commande associée →
+                    </Button>
+                  )}
+                  {hasMultipleSelectedOrders ? (
+                    <p className="text-[13px] leading-5 text-[#6B7280]">
+                      💡 Cette facture regroupe plusieurs livraisons du mois. Consultez les bons de commande pour chaque cours
+                      associé.
+                    </p>
+                  ) : null}
                 </div>
               </div>
 
@@ -763,6 +894,26 @@ const Factures = () => {
           ) : null}
         </SheetContent>
       </Sheet>
+
+      {ordersModalInvoice ? (
+        <ModalCommandesAssociees
+          isOpen={isOrdersModalOpen}
+          invoiceNumber={ordersModalInvoice.invoice_number}
+          orders={ordersModalData.orders}
+          totalAmount={ordersModalData.total}
+          onClose={handleOrdersModalClose}
+          onSelectOrder={(orderId) => {
+            handleOpenOrder(orderId);
+            handleOrdersModalClose();
+          }}
+          onViewAll={() => {
+            handleViewAllOrders(ordersModalInvoice);
+            handleOrdersModalClose();
+          }}
+          formatCurrency={formatCurrency}
+          formatDate={formatDate}
+        />
+      ) : null}
 
       <Dialog
         open={isPaymentModalOpen}

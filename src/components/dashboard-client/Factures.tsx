@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { LayoutGroup, motion } from "framer-motion";
+import { LayoutGroup, AnimatePresence, motion } from "framer-motion";
 import { Download, FileDown, Search } from "lucide-react";
 
 import invoicesData from "@/data/invoices.json";
@@ -16,13 +16,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -32,11 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
-import {
-  ModalCommandesAssociees,
-  type AssociatedOrder,
-  type OrderStatus,
-} from "./ModalCommandesAssociees";
+import { type AssociatedOrder, type OrderStatus } from "./ModalCommandesAssociees";
 
 type InvoiceStatus = "Payée" | "En attente" | "En retard";
 
@@ -208,11 +197,10 @@ const Factures = () => {
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("month");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [detailView, setDetailView] = useState<"invoice" | "orders">("invoice");
   const [paymentInvoice, setPaymentInvoice] = useState<Invoice | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [ordersModalInvoice, setOrdersModalInvoice] = useState<Invoice | null>(null);
-  const [isOrdersModalOpen, setIsOrdersModalOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -323,7 +311,14 @@ const Factures = () => {
 
   const handleRowClick = useCallback((invoice: Invoice) => {
     setSelectedInvoice(invoice);
-    setIsSheetOpen(true);
+    setDetailView("invoice");
+    setIsDetailOpen(true);
+  }, []);
+
+  const closeDetailView = useCallback(() => {
+    setIsDetailOpen(false);
+    setDetailView("invoice");
+    setSelectedInvoice(null);
   }, []);
 
   const openPaymentModal = useCallback((invoice: Invoice) => {
@@ -378,7 +373,8 @@ const Factures = () => {
   const handleDownload = useCallback(
     (invoice: Invoice) => {
       setSelectedInvoice(invoice);
-      setIsSheetOpen(true);
+      setDetailView("invoice");
+      setIsDetailOpen(true);
       toast({
         title: "Téléchargement en préparation",
         description: `La facture ${invoice.invoice_number} sera générée en PDF.`,
@@ -420,34 +416,6 @@ const Factures = () => {
     [toast],
   );
 
-  const handleOrdersModalClose = useCallback(() => {
-    setIsOrdersModalOpen(false);
-    setOrdersModalInvoice(null);
-  }, []);
-
-  const handleViewAllOrders = useCallback(
-    (invoice: Invoice) => {
-      toast({
-        title: "Commandes du mois",
-        description: `Affichage des commandes associées au cycle de facturation ${formatDate(
-          invoice.date_issued,
-        )}.`,
-      });
-    },
-    [toast],
-  );
-
-  const ordersModalData = useMemo(() => {
-    if (!ordersModalInvoice) {
-      return { orders: [] as AssociatedOrder[], total: 0 };
-    }
-
-    const orders = resolveAssociatedOrders(ordersModalInvoice);
-    const total = orders.reduce((sum, order) => sum + order.total, 0);
-
-    return { orders, total };
-  }, [ordersModalInvoice, resolveAssociatedOrders]);
-
   const selectedInvoiceOrders = useMemo(() => {
     if (!selectedInvoice) {
       return [] as AssociatedOrder[];
@@ -457,6 +425,11 @@ const Factures = () => {
   }, [resolveAssociatedOrders, selectedInvoice]);
 
   const hasMultipleSelectedOrders = selectedInvoiceOrders.length > 1;
+  const isOrdersView = detailView === "orders";
+  const ordersTotal = useMemo(
+    () => selectedInvoiceOrders.reduce((sum, order) => sum + order.total, 0),
+    [selectedInvoiceOrders],
+  );
 
 
 
@@ -688,232 +661,403 @@ const Factures = () => {
         </div>
       </div>
 
-      <Sheet
-        open={isSheetOpen}
-        onOpenChange={(open) => {
-          setIsSheetOpen(open);
-          if (!open) {
-            setSelectedInvoice(null);
-          }
-        }}
-      >
-        <SheetContent
-          side="right"
-          className="w-full max-w-full overflow-y-auto border-l border-slate-200 bg-white sm:max-w-xl"
-        >
-          {selectedInvoice ? (
-            <div className="space-y-6">
-              <SheetHeader className="items-start space-y-3 text-left">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <SheetTitle className="text-lg font-semibold text-slate-900">
-                      Facture {selectedInvoice.invoice_number}
-                    </SheetTitle>
-                    <SheetDescription className="text-sm text-slate-500">
-                      Commande associée : {selectedInvoice.order_number}
-                    </SheetDescription>
-                  </div>
-                  <motion.span
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className={cn(
-                      "inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-medium uppercase leading-4",
-                      STATUS_CONFIG[selectedInvoice.status].badgeClass,
-                    )}
-                  >
-                    {STATUS_CONFIG[selectedInvoice.status].label}
-                  </motion.span>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                  <span>Émise le {formatDate(selectedInvoice.date_issued)}</span>
-                  <span className="hidden h-1 w-1 rounded-full bg-slate-300 sm:inline" aria-hidden />
-                  <span>Échéance {formatDate(selectedInvoice.due_date)}</span>
-                  {selectedInvoice.payment_reference ? (
-                    <span className="hidden h-1 w-1 rounded-full bg-slate-300 sm:inline" aria-hidden />
-                  ) : null}
-                  {selectedInvoice.payment_reference ? (
-                    <span>Réf. paiement : {selectedInvoice.payment_reference}</span>
-                  ) : null}
-                </div>
-              </SheetHeader>
-
-              <div className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Montant TTC</p>
-                    <p className="text-lg font-semibold text-slate-900">
-                      {formatCurrency(selectedInvoice.total)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Moyen de paiement</p>
-                    <p className="text-sm text-slate-700">
-                      {getPaymentEmoji(selectedInvoice.payment_method)} {selectedInvoice.payment_method}
-                    </p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  {hasMultipleSelectedOrders ? (
-                    <Button
-                      type="button"
-                      className="px-0 text-sm font-semibold text-[#2563EB] hover:text-[#1D4ED8]"
-                      variant="link"
-                      onClick={() => {
-                        setOrdersModalInvoice(selectedInvoice);
-                        setIsOrdersModalOpen(true);
-                      }}
-                    >
-                      Accéder aux commandes associées →
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      className="px-0 text-sm font-semibold text-[#2563EB] hover:text-[#1D4ED8]"
-                      variant="link"
-                      onClick={() => {
-                        const [singleOrder] = selectedInvoiceOrders;
-                        if (singleOrder) {
-                          handleOpenOrder(singleOrder.id);
-                        }
-                      }}
-                    >
-                      Accéder à la commande associée →
-                    </Button>
-                  )}
-                  {hasMultipleSelectedOrders ? (
-                    <p className="text-[13px] leading-5 text-[#6B7280]">
-                      💡 Cette facture regroupe plusieurs livraisons du mois. Consultez les bons de commande pour chaque cours
-                      associé.
-                    </p>
-                  ) : null}
-                </div>
+      <AnimatePresence>
+        {isDetailOpen && selectedInvoice ? (
+          <motion.div
+            key={selectedInvoice.invoice_number}
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/30 px-4 py-8 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="facture-detail-title"
+            onClick={(event) => {
+              if (event.target === event.currentTarget) {
+                closeDetailView();
+              }
+            }}
+          >
+            <motion.div
+              layout
+              className="relative w-full max-w-4xl"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.35, ease: "easeInOut" }}
+            >
+              <div className="absolute -top-10 left-1/2 z-10 flex -translate-x-1/2 items-center gap-3 rounded-full bg-white/90 px-5 py-2 text-xs font-medium text-slate-600 shadow-lg shadow-slate-900/10 backdrop-blur">
+                <span className="text-slate-400">ℹ️</span>
+                <span>Consultation des commandes associées à cette facture — affichage temporaire.</span>
               </div>
 
-              <div className="grid gap-6">
-                <div className="grid gap-4 rounded-2xl border border-slate-200 p-4">
-                  <h3 className="text-sm font-semibold text-slate-900">Informations de facturation</h3>
-                  <div className="grid gap-4 text-sm text-slate-600 sm:grid-cols-2">
+              <div
+                className={cn(
+                  "group relative overflow-hidden rounded-3xl transition-all duration-300",
+                  isOrdersView
+                    ? "bg-slate-50 shadow-inner shadow-slate-900/10"
+                    : "bg-white shadow-xl shadow-slate-900/10",
+                )}
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-100/40 via-transparent to-blue-100/30 opacity-0 transition-opacity duration-300 group-hover:opacity-100" aria-hidden />
+
+                <div className="relative flex flex-col gap-8 px-6 py-8 sm:px-10">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Client</p>
-                      <p className="font-medium text-slate-900">{selectedInvoice.customer.name}</p>
-                      <p>{selectedInvoice.customer.address}</p>
-                      <p>SIRET : {selectedInvoice.customer.siret}</p>
-                      <p>Email : {selectedInvoice.customer.email}</p>
-                      <p>Téléphone : {selectedInvoice.customer.phone}</p>
+                      <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{isOrdersView ? "Vue commandes" : "Vue facture"}</p>
+                      <h2
+                        id="facture-detail-title"
+                        className="text-2xl font-semibold text-slate-900"
+                      >
+                        {isOrdersView
+                          ? `Commandes associées à la facture ${selectedInvoice.invoice_number}`
+                          : `Facture ${selectedInvoice.invoice_number}`}
+                      </h2>
+                      <p className="text-sm text-slate-600">
+                        Commande associée principale : {selectedInvoice.order_number}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                        <span>Émise le {formatDate(selectedInvoice.date_issued)}</span>
+                        <span className="hidden h-1 w-1 rounded-full bg-slate-300 sm:inline" aria-hidden />
+                        <span>Échéance {formatDate(selectedInvoice.due_date)}</span>
+                        {selectedInvoice.payment_reference ? (
+                          <>
+                            <span className="hidden h-1 w-1 rounded-full bg-slate-300 sm:inline" aria-hidden />
+                            <span>Réf. paiement : {selectedInvoice.payment_reference}</span>
+                          </>
+                        ) : null}
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Swift Connexion</p>
-                      <p className="font-medium text-slate-900">{selectedInvoice.issuer.name}</p>
-                      <p>{selectedInvoice.issuer.address}</p>
-                      <p>SIRET : {selectedInvoice.issuer.siret}</p>
-                      <p>Email : {selectedInvoice.issuer.email}</p>
-                      <p>Téléphone : {selectedInvoice.issuer.phone}</p>
+                    <div className="flex flex-col items-end gap-3 text-right">
+                      <motion.span
+                        layout
+                        className={cn(
+                          "inline-flex items-center rounded-full px-3 py-1 text-[12px] font-semibold uppercase tracking-wide",
+                          STATUS_CONFIG[selectedInvoice.status].badgeClass,
+                        )}
+                      >
+                        {STATUS_CONFIG[selectedInvoice.status].label}
+                      </motion.span>
+                      <button
+                        type="button"
+                        onClick={closeDetailView}
+                        className="text-xs font-semibold text-slate-400 transition-colors duration-200 hover:text-slate-600"
+                        aria-label="Fermer la fiche facture"
+                      >
+                        Fermer ✕
+                      </button>
                     </div>
+                  </div>
+
+                  <div className="grid gap-6">
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={detailView}
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.98 }}
+                        transition={{ duration: 0.4, ease: "easeInOut" }}
+                        className="space-y-6"
+                      >
+                        {detailView === "invoice" ? (
+                          <div className="space-y-6">
+                            <div className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+                              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                <div>
+                                  <p className="text-xs uppercase tracking-wide text-slate-500">Total TTC</p>
+                                  <p className="text-xl font-semibold text-slate-900">
+                                    {formatCurrency(selectedInvoice.total)}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-xs uppercase tracking-wide text-slate-500">Total HT</p>
+                                  <p className="text-sm font-medium text-slate-800">
+                                    {formatCurrency(selectedInvoice.total_ht)}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-xs uppercase tracking-wide text-slate-500">TVA</p>
+                                  <p className="text-sm font-medium text-slate-800">
+                                    {formatCurrency(selectedInvoice.tva)}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex flex-col gap-2 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+                                <p className="flex items-center gap-2 text-slate-700">
+                                  <span role="img" aria-hidden>
+                                    {getPaymentEmoji(selectedInvoice.payment_method)}
+                                  </span>
+                                  <span>Moyen de paiement : {selectedInvoice.payment_method}</span>
+                                </p>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    className="bg-[#2563EB] text-white shadow-sm hover:bg-[#1D4ED8]"
+                                    onClick={() => handleDownload(selectedInvoice)}
+                                    aria-label="Télécharger la facture"
+                                  >
+                                    <Download className="mr-2 h-4 w-4" aria-hidden />
+                                    Télécharger le PDF
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-[#BFDBFE] text-[#1D4ED8]"
+                                    onClick={() =>
+                                      toast({
+                                        title: "Service facturation",
+                                        description: "Un conseiller vous recontacte sous 24h.",
+                                      })
+                                    }
+                                  >
+                                    Contacter un conseiller
+                                  </Button>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between rounded-xl bg-white/90 px-4 py-3 text-sm text-slate-600 shadow-inner">
+                                <div className="flex items-center gap-3">
+                                  <span className="text-lg">{hasMultipleSelectedOrders ? "🧾" : "📄"}</span>
+                                  <div>
+                                    <p className="font-medium text-slate-900">
+                                      {hasMultipleSelectedOrders
+                                        ? `${selectedInvoiceOrders.length} commandes associées`
+                                        : "Commande associée"}
+                                    </p>
+                                    <p className="text-xs text-slate-500">
+                                      {hasMultipleSelectedOrders
+                                        ? "Visualisez le détail de chaque livraison."
+                                        : "Accédez directement au bon de commande."}
+                                    </p>
+                                  </div>
+                                </div>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  className="bg-slate-900 text-white transition-all duration-300 hover:bg-slate-700"
+                                  onClick={() => setDetailView("orders")}
+                                >
+                                  {hasMultipleSelectedOrders
+                                    ? "Accéder aux commandes associées"
+                                    : "Accéder à la commande associée"}
+                                </Button>
+                              </div>
+                            </div>
+
+                            <div className="grid gap-5 rounded-2xl border border-slate-200 bg-white/90 p-5">
+                              <h3 className="text-sm font-semibold text-slate-900">Informations de facturation</h3>
+                              <div className="grid gap-4 text-sm text-slate-600 sm:grid-cols-2">
+                                <div className="space-y-2">
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Client</p>
+                                  <p className="font-medium text-slate-900">{selectedInvoice.customer.name}</p>
+                                  <p>{selectedInvoice.customer.address}</p>
+                                  <p>SIRET : {selectedInvoice.customer.siret}</p>
+                                  <p>Email : {selectedInvoice.customer.email}</p>
+                                  <p>Téléphone : {selectedInvoice.customer.phone}</p>
+                                </div>
+                                <div className="space-y-2">
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Swift Connexion</p>
+                                  <p className="font-medium text-slate-900">{selectedInvoice.issuer.name}</p>
+                                  <p>{selectedInvoice.issuer.address}</p>
+                                  <p>SIRET : {selectedInvoice.issuer.siret}</p>
+                                  <p>Email : {selectedInvoice.issuer.email}</p>
+                                  <p>Téléphone : {selectedInvoice.issuer.phone}</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="grid gap-5 rounded-2xl border border-slate-200 bg-white/90 p-5">
+                              <h3 className="text-sm font-semibold text-slate-900">Détail de la facture</h3>
+                              <ScrollArea className="max-h-72 pr-2">
+                                <table className="w-full text-sm">
+                                  <thead>
+                                    <tr className="text-xs uppercase tracking-wide text-slate-500">
+                                      <th className="py-2 text-left">Désignation</th>
+                                      <th className="py-2 text-center">Quantité</th>
+                                      <th className="py-2 text-right">Prix unitaire</th>
+                                      <th className="py-2 text-right">Total</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {selectedInvoice.items.map((item) => (
+                                      <tr key={`${item.description}-${item.total}`} className="border-t border-slate-100">
+                                        <td className="py-3 pr-4 text-slate-700">{item.description}</td>
+                                        <td className="py-3 text-center text-slate-600">{item.quantity}</td>
+                                        <td className="py-3 text-right text-slate-600">
+                                          {formatCurrency(item.unit_price)}
+                                        </td>
+                                        <td className="py-3 text-right font-medium text-slate-800">
+                                          {formatCurrency(item.total)}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </ScrollArea>
+                            </div>
+
+                            {selectedInvoice.notes ? (
+                              <div className="rounded-2xl border border-slate-200 bg-white/90 p-5 text-sm text-slate-600">
+                                <p className="font-medium text-slate-800">Notes</p>
+                                <p className="mt-1 leading-relaxed">{selectedInvoice.notes}</p>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <div className="space-y-6">
+                            <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm">
+                              <div className="flex flex-wrap items-center justify-between gap-4">
+                                <div className="space-y-1">
+                                  <p className="text-sm font-semibold text-slate-900">
+                                    Total des commandes associées
+                                  </p>
+                                  <p className="text-xs text-slate-500">
+                                    Visualisez les bons de commande liés à cette facture.
+                                  </p>
+                                </div>
+                                <p className="text-2xl font-semibold text-slate-900">
+                                  {formatCurrency(ordersTotal)}
+                                </p>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                                <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700">
+                                  {selectedInvoiceOrders.length} commande(s)
+                                </span>
+                                <span className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 font-medium text-blue-700">
+                                  Facture {selectedInvoice.invoice_number}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                              <table className="w-full text-sm">
+                                <thead className="bg-slate-100/70 text-xs uppercase tracking-wide text-slate-500">
+                                  <tr>
+                                    <th className="px-4 py-3 text-left">Numéro</th>
+                                    <th className="px-4 py-3 text-left">Date</th>
+                                    <th className="px-4 py-3 text-left">Statut</th>
+                                    <th className="px-4 py-3 text-right">Montant TTC</th>
+                                    <th className="px-4 py-3 text-right">Action</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 text-slate-700">
+                                  {selectedInvoiceOrders.map((order) => (
+                                    <motion.tr
+                                      key={order.id}
+                                      initial={{ opacity: 0, y: 8 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      transition={{ duration: 0.25, ease: "easeOut" }}
+                                      className="bg-white/80 hover:bg-slate-50"
+                                    >
+                                      <td className="px-4 py-3 font-medium text-slate-900">{order.code}</td>
+                                      <td className="px-4 py-3 text-sm">{formatDate(order.date)}</td>
+                                      <td className="px-4 py-3">
+                                        <Badge
+                                          className={cn(
+                                            "rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold",
+                                            order.status === "Livrée"
+                                              ? "bg-emerald-100 text-emerald-700"
+                                              : order.status === "En transit"
+                                                ? "bg-blue-100 text-blue-700"
+                                                : "bg-amber-100 text-amber-700",
+                                          )}
+                                        >
+                                          {order.status}
+                                        </Badge>
+                                      </td>
+                                      <td className="px-4 py-3 text-right font-medium">
+                                        {formatCurrency(order.total)}
+                                      </td>
+                                      <td className="px-4 py-3 text-right">
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="outline"
+                                          className="border-slate-200 text-slate-700 hover:bg-slate-100"
+                                          onClick={() => handleOpenOrder(order.id)}
+                                        >
+                                          Ouvrir
+                                        </Button>
+                                      </td>
+                                    </motion.tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+
+                            <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/90 p-5 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="space-y-1">
+                                <p className="font-medium text-slate-900">Timeline de facturation</p>
+                                <p className="text-xs text-slate-500">
+                                  Des commandes à la facture : suivez les étapes clés.
+                                </p>
+                                <div className="mt-3 grid gap-2 text-xs">
+                                  <div className="flex items-center gap-3">
+                                    <span className="h-2 w-2 rounded-full bg-blue-500" aria-hidden />
+                                    <span>Validation de la commande</span>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden />
+                                    <span>Livraison confirmée</span>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <span className="h-2 w-2 rounded-full bg-slate-400" aria-hidden />
+                                    <span>Facture émise</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-3">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+                                  📦
+                                </div>
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-900">Suivi logistique</p>
+                                  <p className="text-xs text-slate-500">3 commandes en cours de suivi.</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                className="text-sm font-semibold text-slate-600 hover:text-slate-900"
+                                onClick={() => setDetailView("invoice")}
+                              >
+                                ← Retour à la facture
+                              </Button>
+                              <div className="flex flex-col gap-2 text-xs text-slate-500 sm:text-right">
+                                <span>
+                                  Besoin d'aide ? Contactez le support commandes.
+                                </span>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  className="self-start bg-[#2563EB] text-white hover:bg-[#1D4ED8] sm:self-end"
+                                  onClick={() =>
+                                    toast({
+                                      title: "Support commandes",
+                                      description: "Un conseiller vous rappelle dans l'heure.",
+                                    })
+                                  }
+                                >
+                                  Contacter le support
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </motion.div>
+                    </AnimatePresence>
                   </div>
                 </div>
-
-                <div className="grid gap-4 rounded-2xl border border-slate-200 p-4">
-                  <h3 className="text-sm font-semibold text-slate-900">Détail de la facture</h3>
-                  <ScrollArea className="max-h-72 pr-2">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="text-xs uppercase tracking-wide text-slate-500">
-                          <th className="py-2 text-left">Désignation</th>
-                          <th className="py-2 text-center">Quantité</th>
-                          <th className="py-2 text-right">Prix unitaire</th>
-                          <th className="py-2 text-right">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedInvoice.items.map((item) => (
-                          <tr key={`${item.description}-${item.total}`} className="border-t border-slate-100">
-                            <td className="py-3 pr-4 text-slate-700">{item.description}</td>
-                            <td className="py-3 text-center text-slate-600">{item.quantity}</td>
-                            <td className="py-3 text-right text-slate-600">
-                              {formatCurrency(item.unit_price)}
-                            </td>
-                            <td className="py-3 text-right font-medium text-slate-800">
-                              {formatCurrency(item.total)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </ScrollArea>
-                  <Separator className="bg-slate-200" />
-                  <div className="space-y-1 text-sm text-slate-700">
-                    <div className="flex items-center justify-between">
-                      <span>Total HT</span>
-                      <span>{formatCurrency(selectedInvoice.total_ht)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>TVA</span>
-                      <span>{formatCurrency(selectedInvoice.tva)}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-base font-semibold text-slate-900">
-                      <span>Total TTC</span>
-                      <span>{formatCurrency(selectedInvoice.total)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {selectedInvoice.notes ? (
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 text-sm text-slate-600">
-                    <p className="font-medium text-slate-800">Notes</p>
-                    <p className="mt-1 leading-relaxed">{selectedInvoice.notes}</p>
-                  </div>
-                ) : null}
               </div>
-
-              <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
-                <Button
-                  type="button"
-                  className="bg-[#2563EB] text-white shadow-md hover:bg-[#1D4ED8]"
-                  onClick={() => handleDownload(selectedInvoice)}
-                  aria-label="Télécharger la facture"
-                >
-                  <Download className="h-4 w-4" aria-hidden />
-                  Télécharger la facture (PDF)
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="border-[#BFDBFE] text-[#1D4ED8]"
-                  onClick={() =>
-                    toast({
-                      title: "Service facturation",
-                      description: "Un conseiller vous recontacte sous 24h.",
-                    })
-                  }
-                >
-                  Contacter le service facturation
-                </Button>
-              </div>
-            </div>
-          ) : null}
-        </SheetContent>
-      </Sheet>
-
-      {ordersModalInvoice ? (
-        <ModalCommandesAssociees
-          isOpen={isOrdersModalOpen}
-          invoiceNumber={ordersModalInvoice.invoice_number}
-          orders={ordersModalData.orders}
-          totalAmount={ordersModalData.total}
-          onClose={handleOrdersModalClose}
-          onSelectOrder={(orderId) => {
-            handleOpenOrder(orderId);
-            handleOrdersModalClose();
-          }}
-          onViewAll={() => {
-            handleViewAllOrders(ordersModalInvoice);
-            handleOrdersModalClose();
-          }}
-          formatCurrency={formatCurrency}
-          formatDate={formatDate}
-        />
-      ) : null}
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       <Dialog
         open={isPaymentModalOpen}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   CheckCircle2,
@@ -282,6 +282,7 @@ const Commandes = () => {
   const [isDetailsOpen, setIsDetailsOpen] = useState<boolean>(false);
   const [loadingRowId, setLoadingRowId] = useState<string | null>(null);
   const { toast } = useToast();
+  const hasLoggedRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -316,6 +317,13 @@ const Commandes = () => {
   }, []);
 
   const kpis = useKpiCounters({ orders, isLoading });
+
+  useEffect(() => {
+    if (!hasLoggedRef.current && !isLoading && !error) {
+      console.info("[Audit] Section Commandes restaurée");
+      hasLoggedRef.current = true;
+    }
+  }, [isLoading, error]);
 
   const columns = useMemo(
     () => [
@@ -485,7 +493,11 @@ const Commandes = () => {
     setSearchQuery(value);
   };
 
-  const renderRow = (row: (typeof tableRows)[number], index: number) => {
+  const renderRow = (row: (typeof tableRows)[number] | undefined, index: number) => {
+    if (!row) {
+      return null;
+    }
+
     const order = row.original;
     const isActive = loadingRowId === order.id;
 
@@ -511,9 +523,17 @@ const Commandes = () => {
         )}
       >
         <div className="grid flex-1 grid-cols-[minmax(180px,1.2fr)_minmax(150px,1fr)_minmax(200px,1.4fr)_minmax(140px,0.9fr)_minmax(120px,0.6fr)] items-center gap-6">
-          {row.getVisibleCells().map((cell) => (
-            <div key={cell.id} className={cn(cell.column.id === "total_amount" && "text-right")}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</div>
-          ))}
+          {row.getVisibleCells().map((cell) => {
+            const column = cell?.column;
+            const cellRenderer = column?.columnDef?.cell;
+            const fallbackValue = typeof cell.getValue === "function" ? cell.getValue() ?? "—" : "—";
+
+            return (
+              <div key={cell.id} className={cn(column?.id === "total_amount" && "text-right")}>
+                {cellRenderer ? flexRender(cellRenderer, cell.getContext()) : fallbackValue}
+              </div>
+            );
+          })}
         </div>
         <div className="flex items-center justify-end">
           <Button
@@ -854,7 +874,7 @@ const Commandes = () => {
                   </div>
                 ) : (
                   <div className="space-y-1 p-2">
-                    {tableRows.map((row) => renderRow(row, row.index))}
+                    {tableRows.map((row) => renderRow(row, row.index ?? 0))}
                   </div>
                 )}
               </div>

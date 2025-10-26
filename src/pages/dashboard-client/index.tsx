@@ -1,5 +1,6 @@
 "use client";
 
+import Head from "next/head";
 import { useMemo, useState, type ComponentType } from "react";
 import {
   LayoutDashboard,
@@ -10,8 +11,6 @@ import {
   Settings,
   HelpCircle,
   Bell,
-  TrendingUp,
-  TrendingDown,
   FileText,
   MessageCircle,
 } from "lucide-react";
@@ -25,8 +24,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  AreaChart,
-  Area,
 } from "recharts";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -62,16 +59,6 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   { label: "Messages", icon: MessageSquare },
   { label: "Paramètres", icon: Settings },
   { label: "Aide", icon: HelpCircle },
-];
-
-const KPI_SPARKLINE = [
-  { name: "S1", value: 32 },
-  { name: "S2", value: 44 },
-  { name: "S3", value: 38 },
-  { name: "S4", value: 52 },
-  { name: "S5", value: 61 },
-  { name: "S6", value: 58 },
-  { name: "S7", value: 72 },
 ];
 
 const RECENT_ACTIVITIES: RecentActivity[] = [
@@ -130,10 +117,67 @@ const DashboardClient = () => {
 
   const selectedActivity = activityData[activeFilter];
   const totalLivrees = selectedActivity.reduce((sum, point) => sum + point.livraisons, 0);
-  const totalEnAttente = selectedActivity.reduce((sum, point) => sum + Math.max(point.commandes - point.livraisons, 0), 0);
+  const totalEnAttente = selectedActivity.reduce(
+    (sum, point) => sum + Math.max(point.commandes - point.livraisons, 0),
+    0
+  );
+
+  const numberFormatter = useMemo(() => new Intl.NumberFormat("fr-FR"), []);
+  const percentFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat("fr-FR", {
+        style: "percent",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }),
+    []
+  );
+  const minuteFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat("fr-FR", {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      }),
+    []
+  );
+  const kpiLastUpdated = useMemo(
+    () =>
+      new Intl.DateTimeFormat("fr-FR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(new Date()),
+    []
+  );
+
+  const monthlyOrders = 117;
+  const monthlyOrderTarget = 122;
+  const orderProgressDelta = 0.12;
+  const deliveriesRatio = 0.87;
+  const deliveriesTarget = 0.95;
+  const deliveriesRatioAriaLabel = `${Math.round(deliveriesRatio * 100)} pour cent de livraisons réussies`;
+  const averageDeliveryTimeMinutes = 30.1;
+  const averageDeliveryDeltaMinutes = -3.3;
+  const averageDeliveryDeltaLabel = `${
+    averageDeliveryDeltaMinutes > 0 ? "+" : ""
+  }${minuteFormatter.format(Math.abs(averageDeliveryDeltaMinutes))}`;
+  const orderProgressDeltaLabel = `${
+    orderProgressDelta > 0 ? "+" : ""
+  }${percentFormatter.format(orderProgressDelta)}`;
 
   return (
-    <div className="flex min-h-screen bg-[#f8f9fb] text-slate-900">
+    <>
+      <Head>
+        <title>Swift · Tableau de bord – Suivi de vos commandes et livraisons</title>
+        <meta
+          name="description"
+          content="Suivez vos commandes, livraisons et délais moyens en temps réel depuis votre tableau de bord Swift."
+        />
+        <meta
+          property="og:title"
+          content="Tableau de bord Swift – Suivi de vos commandes et livraisons en un coup d’œil."
+        />
+      </Head>
+      <div className="flex min-h-screen bg-[#f8f9fb] text-slate-900">
       <aside className="hidden w-72 flex-col border-r border-slate-200 bg-slate-900/95 px-6 py-8 text-slate-100 shadow-xl lg:flex">
         <div className="mb-8 flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2563eb] text-lg font-semibold">
@@ -157,7 +201,7 @@ const DashboardClient = () => {
                   : "text-slate-300 hover:bg-white/10 hover:text-white"
               )}
             >
-              <Icon className="h-5 w-5" />
+              <Icon className="h-5 w-5" aria-hidden="true" />
               <span>{label}</span>
             </button>
           ))}
@@ -176,22 +220,31 @@ const DashboardClient = () => {
         <header className="flex flex-col gap-6 border-b border-slate-200 bg-white/80 px-6 py-6 backdrop-blur">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-sm uppercase tracking-wide text-slate-400">Bienvenue</p>
-              <h1 className="text-2xl font-semibold text-slate-900">Bonjour, Clara Dupont 👋</h1>
-              <p className="text-sm text-slate-500">Suivez vos commandes et optimisez vos livraisons en temps réel.</p>
+              <p className="text-sm text-slate-600">Bonjour, Clara Dupont 👋</p>
+              <h1 className="text-3xl font-semibold text-slate-900">
+                Tableau de bord – Commandes & livraisons
+              </h1>
+              <p className="text-sm text-slate-600">
+                Suivez vos commandes, les livraisons réussies et vos délais moyens en toute clarté.
+              </p>
             </div>
             <div className="flex items-center gap-4">
               <Button
                 type="button"
                 variant="outline"
                 className="relative h-11 w-11 rounded-xl border-slate-200 bg-white text-slate-600 hover:border-[#2563eb] hover:text-[#2563eb]"
+                aria-label="Notifications"
               >
-                <Bell className="h-5 w-5" />
+                <Bell className="h-5 w-5" aria-hidden="true" />
                 <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#2563eb]" aria-hidden />
               </Button>
               <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
                 <Avatar className="h-11 w-11 border-2 border-[#2563eb]/20">
-                  <AvatarImage src="https://i.pravatar.cc/100?img=48" alt="Clara Dupont" />
+                  <AvatarImage
+                    src="https://i.pravatar.cc/100?img=48"
+                    alt="Portrait de Clara Dupont"
+                    loading="lazy"
+                  />
                   <AvatarFallback>CD</AvatarFallback>
                 </Avatar>
                 <div>
@@ -206,75 +259,80 @@ const DashboardClient = () => {
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Card className="border-none bg-white shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-500">Commandes</CardTitle>
-                <Badge className="bg-[#2563eb]/10 text-[#2563eb]">Objectif 150</Badge>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-semibold text-slate-900">128</p>
-                <div className="mt-2 flex items-center gap-2 text-sm">
-                  <TrendingUp className="h-4 w-4 text-[#16a34a]" />
-                  <span className="text-[#16a34a]">+12% vs mois dernier</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-none bg-white shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-500">Taux de livraison</CardTitle>
-                <Badge className="bg-[#16a34a]/10 text-[#16a34a]">Cible 95%</Badge>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-semibold text-slate-900">92%</p>
-                <div className="mt-2 flex items-center gap-2 text-sm">
-                  <TrendingUp className="h-4 w-4 text-[#16a34a]" />
-                  <span className="text-[#16a34a]">+4 pts</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-none bg-white shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-500">Montant consommé</CardTitle>
-                <Badge className="bg-[#8b5cf6]/10 text-[#8b5cf6]">Budget 45K€</Badge>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <p className="text-3xl font-semibold text-slate-900">32 450€</p>
-                <div className="h-16">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={KPI_SPARKLINE}>
-                      <defs>
-                        <linearGradient id="sparkline" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
-                          <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.1} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eef2ff" />
-                      <XAxis dataKey="name" hide />
-                      <RechartsTooltip cursor={false} />
-                      <Area type="monotone" dataKey="value" stroke="#8b5cf6" fill="url(#sparkline)" strokeWidth={2} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-none bg-white shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-500">Temps moyen de livraison</CardTitle>
-                <Badge className="bg-[#2563eb]/10 text-[#2563eb]">Objectif 28 min</Badge>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-semibold text-slate-900">31 min</p>
-                <div className="mt-2 flex items-center gap-2 text-sm">
-                  <TrendingDown className="h-4 w-4 text-[#2563eb]" />
-                  <span className="text-[#2563eb]">-3 min</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <section
+            aria-labelledby="kpi-heading"
+            role="region"
+            className="rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-sm"
+          >
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+              <div>
+                <h2 id="kpi-heading" className="text-lg font-semibold text-slate-900">
+                  Vos indicateurs du mois
+                </h2>
+                <p className="text-sm text-slate-600">
+                  Visualisez l'avancement de vos commandes et livraisons pour le mois en cours.
+                </p>
+              </div>
+              <Badge className="bg-[#EEF2FF] text-[#3730A3]">
+                Mise à jour à {kpiLastUpdated}
+              </Badge>
+            </div>
+            <div aria-live="polite" className="mt-6">
+              <ul className="grid gap-4 md:grid-cols-3">
+                <li className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <h3 className="text-base font-semibold text-slate-900">Vos commandes du mois</h3>
+                  <div className="flex items-baseline gap-2 text-slate-900">
+                    <data
+                      value={monthlyOrders}
+                      aria-label={`Vous avez validé ${numberFormatter.format(monthlyOrders)} commandes ce mois-ci`}
+                      className="kpi text-[clamp(24px,3.2vw,32px)] font-bold text-slate-900"
+                    >
+                      {numberFormatter.format(monthlyOrders)}
+                    </data>
+                    <span
+                      className="text-sm text-slate-600"
+                      aria-label={`Objectif de ${numberFormatter.format(monthlyOrderTarget)} commandes`}
+                    >
+                      / {numberFormatter.format(monthlyOrderTarget)} objectif
+                    </span>
+                  </div>
+                  <p className="text-sm text-emerald-600">{orderProgressDeltaLabel} vs. mois dernier</p>
+                </li>
+                <li className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <h3 className="text-base font-semibold text-slate-900">Commandes livrées avec succès</h3>
+                  <meter
+                    value={deliveriesRatio}
+                    min={0}
+                    max={1}
+                    optimum={deliveriesTarget}
+                    aria-label={deliveriesRatioAriaLabel}
+                    className="h-3 w-full rounded-full [&::-webkit-meter-bar]:rounded-full [&::-webkit-meter-optimum-value]:rounded-full"
+                  />
+                  <span className="text-sm text-slate-600">
+                    {percentFormatter.format(deliveriesRatio)} atteints · cible {percentFormatter.format(deliveriesTarget)}
+                  </span>
+                </li>
+                <li className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <h3 className="text-base font-semibold text-slate-900">Temps moyen de livraison</h3>
+                  <div className="flex items-baseline gap-2 text-slate-900">
+                    <data
+                      value={averageDeliveryTimeMinutes}
+                      aria-label={`Temps moyen de livraison de ${minuteFormatter.format(averageDeliveryTimeMinutes)} minutes`}
+                      className="kpi text-[clamp(24px,3.2vw,32px)] font-bold text-slate-900"
+                    >
+                      {minuteFormatter.format(averageDeliveryTimeMinutes)}
+                    </data>
+                    <span className="text-sm text-slate-600" aria-hidden="true">
+                      min
+                    </span>
+                  </div>
+                  <span className="text-sm text-[#2563eb]">
+                    {averageDeliveryDeltaLabel}&nbsp;min vs. mois dernier
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </section>
         </header>
 
         <section className="flex-1 space-y-8 px-6 pb-10">
@@ -379,7 +437,7 @@ const DashboardClient = () => {
                   className="group flex h-full w-full min-h-[180px] flex-col items-start justify-between gap-4 rounded-3xl bg-[#2563eb] p-6 text-left text-white shadow-md transition-all hover:-translate-y-1 hover:shadow-xl"
                 >
                   <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white transition group-hover:bg-white/20">
-                    <MapPin className="h-6 w-6" />
+                    <MapPin className="h-6 w-6" aria-hidden="true" />
                   </span>
                   <div className="space-y-1">
                     <p className="text-base font-semibold">Suivi en direct</p>
@@ -390,7 +448,7 @@ const DashboardClient = () => {
                   className="group flex h-full w-full min-h-[180px] flex-col items-start justify-between gap-4 rounded-3xl bg-[#16a34a] p-6 text-left text-white shadow-md transition-all hover:-translate-y-1 hover:shadow-xl"
                 >
                   <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white transition group-hover:bg-white/20">
-                    <FileText className="h-6 w-6" />
+                    <FileText className="h-6 w-6" aria-hidden="true" />
                   </span>
                   <div className="space-y-1">
                     <p className="text-base font-semibold">Mes factures</p>
@@ -401,7 +459,7 @@ const DashboardClient = () => {
                   className="group flex h-full w-full min-h-[180px] flex-col items-start justify-between gap-4 rounded-3xl bg-[#8b5cf6] p-6 text-left text-white shadow-md transition-all hover:-translate-y-1 hover:shadow-xl"
                 >
                   <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white transition group-hover:bg-white/20">
-                    <MessageCircle className="h-6 w-6" />
+                    <MessageCircle className="h-6 w-6" aria-hidden="true" />
                   </span>
                   <div className="space-y-1">
                     <p className="text-base font-semibold">Messagerie</p>
@@ -448,6 +506,7 @@ const DashboardClient = () => {
         </section>
       </main>
     </div>
+    </>
   );
 };
 

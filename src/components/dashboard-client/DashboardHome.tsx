@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from "react";
-import { useRouter } from "next/router";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -37,11 +37,11 @@ const staggeredListVariants = {
 };
 
 const DashboardHome = () => {
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const handleCreateOrder = useCallback(() => {
-    void router.push("/dashboard-client/commandes/nouvelle");
-  }, [router]);
+    navigate("/dashboard-client/commandes/nouvelle");
+  }, [navigate]);
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
@@ -254,6 +254,7 @@ const DashboardHome = () => {
                     </div>
                     <span className="text-sm font-semibold text-slate-900">55</span>
                   </div>
+                </div>
                 </CardContent>
               </Card>
             </AnimatedSection>
@@ -361,6 +362,7 @@ const DashboardHome = () => {
             </CardContent>
           </Card>
         </AnimatedSection>
+      </AnimatedSection>
       </div>
       <button
         type="button"

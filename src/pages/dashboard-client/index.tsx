@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 
 import DashboardHome from "@/components/dashboard-client/DashboardHome";
 import Commandes from "@/components/dashboard-client/Commandes";
@@ -80,21 +81,23 @@ const DashboardClient = () => {
             const isActive = activeSection === item.id;
 
             return (
-              <button
+              <motion.button
                 key={item.id}
                 type="button"
                 onClick={() => setActiveSection(item.id)}
-                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${
+                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-all duration-300 ease-out ${
                   isActive
                     ? "bg-slate-700 font-medium text-white"
                     : "text-slate-300 hover:bg-slate-700/50 hover:text-white"
                 }`}
+                whileHover={{ x: 4 }}
+                whileTap={{ scale: 0.98 }}
               >
                 <span aria-hidden="true" className="text-base">
                   {item.icon}
                 </span>
                 <span>{item.label}</span>
-              </button>
+              </motion.button>
             );
           })}
         </nav>
@@ -134,7 +137,19 @@ const DashboardClient = () => {
         {/* Content area */}
         <main className="flex-1 overflow-y-auto p-6 bg-slate-50">
           <div className="mx-auto w-full max-w-7xl">
-            {renderSection()}
+            {/* Transition fluide entre les sections du tableau de bord */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeSection}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+                className="h-full"
+              >
+                {renderSection()}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </main>
       </div>

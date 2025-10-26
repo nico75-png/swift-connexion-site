@@ -1,7 +1,9 @@
 import { FormEvent, useMemo, useState } from "react";
 import {
+  AlertTriangle,
   ArrowUpRight,
   BadgeCheck,
+  Bell,
   CirclePlus,
   Clock3,
   Loader2,
@@ -707,50 +709,69 @@ const Messages = () => {
           </div>
 
           {/* Support info panel */}
-          <aside className="hidden w-full max-w-xs border-l border-slate-200/80 bg-white/70 p-6 text-sm text-slate-600 lg:block">
+          <aside className="hidden w-full max-w-lg border-l border-slate-200/80 bg-white/70 p-6 text-sm text-slate-600 lg:block">
             <div className="flex flex-col gap-6">
-              <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 text-slate-100 shadow-xl">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-500 text-sm font-semibold">
-                    SC
+              <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-slate-800 to-slate-900 p-6 text-slate-100 shadow-2xl">
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500 text-sm font-semibold">
+                      SC
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[11px] uppercase tracking-[0.32em] text-blue-200/70">Support dédié</p>
+                      <h3 className="text-lg font-semibold sm:text-xl">Swift Connexion</h3>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.28em] text-blue-200/80">Support dédié</p>
-                    <p className="text-base font-semibold">Swift Connexion</p>
-                  </div>
-                </div>
-                <Separator className="my-4 bg-white/10" />
-                <div className="space-y-3 text-sm">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.35em] text-blue-200/70">Email direct</p>
-                    <p className="mt-1 font-medium text-white">support@swift-connexion.com</p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.35em] text-blue-200/70">Téléphone</p>
-                    <p className="mt-1 font-medium text-white">+33 1 86 76 45 90</p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.35em] text-blue-200/70">Disponibilité</p>
-                    <p className="mt-1 font-medium text-white">Lun - Ven · 8h - 19h</p>
+                  <p className="text-sm leading-relaxed text-slate-100/80 sm:text-base">
+                    Une équipe disponible pour vos demandes critiques, avec un suivi personnalisé et des réponses rapides.
+                  </p>
+                  <Separator className="bg-white/10" />
+                  <div className="space-y-4 text-slate-100/90">
+                    <div className="space-y-1">
+                      <p className="text-[11px] uppercase tracking-[0.32em] text-blue-200/70">Email direct</p>
+                      <p className="text-base font-semibold leading-relaxed text-white">support@swift-connexion.com</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[11px] uppercase tracking-[0.32em] text-blue-200/70">Téléphone</p>
+                      <p className="text-base font-semibold leading-relaxed text-white">+33 1 86 76 45 90</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[11px] uppercase tracking-[0.32em] text-blue-200/70">Disponibilité</p>
+                      <p className="text-base font-semibold leading-relaxed text-white">Lun - Ven · 8h - 19h</p>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <Card className="border-slate-200/70 bg-white/80 shadow-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base text-slate-900">Conseil express</CardTitle>
-                  <CardDescription>
-                    Ajoutez un maximum de détails (horaires, références, captures d'écran) pour accélérer la résolution.
+              <Card className="rounded-3xl border border-slate-200/80 bg-white/95 shadow-lg">
+                <CardHeader className="space-y-2 pb-4">
+                  <CardTitle className="text-lg font-semibold text-slate-900 sm:text-xl">Conseil express</CardTitle>
+                  <CardDescription className="text-sm leading-relaxed text-slate-600 sm:text-base">
+                    Ajoutez un maximum de détails (horaires, références, captures d'écran) pour accélérer la résolution et permettre une prise en charge sur-mesure.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3 text-xs text-slate-500">
-                  <div className="rounded-2xl bg-slate-100 px-3 py-2">
-                    <p className="font-medium text-slate-700">Suivi dynamique</p>
-                    <p>Chaque réponse déclenche une notification par email et dans votre tableau de bord.</p>
+                <CardContent className="space-y-4 text-sm leading-relaxed text-slate-600">
+                  <div className="group flex items-start gap-3 rounded-xl bg-blue-50 p-3 text-slate-700 transition-transform duration-200 hover:scale-[1.01]">
+                    <span className="mt-1 flex h-9 w-9 items-center justify-center rounded-full bg-blue-500/10 text-blue-600">
+                      <Bell className="h-5 w-5" />
+                    </span>
+                    <div className="space-y-1">
+                      <p className="text-base font-semibold text-slate-900">Suivi dynamique</p>
+                      <p className="text-sm leading-relaxed text-slate-600 sm:text-base">
+                        Chaque réponse déclenche une notification instantanée par email et dans votre tableau de bord pour ne rien manquer.
+                      </p>
+                    </div>
                   </div>
-                  <div className="rounded-2xl bg-blue-50 px-3 py-2 text-blue-700">
-                    <p className="font-medium">Escalade prioritaire</p>
-                    <p>Les conversations « Non lues » sont automatiquement escaladées au bout de 4 heures.</p>
+                  <div className="group flex items-start gap-3 rounded-xl bg-gray-50 p-3 text-slate-700 transition-transform duration-200 hover:scale-[1.01]">
+                    <span className="mt-1 flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
+                      <AlertTriangle className="h-5 w-5" />
+                    </span>
+                    <div className="space-y-1">
+                      <p className="text-base font-semibold text-slate-900">Escalade prioritaire</p>
+                      <p className="text-sm leading-relaxed text-slate-600 sm:text-base">
+                        Les conversations « Non lues » sont automatiquement escaladées après 4 heures pour assurer une résolution rapide.
+                      </p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

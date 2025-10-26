@@ -31,10 +31,9 @@ const ActiveOrdersList = ({ orders, selectedOrderId, onSelect, onViewDetails }: 
           return (
             <motion.li
               key={order.id}
-              custom={index}
-              initial="hidden"
-              animate="visible"
-              variants={listVariants}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1, duration: 0.18 }}
               className="list-none"
             >
               <article

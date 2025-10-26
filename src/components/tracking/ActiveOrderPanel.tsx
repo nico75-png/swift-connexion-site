@@ -8,6 +8,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+import { cn } from "@/lib/utils";
+
 import type { TrackingOrder } from "./LiveTrackingSection";
 
 type ActiveOrderPanelProps = {
@@ -25,11 +27,16 @@ const ActiveOrderPanel = ({ orders, onContact, onViewDetails }: ActiveOrderPanel
     );
   }
 
+  const isCompactLayout = orders.length <= 2;
+
   const content = orders.map((order) => (
     <motion.article
       key={order.id}
       layout
-      className="flex min-w-[260px] flex-1 flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+      className={cn(
+        "flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors duration-200 ease-out",
+        isCompactLayout ? "min-w-[260px] flex-1" : "w-full",
+      )}
       transition={{ type: "spring", stiffness: 160, damping: 20 }}
     >
       <div className="flex items-start justify-between gap-3">
@@ -101,7 +108,7 @@ const ActiveOrderPanel = ({ orders, onContact, onViewDetails }: ActiveOrderPanel
   ));
 
   return (
-    <section className="space-y-4">
+    <section className="flex flex-col gap-4 rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-sm backdrop-blur-sm">
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold text-slate-900">
           {orders.length > 1 ? `Commandes actives (${orders.length})` : "Commande active"}
@@ -109,29 +116,21 @@ const ActiveOrderPanel = ({ orders, onContact, onViewDetails }: ActiveOrderPanel
         <span className="text-xs text-slate-500">Synchronisé en continu</span>
       </div>
       <AnimatePresence initial={false}>
-        {orders.length > 1 ? (
-          <motion.div
-            key="multiple"
-            className="flex gap-4 overflow-x-auto pb-2"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-          >
-            {content}
-          </motion.div>
-        ) : (
-          <motion.div
-            key="single"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-            className="grid grid-cols-1"
-          >
-            {content}
-          </motion.div>
-        )}
+        <motion.div
+          key={isCompactLayout ? "compact" : "extended"}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.2 }}
+          className={cn(
+            "gap-4",
+            isCompactLayout
+              ? "flex flex-row flex-wrap justify-between overflow-hidden"
+              : "flex max-h-[400px] flex-col overflow-y-auto pr-1 scroll-smooth",
+          )}
+        >
+          {content}
+        </motion.div>
       </AnimatePresence>
     </section>
   );

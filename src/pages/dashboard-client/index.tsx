@@ -240,23 +240,17 @@ const DashboardClient = () => {
             <Menu className="h-6 w-6" />
           </Button>
 
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-            <Input
-              placeholder="Rechercher une commande, un trajet..."
-              className="w-full rounded-2xl border-neutral-300 bg-neutral-50 pl-10 pr-4"
-            />
+          <div className="flex flex-1 items-center justify-end gap-3">
+            <Button variant="ghost" size="icon" className="relative text-neutral-700">
+              <Bell className="h-5 w-5" />
+              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
+            </Button>
+
+            <Avatar className="h-9 w-9 border border-neutral-300">
+              <AvatarImage src="" alt="User" />
+              <AvatarFallback className="bg-neutral-200 text-neutral-700">CL</AvatarFallback>
+            </Avatar>
           </div>
-
-          <Button variant="ghost" size="icon" className="relative text-neutral-700">
-            <Bell className="h-5 w-5" />
-            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
-          </Button>
-
-          <Avatar className="h-9 w-9 border border-neutral-300">
-            <AvatarImage src="" alt="User" />
-            <AvatarFallback className="bg-neutral-200 text-neutral-700">CL</AvatarFallback>
-          </Avatar>
         </header>
 
         {/* Content area */}
@@ -360,30 +354,20 @@ const DashboardSection: FC<DashboardSectionProps> = ({ setActiveSection }) => {
   }
 
   return (
-    <section className="flex min-h-full flex-col overflow-hidden lg:h-[calc(100vh-64px)] lg:max-h-[calc(100vh-64px)]">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold text-neutral-800">Tableau de bord</h1>
-        <p className="text-sm text-neutral-600">Vue d'ensemble de votre activité</p>
-      </div>
+    <main className="flex flex-col gap-6 w-full h-full overflow-hidden">
+      <ProfileAlert onCompleteProfile={() => setActiveSection("parametres")} />
 
-      <ProfileAlert
-        onCompleteProfile={() => setActiveSection("parametres")}
-        className="mt-4 mb-6"
+      <DashboardStats
+        orders={{ value: ordersCount, trend: ordersTrend, target: ordersTarget }}
+        delivery={{ value: deliveryRate, trend: deliveryTrend }}
+        amount={{ value: amountConsumed, sparkline }}
+        delay={{ value: averageDelay, variation: delayVariation }}
       />
 
-      <div className="flex flex-1 flex-col gap-6 overflow-y-auto pb-2">
-        <DashboardStats
-          orders={{ value: ordersCount, trend: ordersTrend, target: ordersTarget }}
-          delivery={{ value: deliveryRate, trend: deliveryTrend }}
-          amount={{ value: amountConsumed, sparkline }}
-          delay={{ value: averageDelay, variation: delayVariation }}
-        />
+      <ActivityChart activityData={activityData} monthlyStats={monthlyStats} />
 
-        <ActivityChart activityData={activityData} monthlyStats={monthlyStats} />
-
-        <QuickActions onNavigate={setActiveSection} className="w-full" />
-      </div>
-    </section>
+      <QuickActions onNavigate={setActiveSection} className="w-full" />
+    </main>
   );
 };
 

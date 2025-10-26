@@ -19,7 +19,6 @@ import {
   Truck,
   Clock,
   DollarSign,
-  TrendingUp,
   Phone,
   Mail,
   Download,
@@ -31,8 +30,6 @@ import {
   ArrowDown,
   ArrowUp,
   Info,
-  Lightbulb,
-  BellRing,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -383,14 +380,13 @@ const DashboardSection: FC<DashboardSectionProps> = ({ setActiveSection }) => {
             <ActivityChart activityData={activityData} monthlyStats={monthlyStats} />
           </div>
 
-          <div className="flex flex-col gap-4 overflow-y-auto pr-1 lg:overflow-hidden">
+          <div className="flex flex-col overflow-y-auto pr-1 lg:overflow-hidden">
             <ProfileAlert onCompleteProfile={() => setActiveSection("parametres")} />
-            <Suggestions />
           </div>
         </div>
       </div>
 
-      <QuickActions onNavigate={setActiveSection} className="mt-2 lg:mt-auto" />
+      <QuickActions onNavigate={setActiveSection} className="mt-1 lg:mt-auto" />
     </section>
   );
 };
@@ -728,63 +724,6 @@ const ProfileAlert: FC<ProfileAlertProps> = ({ onCompleteProfile }) => {
         </Button>
       </div>
     </Alert>
-  );
-};
-
-const Suggestions: FC = () => {
-  const suggestions: { title: string; description: string; icon: LucideIcon; accent: string }[] = [
-    {
-      title: "Optimisez vos trajets",
-      description: "Regroupez vos commandes proches pour réduire les kilomètres parcourus.",
-      icon: Lightbulb,
-      accent: "bg-amber-100 text-amber-600",
-    },
-    {
-      title: "Débloquez la fidélité",
-      description: "Profitez de notre réduction exclusive après 50 commandes ce trimestre.",
-      icon: TrendingUp,
-      accent: "bg-blue-100 text-blue-600",
-    },
-    {
-      title: "Activez les alertes SMS",
-      description: "Soyez averti instantanément des étapes clés grâce aux notifications SMS.",
-      icon: BellRing,
-      accent: "bg-purple-100 text-purple-600",
-    },
-  ];
-
-  return (
-    <Card className="border-neutral-200 bg-white">
-      <CardHeader className="space-y-1 pb-2">
-        <CardTitle className="text-lg font-semibold text-neutral-800">Suggestions personnalisées</CardTitle>
-        <CardDescription className="text-xs text-neutral-500">
-          Des recommandations adaptées à votre activité récente
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="pt-2">
-        <div className="grid gap-3 md:grid-cols-3">
-          {suggestions.map(({ title, description, icon: Icon, accent }) => (
-            <div
-              key={title}
-              className="flex h-full flex-col justify-between rounded-2xl bg-neutral-100 p-3 transition-colors duration-150 hover:bg-neutral-200"
-            >
-              <span
-                className={cn(
-                  "mb-2 inline-flex h-9 w-9 items-center justify-center rounded-full",
-                  accent
-                )}
-              >
-                <Icon className="h-5 w-5" />
-              </span>
-              <div>
-                <h3 className="text-sm font-semibold text-neutral-800">{title}</h3>
-                <p className="mt-2 text-xs text-neutral-600">{description}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
   );
 };
 

@@ -1,6 +1,3 @@
-"use client";
-
-import Head from "next/head";
 import { useMemo, useState, type ComponentType } from "react";
 import {
   LayoutDashboard,
@@ -165,19 +162,7 @@ const DashboardClient = () => {
   }${percentFormatter.format(orderProgressDelta)}`;
 
   return (
-    <>
-      <Head>
-        <title>Swift · Tableau de bord – Suivi de vos commandes et livraisons</title>
-        <meta
-          name="description"
-          content="Suivez vos commandes, livraisons et délais moyens en temps réel depuis votre tableau de bord Swift."
-        />
-        <meta
-          property="og:title"
-          content="Tableau de bord Swift – Suivi de vos commandes et livraisons en un coup d’œil."
-        />
-      </Head>
-      <div className="flex min-h-screen bg-[#f8f9fb] text-slate-900">
+    <div className="flex min-h-screen bg-[#f8f9fb] text-slate-900">
       <aside className="hidden w-72 flex-col border-r border-slate-200 bg-slate-900/95 px-6 py-8 text-slate-100 shadow-xl lg:flex">
         <div className="mb-8 flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2563eb] text-lg font-semibold">
@@ -506,7 +491,6 @@ const DashboardClient = () => {
         </section>
       </main>
     </div>
-    </>
   );
 };
 

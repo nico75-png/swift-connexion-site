@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { generateNextOrderNumber } from "@/lib/orderSequence";
 import {
   Order,

@@ -180,7 +180,7 @@ export function generateNextOrderNumber(): string {
     const storage = getLocalStorage();
     if (!storage) return formatOrderNumber(1);
 
-    let current = Number.parseInt(storage.getItem(KEY_SEQ_GLOBAL) ?? "0", 10) || 0;
+    const current = Number.parseInt(storage.getItem(KEY_SEQ_GLOBAL) ?? "0", 10) || 0;
     const orders = getFromStorage<Array<{ id?: string }>>("oc_orders", []);
     let next = current + 1;
 
@@ -201,7 +201,7 @@ export function previewNextOrderNumber(): string | null {
 
   return withSeqLock(() => {
     initGlobalOrderSeq();
-    let current = Number.parseInt(storage.getItem(KEY_SEQ_GLOBAL) ?? "0", 10) || 0;
+    const current = Number.parseInt(storage.getItem(KEY_SEQ_GLOBAL) ?? "0", 10) || 0;
     const orders = getFromStorage<Array<{ id?: string }>>("oc_orders", []);
     let next = current + 1;
 

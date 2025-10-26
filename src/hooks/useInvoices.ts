@@ -1,39 +1,25 @@
-// @ts-nocheck
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
-export interface Invoice {
-  id: string;
-  invoice_number: string;
-  customer_id: string;
-  amount: number;
-  currency: string;
-  status: string;
-  due_date: string | null;
-  paid_at: string | null;
-  payment_method: string | null;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-}
+export type Invoice = Tables<"invoices">;
 
 export const useInvoices = (customerId?: string) => {
   return useQuery({
     queryKey: ["invoices", customerId],
     queryFn: async () => {
-      let query = supabase
+      const baseQuery = supabase
         .from("invoices")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (customerId) {
-        query = query.eq("customer_id", customerId);
-      }
-
-      const { data, error } = await query;
+      const { data, error } = await (customerId
+        ? baseQuery.eq("customer_id", customerId)
+        : baseQuery
+      ).returns<Invoice[]>();
 
       if (error) throw error;
-      return data as Invoice[];
+      return data ?? [];
     },
   });
 };

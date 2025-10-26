@@ -469,6 +469,8 @@ const LiveTrackingSection = () => {
   const [contactOrder, setContactOrder] = useState<TrackingOrder | null>(null);
   const [detailsOrder, setDetailsOrder] = useState<TrackingOrder | null>(null);
 
+  const isContactOpen = Boolean(contactOrder);
+
   const activeOrders = useMemo(
     () => orders.filter((order) => order.status === "En transit"),
     [orders],
@@ -572,10 +574,12 @@ const LiveTrackingSection = () => {
                 <TrackingMap
                   order={selectedOrder ?? null}
                   lastUpdateLabel={lastUpdateLabel}
-                  disableInteractions={isDetailsOpen}
+                  disableInteractions={isDetailsOpen || isContactOpen}
                   className={cn(
-                    "transition-all duration-300",
-                    isDetailsOpen && "scale-[0.995] blur-[1.5px] brightness-[0.92]",
+                    "h-full w-full transition-all duration-300",
+                    (isDetailsOpen || isContactOpen) && "scale-[0.995]",
+                    isDetailsOpen && "blur-[1.5px] brightness-[0.92]",
+                    isContactOpen && "pointer-events-none opacity-50 [filter:blur(4px)_saturate(0.8)]",
                   )}
                 />
                 <AnimatePresence>
@@ -590,6 +594,16 @@ const LiveTrackingSection = () => {
                     />
                   ) : null}
                 </AnimatePresence>
+                <ContactDriverDrawer
+                  order={contactOrder}
+                  open={isContactOpen}
+                  onOpenChange={(open) => {
+                    if (!open) setContactOrder(null);
+                  }}
+                  onSendMessage={(orderId, content) => {
+                    appendMessage(orderId, content);
+                  }}
+                />
               </div>
             </motion.div>
           </div>
@@ -611,17 +625,6 @@ const LiveTrackingSection = () => {
           </AnimatePresence>
         </div>
       )}
-
-      <ContactDriverDrawer
-        order={contactOrder}
-        open={Boolean(contactOrder)}
-        onOpenChange={(open) => {
-          if (!open) setContactOrder(null);
-        }}
-        onSendMessage={(orderId, content) => {
-          appendMessage(orderId, content);
-        }}
-      />
 
       <OrderDetailsSlideOver
         order={detailsOrder}

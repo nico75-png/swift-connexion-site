@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
+import { cn } from "@/lib/utils";
+
 import ActiveOrderPanel from "./ActiveOrderPanel";
 import ActiveOrdersList from "./ActiveOrdersList";
 import ActiveSummaryBar, { type SummaryCounts } from "./ActiveSummaryBar";
@@ -488,6 +490,8 @@ const LiveTrackingSection = () => {
     return formatRelativeTime(reference);
   }, [lastRefreshAt, selectedOrder]);
 
+  const isDetailsOpen = Boolean(detailsOrder);
+
   const handleContact = useCallback(
     (order: TrackingOrder, mode?: "call" | "chat" | "message") => {
       if (mode === "call" && typeof window !== "undefined") {
@@ -564,8 +568,28 @@ const LiveTrackingSection = () => {
                 <h2 className="text-sm font-semibold text-slate-900">Carte de suivi</h2>
                 <p className="text-xs text-slate-500">Zoom et drag disponibles pour explorer le trajet sélectionné.</p>
               </div>
-              <div className="h-[360px] w-full">
-                <TrackingMap order={selectedOrder ?? null} lastUpdateLabel={lastUpdateLabel} />
+              <div className="relative h-[360px] w-full">
+                <TrackingMap
+                  order={selectedOrder ?? null}
+                  lastUpdateLabel={lastUpdateLabel}
+                  disableInteractions={isDetailsOpen}
+                  className={cn(
+                    "transition-all duration-300",
+                    isDetailsOpen && "scale-[0.995] blur-[1.5px] brightness-[0.92]",
+                  )}
+                />
+                <AnimatePresence>
+                  {isDetailsOpen ? (
+                    <motion.div
+                      key="tracking-map-overlay"
+                      className="pointer-events-none absolute inset-0 rounded-[14px] border border-slate-200/60 bg-white/40 backdrop-blur-sm"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                    />
+                  ) : null}
+                </AnimatePresence>
               </div>
             </motion.div>
           </div>

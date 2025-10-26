@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 
+import { cn } from "@/lib/utils";
+
 import type { TrackingOrder } from "./LiveTrackingSection";
 
 type LeafletModule = typeof import("leaflet");
@@ -8,6 +10,8 @@ type LeafletModule = typeof import("leaflet");
 type TrackingMapProps = {
   order: TrackingOrder | null;
   lastUpdateLabel: string;
+  className?: string;
+  disableInteractions?: boolean;
 };
 
 const LEAFLET_CSS_URL = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
@@ -91,7 +95,7 @@ const createClientIcon = (leaflet: LeafletModule) =>
     iconAnchor: [17, 50],
   });
 
-const TrackingMap = ({ order, lastUpdateLabel }: TrackingMapProps) => {
+const TrackingMap = ({ order, lastUpdateLabel, className, disableInteractions }: TrackingMapProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<import("leaflet").Map | null>(null);
   const routeRef = useRef<import("leaflet").Polyline | null>(null);
@@ -220,7 +224,13 @@ const TrackingMap = ({ order, lastUpdateLabel }: TrackingMapProps) => {
   }, [order]);
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-[14px] border border-[#E5E7EB] bg-white shadow-[0_4px_16px_rgba(0,0,0,0.06)]">
+    <div
+      className={cn(
+        "relative h-full w-full overflow-hidden rounded-[14px] border border-[#E5E7EB] bg-white shadow-[0_4px_16px_rgba(0,0,0,0.06)]",
+        disableInteractions && "pointer-events-none",
+        className,
+      )}
+    >
       <div className="absolute inset-0">
         {content}
         {error ? (

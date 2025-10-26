@@ -12,8 +12,7 @@ import {
   Bell,
   TrendingUp,
   TrendingDown,
-  Radio,
-  CreditCard,
+  FileText,
   MessageCircle,
 } from "lucide-react";
 import {
@@ -368,62 +367,69 @@ const DashboardClient = () => {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-3">
-            <Card className="border-none bg-white shadow-sm lg:col-span-2">
-              <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 pb-4">
-                <div>
-                  <CardTitle className="text-lg font-semibold text-slate-900">Activités récentes</CardTitle>
-                  <p className="text-sm text-slate-500">Les dernières actions effectuées par vos équipes et clients.</p>
-                </div>
-                <Badge className="bg-[#2563eb]/10 text-[#2563eb]">Mis à jour en direct</Badge>
+            <Card className="border-none bg-white shadow-lg lg:col-span-2 lg:row-span-1 rounded-3xl">
+              <CardHeader className="space-y-1 border-b border-slate-100 pb-5">
+                <CardTitle className="text-lg font-semibold text-slate-900">Actions rapides</CardTitle>
+                <p className="text-sm text-slate-500">
+                  Accédez immédiatement aux fonctionnalités clés pour suivre, facturer et échanger avec vos clients.
+                </p>
               </CardHeader>
-              <CardContent className="space-y-4 pt-6">
-                {RECENT_ACTIVITIES.map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="flex items-start justify-between gap-4 rounded-2xl border border-slate-100 bg-slate-50/60 p-4 transition hover:border-[#2563eb]/40 hover:bg-white"
-                  >
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">{activity.title}</p>
-                      <p className="mt-1 text-sm text-slate-500">{activity.description}</p>
-                    </div>
-                    <span className="text-xs text-slate-400">{activity.time}</span>
+              <CardContent className="grid gap-4 pt-6 md:grid-cols-2">
+                <Button
+                  className="group flex h-full w-full flex-col items-start justify-between gap-4 rounded-3xl bg-[#2563eb] p-6 text-left text-white shadow-md transition-all hover:-translate-y-0.5 hover:shadow-xl"
+                >
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white transition group-hover:bg-white/20">
+                    <MapPin className="h-6 w-6" />
+                  </span>
+                  <div className="space-y-1">
+                    <p className="text-base font-semibold">Suivi en direct</p>
+                    <p className="text-sm text-white/80">Visualiser les déplacements en temps réel</p>
                   </div>
-                ))}
+                </Button>
+                <Button
+                  className="group flex h-full w-full flex-col items-start justify-between gap-4 rounded-3xl bg-[#16a34a] p-6 text-left text-white shadow-md transition-all hover:-translate-y-0.5 hover:shadow-xl"
+                >
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white transition group-hover:bg-white/20">
+                    <FileText className="h-6 w-6" />
+                  </span>
+                  <div className="space-y-1">
+                    <p className="text-base font-semibold">Mes factures</p>
+                    <p className="text-sm text-white/80">Consulter et télécharger vos documents</p>
+                  </div>
+                </Button>
+                <Button
+                  className="group flex h-full w-full flex-col items-start justify-between gap-4 rounded-3xl bg-[#8b5cf6] p-6 text-left text-white shadow-md transition-all hover:-translate-y-0.5 hover:shadow-xl md:col-span-2"
+                >
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white transition group-hover:bg-white/20">
+                    <MessageCircle className="h-6 w-6" />
+                  </span>
+                  <div className="space-y-1">
+                    <p className="text-base font-semibold">Messagerie</p>
+                    <p className="text-sm text-white/80">Accéder à vos conversations clients</p>
+                  </div>
+                </Button>
               </CardContent>
             </Card>
 
-            <Card className="border-none bg-white shadow-sm">
-              <CardHeader className="border-b border-slate-100 pb-4">
-                <CardTitle className="text-lg font-semibold text-slate-900">Actions rapides</CardTitle>
+            <Card className="border border-slate-100 bg-[#f9fafb] shadow-sm rounded-3xl">
+              <CardHeader className="flex flex-row items-start justify-between gap-3 pb-4">
+                <div>
+                  <CardTitle className="text-lg font-semibold text-slate-900">Activités récentes</CardTitle>
+                  <p className="mt-1 text-sm text-slate-500">Un aperçu instantané des dernières interactions.</p>
+                </div>
+                <Badge className="mt-1 bg-[#2563eb]/10 text-xs font-medium text-[#2563eb]">Mis à jour en direct</Badge>
               </CardHeader>
-              <CardContent className="flex flex-col gap-4 pt-6">
-                <Button
-                  className="flex w-full items-center justify-between rounded-2xl bg-[#2563eb] px-4 py-5 text-left text-white shadow-lg transition hover:bg-[#1d4ed8]"
-                >
-                  <span>
-                    <p className="text-sm font-semibold">Suivi en direct</p>
-                    <p className="text-xs text-white/70">Visualiser les déplacements en temps réel</p>
-                  </span>
-                  <Radio className="h-5 w-5" />
-                </Button>
-                <Button
-                  className="flex w-full items-center justify-between rounded-2xl bg-[#16a34a] px-4 py-5 text-left text-white shadow-lg transition hover:bg-[#15803d]"
-                >
-                  <span>
-                    <p className="text-sm font-semibold">Mes factures</p>
-                    <p className="text-xs text-white/70">Consulter et télécharger vos documents</p>
-                  </span>
-                  <CreditCard className="h-5 w-5" />
-                </Button>
-                <Button
-                  className="flex w-full items-center justify-between rounded-2xl bg-[#8b5cf6] px-4 py-5 text-left text-white shadow-lg transition hover:bg-[#7c3aed]"
-                >
-                  <span>
-                    <p className="text-sm font-semibold">Messagerie</p>
-                    <p className="text-xs text-white/70">Accéder à vos conversations clients</p>
-                  </span>
-                  <MessageCircle className="h-5 w-5" />
-                </Button>
+              <CardContent className="space-y-3 pt-2">
+                {RECENT_ACTIVITIES.map((activity) => (
+                  <div
+                    key={activity.id}
+                    className="rounded-2xl border border-slate-100 bg-white/80 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-[#2563eb]/40 hover:bg-white hover:shadow-md"
+                  >
+                    <p className="text-sm font-semibold text-slate-900">{activity.title}</p>
+                    <p className="mt-1 text-sm text-slate-500">{activity.description}</p>
+                    <span className="mt-2 block text-xs font-medium text-slate-400">{activity.time}</span>
+                  </div>
+                ))}
               </CardContent>
             </Card>
           </div>

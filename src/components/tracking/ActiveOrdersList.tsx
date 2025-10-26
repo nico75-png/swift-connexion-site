@@ -11,14 +11,6 @@ type ActiveOrdersListProps = {
   onViewDetails: (order: TrackingOrder) => void;
 };
 
-const listVariants = {
-  hidden: { opacity: 0, y: 10 },
-  visible: (index: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: index * 0.1, duration: 0.18, ease: "easeOut" },
-  }),
-};
 
 const ActiveOrdersList = ({ orders, selectedOrderId, onSelect, onViewDetails }: ActiveOrdersListProps) => {
   return (

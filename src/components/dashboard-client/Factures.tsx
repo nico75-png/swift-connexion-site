@@ -6,14 +6,6 @@ import {
   FileDown,
   Search,
 } from "lucide-react";
-import {
-  createColumnHelper,
-  flexRender,
-  getCoreRowModel,
-  getSortedRowModel,
-  type SortingState,
-  useReactTable,
-} from "@tanstack/react-table";
 
 import invoicesData from "@/data/invoices.json";
 import { Badge } from "@/components/ui/badge";
@@ -105,7 +97,7 @@ const STATUS_CONFIG: Record<InvoiceStatus, { badgeClass: string; icon: string }>
   },
 };
 
-const columnHelper = createColumnHelper<Invoice>();
+
 
 const currencyFormatter = new Intl.NumberFormat("fr-FR", {
   style: "currency",
@@ -174,9 +166,6 @@ const Factures = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue>("all");
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("month");
   const [searchQuery, setSearchQuery] = useState("");
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: "date_issued", desc: true },
-  ]);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const { toast } = useToast();
@@ -304,149 +293,7 @@ const Factures = () => {
     [toast],
   );
 
-  const columns = useMemo(
-    () => [
-      columnHelper.accessor("invoice_number", {
-        header: "Facture",
-        cell: ({ row }) => {
-          const invoice = row.original;
-          return (
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-slate-900">
-                  {invoice.invoice_number}
-                </span>
-                {isRecentInvoice(invoice) ? (
-                  <Badge className="bg-blue-600/10 text-[11px] font-semibold uppercase tracking-wide text-blue-700">
-                    Nouveau
-                  </Badge>
-                ) : null}
-              </div>
-              <p className="text-xs text-slate-500">Commande {invoice.order_number}</p>
-            </div>
-          );
-        },
-      }),
-      columnHelper.accessor("date_issued", {
-        header: ({ column }) => (
-          <button
-            type="button"
-            onClick={column.getToggleSortingHandler()}
-            className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500"
-          >
-            Date d'émission
-            <ArrowUpDown className="h-3.5 w-3.5" />
-          </button>
-        ),
-        cell: ({ row }) => {
-          const invoice = row.original;
-          return (
-            <div className="space-y-1 text-sm text-slate-600">
-              <p className="font-medium text-slate-800">{formatDate(invoice.date_issued)}</p>
-              <p className="text-xs text-slate-500">Échéance : {formatDate(invoice.due_date)}</p>
-            </div>
-          );
-        },
-        sortingFn: (rowA, rowB) => {
-          const a = new Date(rowA.original.date_issued).getTime();
-          const b = new Date(rowB.original.date_issued).getTime();
-          return a - b;
-        },
-      }),
-      columnHelper.accessor("total", {
-        header: ({ column }) => (
-          <button
-            type="button"
-            onClick={column.getToggleSortingHandler()}
-            className="flex items-center justify-end gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500"
-          >
-            Montant TTC
-            <ArrowUpDown className="h-3.5 w-3.5" />
-          </button>
-        ),
-        cell: ({ getValue }) => (
-          <div className="text-right text-sm font-semibold text-slate-900">
-            {formatCurrency(getValue())}
-          </div>
-        ),
-        sortingFn: (rowA, rowB) => rowA.original.total - rowB.original.total,
-      }),
-      columnHelper.accessor("status", {
-        header: () => (
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Statut</span>
-        ),
-        cell: ({ getValue }) => {
-          const status = getValue();
-          const config = STATUS_CONFIG[status];
-          return (
-            <AnimatePresence mode="wait">
-              <motion.span
-                key={status}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1.05 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold shadow-sm",
-                  config.badgeClass,
-                )}
-              >
-                <span aria-hidden>{config.icon}</span>
-                {status}
-              </motion.span>
-            </AnimatePresence>
-          );
-        },
-      }),
-      columnHelper.accessor("payment_method", {
-        header: () => (
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Paiement</span>
-        ),
-        cell: ({ getValue }) => (
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <span aria-hidden className="text-base">
-              {getPaymentEmoji(getValue())}
-            </span>
-            <span>{getValue()}</span>
-          </div>
-        ),
-      }),
-      columnHelper.display({
-        id: "actions",
-        header: () => <span className="sr-only">Actions</span>,
-        cell: ({ row }) => (
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="border-[#BFDBFE] text-sm font-medium text-[#1D4ED8] hover:bg-[#DBEAFE]"
-              onClick={(event) => {
-                event.stopPropagation();
-                handleDownload(row.original);
-              }}
-              aria-label={`Télécharger la facture ${row.original.invoice_number}`}
-            >
-              <Download className="h-4 w-4" aria-hidden />
-              Télécharger PDF
-            </Button>
-          </div>
-        ),
-      }),
-    ],
-    [handleDownload, isRecentInvoice],
-  );
 
-  const table = useReactTable({
-    data: filteredInvoices,
-    columns,
-    state: {
-      sorting,
-    },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
 
   const periodLabel = useMemo(() => {
     const option = PERIOD_OPTIONS.find((item) => item.value === periodFilter);
@@ -552,76 +399,97 @@ const Factures = () => {
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.15, ease: "easeOut" }}
+              transition={{ duration: 0.15 }}
             >
               <table className="w-full border-collapse text-sm">
                 <thead className="bg-slate-50">
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <tr key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <th
-                          key={header.id}
-                          scope="col"
-                          className={cn(
-                            "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500",
-                            header.column.id === "total" && "text-right",
-                            header.column.id === "actions" && "text-right",
-                          )}
-                        >
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(header.column.columnDef.header, header.getContext())}
-                        </th>
-                      ))}
-                    </tr>
-                  ))}
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Facture</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Date d'émission</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Montant TTC</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Statut</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Paiement</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</th>
+                  </tr>
                 </thead>
                 <tbody>
-                  {table.getRowModel().rows.length ? (
-                    table.getRowModel().rows.map((row) => (
-                      <motion.tr
-                        key={row.id}
-                        layout
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -6 }}
-                        whileHover={{ y: -2 }}
-                        className="cursor-pointer border-b border-slate-100 bg-white transition-shadow hover:bg-[#F9FAFB] hover:shadow-md"
-                        onClick={() => handleRowClick(row.original)}
-                      >
-                        {row.getVisibleCells().map((cell) => (
-                          <td
-                            key={cell.id}
-                            className={cn(
-                              "px-4 py-4 align-top",
-                              cell.column.id === "total" && "text-right",
-                              cell.column.id === "actions" && "text-right",
-                            )}
-                          >
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  {filteredInvoices.length ? (
+                    [...filteredInvoices]
+                      .sort((a, b) => new Date(b.date_issued).getTime() - new Date(a.date_issued).getTime())
+                      .map((invoice) => (
+                        <motion.tr
+                          key={invoice.invoice_number}
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -6 }}
+                          className="cursor-pointer border-b border-slate-100 bg-white transition-shadow hover:bg-[#F9FAFB] hover:shadow-md"
+                          onClick={() => handleRowClick(invoice)}
+                        >
+                          <td className="px-4 py-4 align-top">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-slate-900">{invoice.invoice_number}</span>
+                                {isRecentInvoice(invoice) ? (
+                                  <Badge className="bg-blue-600/10 text-[11px] font-semibold uppercase tracking-wide text-blue-700">Nouveau</Badge>
+                                ) : null}
+                              </div>
+                              <p className="text-xs text-slate-500">Commande {invoice.order_number}</p>
+                            </div>
                           </td>
-                        ))}
-                      </motion.tr>
-                    ))
+                          <td className="px-4 py-4 align-top">
+                            <div className="space-y-1 text-sm text-slate-600">
+                              <p className="font-medium text-slate-800">{formatDate(invoice.date_issued)}</p>
+                              <p className="text-xs text-slate-500">Échéance : {formatDate(invoice.due_date)}</p>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 align-top text-right">
+                            <div className="text-right text-sm font-semibold text-slate-900">{formatCurrency(invoice.total)}</div>
+                          </td>
+                          <td className="px-4 py-4 align-top">
+                            <span className={cn("inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold shadow-sm", STATUS_CONFIG[invoice.status].badgeClass)}>
+                              <span aria-hidden>{STATUS_CONFIG[invoice.status].icon}</span>
+                              {invoice.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 align-top">
+                            <div className="flex items-center gap-2 text-sm text-slate-600">
+                              <span aria-hidden className="text-base">{getPaymentEmoji(invoice.payment_method)}</span>
+                              <span>{invoice.payment_method}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 align-top text-right">
+                            <div className="flex justify-end">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="border-[#BFDBFE] text-sm font-medium text-[#1D4ED8] hover:bg-[#DBEAFE]"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleDownload(invoice);
+                                }}
+                                aria-label={`Télécharger la facture ${invoice.invoice_number}`}
+                              >
+                                <Download className="h-4 w-4" aria-hidden />
+                                Télécharger PDF
+                              </Button>
+                            </div>
+                          </td>
+                        </motion.tr>
+                      ))
                   ) : (
                     <tr>
-                      <td className="px-6 py-10 text-center text-sm text-slate-500" colSpan={columns.length}>
+                      <td className="px-6 py-10 text-center text-sm text-slate-500" colSpan={6}>
                         <div className="mx-auto max-w-md space-y-4">
                           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-3xl">
                             <FileDown aria-hidden />
                           </div>
                           <div className="space-y-1">
                             <h3 className="text-base font-semibold text-slate-800">Aucune facture disponible pour cette période.</h3>
-                            <p>
-                              Ajustez vos filtres ou élargissez la période de recherche pour retrouver vos factures.
-                            </p>
+                            <p> Ajustez vos filtres ou élargissez la période de recherche pour retrouver vos factures. </p>
                           </div>
                           <div className="flex justify-center">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="border-[#BFDBFE] text-[#1D4ED8]"
-                            >
+                            <Button type="button" variant="outline" className="border-[#BFDBFE] text-[#1D4ED8]">
                               Voir toutes mes commandes
                             </Button>
                           </div>

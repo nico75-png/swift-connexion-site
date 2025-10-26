@@ -854,7 +854,7 @@ const Commandes = () => {
                       if (!row) return null;
                       return (
                         <div
-                          key={row.id}
+                          key={virtualRow.key}
                           className="absolute left-0 right-0"
                           style={{
                             transform: `translateY(${virtualRow.start}px)`,

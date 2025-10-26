@@ -1,8 +1,16 @@
+import { useCallback, useEffect } from "react";
+import { useRouter } from "next/router";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { MapPin, FileText, MessageCircle } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { FileText, MapPin, MessageCircle, Plus, PlusCircle } from "lucide-react";
 import AnimatedSection from "@/components/dashboard-client/AnimatedSection";
 import ClientActivityChart from "./ClientActivityChart";
 import AnimatedCounter from "./AnimatedCounter";
@@ -29,185 +37,229 @@ const staggeredListVariants = {
 };
 
 const DashboardHome = () => {
+  const router = useRouter();
+
+  const handleCreateOrder = useCallback(() => {
+    void router.push("/dashboard-client/commandes/nouvelle");
+  }, [router]);
+
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "n") {
+        event.preventDefault();
+        handleCreateOrder();
+      }
+    };
+
+    window.addEventListener("keydown", handleShortcut);
+
+    return () => {
+      window.removeEventListener("keydown", handleShortcut);
+    };
+  }, [handleCreateOrder]);
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <AnimatedSection>
-        <h1 className="text-2xl font-bold text-slate-900">
-          Bonjour, Clara Dupont 👋
-        </h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Suivez vos commandes, les livraisons réussies et vos délais moyens en toute clarté.
-        </p>
-      </AnimatedSection>
-
-      {/* Vos indicateurs du mois */}
-      <AnimatedSection delay={0.08} className="space-y-4">
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">Vos indicateurs du mois</h2>
-            <p className="text-sm text-slate-600">
-              Visualisez l'avancement de vos commandes et livraisons pour le mois en cours.
-            </p>
+    <TooltipProvider delayDuration={150}>
+      <div className="space-y-6">
+        {/* Header */}
+        <AnimatedSection className="space-y-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+                Tableau de bord
+              </p>
+              <h1 className="mt-1 text-2xl font-bold text-slate-900">
+                Bonjour, Clara Dupont 👋
+              </h1>
+              <p className="mt-1 text-sm text-slate-600">
+                Suivez vos commandes, les livraisons réussies et vos délais moyens en toute clarté.
+              </p>
+            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  onClick={handleCreateOrder}
+                  className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition-transform duration-200 ease-out hover:scale-[1.02] hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white md:w-auto md:self-start md:shadow-md md:px-6 mt-4 md:mt-0 mb-6 md:mb-0"
+                  aria-label="Créer une nouvelle commande"
+                >
+                  <PlusCircle className="h-5 w-5 transition-transform group-hover:scale-110" aria-hidden="true" />
+                  <span>+ Créer une commande</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" align="end" className="text-xs text-slate-100">
+                Créer une nouvelle commande de transport.
+              </TooltipContent>
+            </Tooltip>
           </div>
-          <span className="text-xs text-blue-600">Mise à jour à16:24</span>
-        </div>
-
-        {/* Apparition en cascade des indicateurs principaux */}
-        <AnimatedSection
-          delay={0.12}
-          className="grid gap-4 md:grid-cols-3"
-          initial="hidden"
-          animate="show"
-          variants={indicatorContainerVariants}
-        >
-          {/* Vos commandes du mois */}
-          <motion.div
-            /* Soulève la carte au survol pour un feedback tangible */
-            variants={indicatorItemVariants}
-            whileHover={{ scale: 1.03, y: -4 }}
-            transition={{ type: "spring", stiffness: 260, damping: 22 }}
-          >
-            <Card className="h-full border-none bg-white/90 shadow-[0_18px_35px_-30px_rgba(30,41,59,0.45)] transition-all duration-300 ease-out">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">
-                  Vos commandes du mois
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-baseline gap-2">
-                    <AnimatedCounter
-                      value={117}
-                      className="text-4xl font-bold text-slate-900"
-                      delay={0.1}
-                    />
-                    <span className="text-sm text-slate-500">/ 122 objectif</span>
-                  </div>
-                  <p className="text-sm text-green-600">+12 % vs. mois dernier</p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Commandes livrées avec succès */}
-          <motion.div
-            /* Soulève la carte au survol pour un feedback tangible */
-            variants={indicatorItemVariants}
-            whileHover={{ scale: 1.03, y: -4 }}
-            transition={{ type: "spring", stiffness: 260, damping: 22 }}
-          >
-            <Card className="h-full border-none bg-white/90 shadow-[0_18px_35px_-30px_rgba(30,41,59,0.45)] transition-all duration-300 ease-out">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">
-                  Commandes livrées avec succès
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <Progress value={87} className="h-2" />
-                  <p className="text-sm text-slate-600">
-                    87 % atteints · cible 95 %
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Temps moyen de livraison */}
-          <motion.div
-            /* Soulève la carte au survol pour un feedback tangible */
-            variants={indicatorItemVariants}
-            whileHover={{ scale: 1.03, y: -4 }}
-            transition={{ type: "spring", stiffness: 260, damping: 22 }}
-          >
-            <Card className="h-full border-none bg-white/90 shadow-[0_18px_35px_-30px_rgba(30,41,59,0.45)] transition-all duration-300 ease-out">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">
-                  Temps moyen de livraison
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-bold text-slate-900">30,1</span>
-                    <span className="text-sm text-slate-500">min</span>
-                  </div>
-                  <p className="text-sm text-blue-600">3,3 min vs. mois dernier</p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
         </AnimatedSection>
-      </AnimatedSection>
 
-      {/* Activité mensuelle & Livrées vs En attente */}
-      <AnimatedSection delay={0.16} className="grid gap-4 lg:grid-cols-3">
-        {/* Activité mensuelle */}
-        <ClientActivityChart />
+        {/* Vos indicateurs du mois */}
+        <AnimatedSection delay={0.08} className="space-y-4">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Vos indicateurs du mois</h2>
+              <p className="text-sm text-slate-600">
+                Visualisez l'avancement de vos commandes et livraisons pour le mois en cours.
+              </p>
+            </div>
+            <span className="text-xs text-blue-600">Mise à jour à16:24</span>
+          </div>
 
-        {/* Livrées vs En attente */}
-        <AnimatedSection delay={0.22} className="h-full">
-          <Card className="h-full border-none bg-white/95 shadow-[0_18px_35px_-30px_rgba(30,41,59,0.45)] transition-all duration-300 ease-out">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-900">
-                Livrées vs En attente
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-center py-8">
-                <div className="relative h-48 w-48">
-                  <svg viewBox="0 0 100 100" className="-rotate-90 transform">
-                    {/* Dessine progressivement le donut pour matérialiser la répartition */}
-                    <motion.circle
-                      cx="50"
-                      cy="50"
-                      r="40"
-                      fill="none"
-                      stroke="#22c55e"
-                      strokeWidth="12"
-                      strokeDasharray="251.2"
-                      initial={{ strokeDashoffset: 251.2 }}
-                      animate={{ strokeDashoffset: 25.12 }}
-                      transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }}
-                    />
-                    <motion.circle
-                      cx="50"
-                      cy="50"
-                      r="40"
-                      fill="none"
-                      stroke="#3b82f6"
-                      strokeWidth="12"
-                      strokeDasharray="251.2"
-                      initial={{ strokeDashoffset: 251.2 }}
-                      animate={{ strokeDashoffset: 215.52 }}
-                      transition={{ duration: 0.8, ease: "easeOut", delay: 0.18 }}
-                    />
-                  </svg>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-full bg-green-500" />
-                    <span className="text-sm text-slate-600">Livrées</span>
+          {/* Apparition en cascade des indicateurs principaux */}
+          <AnimatedSection
+            delay={0.12}
+            className="grid gap-4 md:grid-cols-3"
+            initial="hidden"
+            animate="show"
+            variants={indicatorContainerVariants}
+          >
+            {/* Vos commandes du mois */}
+            <motion.div
+              /* Soulève la carte au survol pour un feedback tangible */
+              variants={indicatorItemVariants}
+              whileHover={{ scale: 1.03, y: -4 }}
+              transition={{ type: "spring", stiffness: 260, damping: 22 }}
+            >
+              <Card className="h-full border-none bg-white/90 shadow-[0_18px_35px_-30px_rgba(30,41,59,0.45)] transition-all duration-300 ease-out">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-slate-600">
+                    Vos commandes du mois
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex items-baseline gap-2">
+                      <AnimatedCounter
+                        value={117}
+                        className="text-4xl font-bold text-slate-900"
+                        delay={0.1}
+                      />
+                      <span className="text-sm text-slate-500">/ 122 objectif</span>
+                    </div>
+                    <p className="text-sm text-green-600">+12 % vs. mois dernier</p>
                   </div>
-                  <span className="text-sm font-semibold text-slate-900">342</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-full bg-blue-500" />
-                    <span className="text-sm text-slate-600">En attente</span>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Commandes livrées avec succès */}
+            <motion.div
+              /* Soulève la carte au survol pour un feedback tangible */
+              variants={indicatorItemVariants}
+              whileHover={{ scale: 1.03, y: -4 }}
+              transition={{ type: "spring", stiffness: 260, damping: 22 }}
+            >
+              <Card className="h-full border-none bg-white/90 shadow-[0_18px_35px_-30px_rgba(30,41,59,0.45)] transition-all duration-300 ease-out">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-slate-600">
+                    Commandes livrées avec succès
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <Progress value={87} className="h-2" />
+                    <p className="text-sm text-slate-600">
+                      87 % atteints · cible 95 %
+                    </p>
                   </div>
-                  <span className="text-sm font-semibold text-slate-900">55</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Temps moyen de livraison */}
+            <motion.div
+              /* Soulève la carte au survol pour un feedback tangible */
+              variants={indicatorItemVariants}
+              whileHover={{ scale: 1.03, y: -4 }}
+              transition={{ type: "spring", stiffness: 260, damping: 22 }}
+            >
+              <Card className="h-full border-none bg-white/90 shadow-[0_18px_35px_-30px_rgba(30,41,59,0.45)] transition-all duration-300 ease-out">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-slate-600">
+                    Temps moyen de livraison
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-4xl font-bold text-slate-900">30,1</span>
+                      <span className="text-sm text-slate-500">min</span>
+                    </div>
+                    <p className="text-sm text-blue-600">3,3 min vs. mois dernier</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </AnimatedSection>
         </AnimatedSection>
-      </AnimatedSection>
 
-      {/* Actions rapides & Activités récentes */}
+        {/* Activité mensuelle & Livrées vs En attente */}
+        <AnimatedSection delay={0.16} className="grid gap-4 lg:grid-cols-3">
+          {/* Activité mensuelle */}
+          <ClientActivityChart />
+
+          {/* Livrées vs En attente */}
+          <AnimatedSection delay={0.22} className="h-full">
+            <Card className="h-full border-none bg-white/95 shadow-[0_18px_35px_-30px_rgba(30,41,59,0.45)] transition-all duration-300 ease-out">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold text-slate-900">
+                  Livrées vs En attente
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-center py-8">
+                  <div className="relative h-48 w-48">
+                    <svg viewBox="0 0 100 100" className="-rotate-90 transform">
+                      {/* Dessine progressivement le donut pour matérialiser la répartition */}
+                      <motion.circle
+                        cx="50"
+                        cy="50"
+                        r="40"
+                        fill="none"
+                        stroke="#22c55e"
+                        strokeWidth="12"
+                        strokeDasharray="251.2"
+                        initial={{ strokeDashoffset: 251.2 }}
+                        animate={{ strokeDashoffset: 25.12 }}
+                        transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }}
+                      />
+                      <motion.circle
+                        cx="50"
+                        cy="50"
+                        r="40"
+                        fill="none"
+                        stroke="#3b82f6"
+                        strokeWidth="12"
+                        strokeDasharray="251.2"
+                        initial={{ strokeDashoffset: 251.2 }}
+                        animate={{ strokeDashoffset: 215.52 }}
+                        transition={{ duration: 0.8, ease: "easeOut", delay: 0.18 }}
+                      />
+                    </svg>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded-full bg-green-500" />
+                      <span className="text-sm text-slate-600">Livrées</span>
+                    </div>
+                    <span className="text-sm font-semibold text-slate-900">342</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded-full bg-blue-500" />
+                      <span className="text-sm text-slate-600">En attente</span>
+                    </div>
+                    <span className="text-sm font-semibold text-slate-900">55</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </AnimatedSection>
+          </AnimatedSection>
+
+        {/* Actions rapides & Activités récentes */}
       <AnimatedSection delay={0.24} className="grid gap-4 lg:grid-cols-2">
         {/* Actions rapides */}
         <AnimatedSection delay={0.28} className="h-full">
@@ -309,8 +361,16 @@ const DashboardHome = () => {
             </CardContent>
           </Card>
         </AnimatedSection>
-      </AnimatedSection>
-    </div>
+      </div>
+      <button
+        type="button"
+        onClick={handleCreateOrder}
+        className="fixed bottom-6 right-6 inline-flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition-transform duration-200 hover:scale-105 hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 md:hidden"
+        aria-label="Créer une nouvelle commande"
+      >
+        <Plus className="h-5 w-5" aria-hidden="true" />
+      </button>
+    </TooltipProvider>
   );
 };
 

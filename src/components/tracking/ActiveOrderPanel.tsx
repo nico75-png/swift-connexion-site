@@ -14,11 +14,9 @@ type ActiveOrderPanelProps = {
   orders: TrackingOrder[];
   onContact: (order: TrackingOrder, mode?: "call" | "chat" | "message") => void;
   onViewDetails: (order: TrackingOrder) => void;
-  activeView: "list" | "map" | "chat";
-  activeChatOrderId: string | null;
 };
 
-const ActiveOrderPanel = ({ orders, onContact, onViewDetails, activeView, activeChatOrderId }: ActiveOrderPanelProps) => {
+const ActiveOrderPanel = ({ orders, onContact, onViewDetails }: ActiveOrderPanelProps) => {
   if (orders.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center shadow-sm">
@@ -86,9 +84,8 @@ const ActiveOrderPanel = ({ orders, onContact, onViewDetails, activeView, active
 
       <div className="flex flex-wrap items-center gap-3">
         <Button
-          className="h-11 flex-1 rounded-lg bg-[#2563EB] text-sm font-semibold text-white transition-colors duration-150 ease-out hover:bg-[#1D4ED8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#93C5FD] focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+          className="h-11 flex-1 rounded-lg bg-[#2563EB] text-sm font-semibold text-white transition-colors duration-150 ease-out hover:bg-[#1D4ED8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#93C5FD] focus-visible:outline-offset-2"
           onClick={() => onContact(order)}
-          disabled={activeView === "chat" && activeChatOrderId === order.id}
         >
           Contacter le chauffeur
         </Button>

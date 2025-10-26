@@ -9,11 +9,10 @@ type ActiveOrdersListProps = {
   selectedOrderId: string | null;
   onSelect: (orderId: string) => void;
   onViewDetails: (order: TrackingOrder) => void;
-  onTrack: (orderId: string) => void;
-  activeView: "list" | "map" | "chat";
 };
 
-const ActiveOrdersList = ({ orders, selectedOrderId, onSelect, onViewDetails, onTrack, activeView }: ActiveOrdersListProps) => {
+
+const ActiveOrdersList = ({ orders, selectedOrderId, onSelect, onViewDetails }: ActiveOrdersListProps) => {
   return (
     <div className="flex h-full flex-col gap-4 rounded-2xl bg-[#F9FAFB] p-4">
       <div className="flex items-center justify-between">
@@ -91,17 +90,8 @@ const ActiveOrdersList = ({ orders, selectedOrderId, onSelect, onViewDetails, on
                 <div className="flex items-center justify-between gap-3">
                   <button
                     type="button"
-                    onClick={() => {
-                      onSelect(order.id);
-                      onTrack(order.id);
-                    }}
-                    disabled={isActive && activeView === "map"}
-                    className={cn(
-                      "inline-flex h-10 min-w-[44px] items-center justify-center rounded-lg px-4 text-sm font-semibold text-white transition-colors duration-150 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#93C5FD] focus-visible:outline-offset-2",
-                      isActive && activeView === "map"
-                        ? "cursor-not-allowed bg-slate-300 text-slate-500"
-                        : "bg-[#2563EB] hover:bg-[#1D4ED8]",
-                    )}
+                    onClick={() => onSelect(order.id)}
+                    className="inline-flex h-10 min-w-[44px] items-center justify-center rounded-lg bg-[#2563EB] px-4 text-sm font-semibold text-white transition-colors duration-150 ease-out hover:bg-[#1D4ED8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#93C5FD] focus-visible:outline-offset-2"
                   >
                     Suivre sur la carte
                   </button>

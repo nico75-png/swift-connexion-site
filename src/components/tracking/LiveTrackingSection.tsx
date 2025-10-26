@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 import { cn } from "@/lib/utils";
@@ -6,10 +6,9 @@ import { cn } from "@/lib/utils";
 import ActiveOrderPanel from "./ActiveOrderPanel";
 import ActiveOrdersList from "./ActiveOrdersList";
 import ActiveSummaryBar, { type SummaryCounts } from "./ActiveSummaryBar";
+import ContactDriverDrawer from "./ContactDriverDrawer";
 import OrderDetailsSlideOver from "./OrderDetailsSlideOver";
 import TrackingMap from "./TrackingMap";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
 
 type TrackingStatus = "En transit" | "En attente" | "Livrée";
 
@@ -456,173 +455,6 @@ export const useLiveTrackingStore = () => {
   };
 };
 
-const MessageBubble = ({ message, isOwn }: { message: TrackingMessage; isOwn: boolean }) => (
-  <motion.div
-    layout
-    initial={{ opacity: 0, y: 6 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -6 }}
-    transition={{ duration: 0.18 }}
-    className={cn(
-      "max-w-[85%] rounded-2xl px-4 py-2 text-sm shadow-sm",
-      isOwn ? "ml-auto bg-[#2563EB] text-white" : "bg-slate-100 text-slate-700",
-    )}
-  >
-    <p className="text-xs text-slate-400">{message.timestamp}</p>
-    <p className="mt-1 text-[13px] leading-relaxed">{message.content}</p>
-  </motion.div>
-);
-
-type ChatWithDriverPanelProps = {
-  order: TrackingOrder | null;
-  onClose: () => void;
-  onSendMessage: (orderId: string, content: string) => void;
-};
-
-const ChatWithDriverPanel = ({ order, onClose, onSendMessage }: ChatWithDriverPanelProps) => {
-  const [message, setMessage] = useState("");
-  const history = useMemo(() => order?.messages ?? [], [order]);
-  const isDisabled = !order;
-
-  useEffect(() => {
-    setMessage("");
-  }, [order?.id]);
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!order) return;
-    const trimmed = message.trim();
-    if (!trimmed) return;
-    onSendMessage(order.id, trimmed);
-    setMessage("");
-  };
-
-  return (
-    <div className="flex flex-col gap-6 rounded-2xl bg-white p-6 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#EFF6FF] text-xl">
-            {order?.driver.avatar ?? "🚚"}
-          </span>
-          <div className="space-y-1">
-            <h2 className="text-base font-semibold text-slate-900">
-              {order ? `Conversation avec ${order.driver.name}` : "Aucune commande sélectionnée"}
-            </h2>
-            <p className="text-xs text-slate-500">
-              {order
-                ? `${order.driver.vehicle} • ${order.driver.licensePlate}`
-                : "Sélectionnez une commande active pour envoyer un message."}
-            </p>
-          </div>
-        </div>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onClose}
-          className="h-10 rounded-lg text-sm text-slate-500 hover:text-slate-700"
-        >
-          Fermer
-        </Button>
-      </div>
-
-      <div className="flex flex-col gap-4">
-        <div className="flex h-[360px] flex-col gap-3 overflow-y-auto rounded-2xl bg-[#F9FAFB] p-4">
-          <AnimatePresence initial={false}>
-            {history.length === 0 ? (
-              <motion.p
-                key="empty-history"
-                className="mt-6 text-center text-sm text-slate-500"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-              >
-                {order
-                  ? "Aucun échange pour le moment. Envoyez votre premier message."
-                  : "Choisissez une commande pour démarrer la discussion."}
-              </motion.p>
-            ) : (
-              history.map((item) => <MessageBubble key={item.id} message={item} isOwn={item.author === "client"} />)
-            )}
-          </AnimatePresence>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-3">
-          <Input
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-            disabled={isDisabled}
-            placeholder="Écrire un message au chauffeur…"
-            className="h-12 flex-1 rounded-lg border-slate-200 bg-white text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#93C5FD] focus-visible:outline-offset-2"
-          />
-          <Button
-            type="submit"
-            disabled={isDisabled || message.trim().length === 0}
-            className="h-12 min-w-[120px] rounded-lg bg-[#2563EB] px-4 text-sm font-semibold text-white transition-colors duration-150 ease-out hover:bg-[#1D4ED8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#93C5FD] focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
-          >
-            Envoyer
-          </Button>
-        </form>
-      </div>
-    </div>
-  );
-};
-
-type TrackingMapViewProps = {
-  order: TrackingOrder | null;
-  onClose: () => void;
-  onContact: (order: TrackingOrder) => void;
-  lastUpdateLabel: string;
-};
-
-const TrackingMapView = ({ order, onClose, onContact, lastUpdateLabel }: TrackingMapViewProps) => {
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="space-y-1">
-          <h2 className="text-base font-semibold text-slate-900">Suivi sur la carte</h2>
-          <p className="text-xs text-slate-500">
-            {order
-              ? `${order.code} • ${order.driver.name} • Dernière mise à jour ${lastUpdateLabel}`
-              : "Sélectionnez une commande active pour visualiser son trajet."}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => order && onContact(order)}
-            disabled={!order}
-            className="h-10 rounded-lg border-[#2563EB] bg-white text-sm font-semibold text-[#2563EB] transition-colors duration-150 ease-out hover:bg-[#EFF6FF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#93C5FD] focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
-          >
-            Contacter le chauffeur
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={onClose}
-            className="h-10 rounded-lg text-sm text-slate-500 hover:text-slate-700"
-          >
-            Fermer
-          </Button>
-        </div>
-      </div>
-      <div className="relative h-[420px] w-full">
-        {order ? (
-          <TrackingMap
-            order={order}
-            lastUpdateLabel={lastUpdateLabel}
-            disableInteractions={false}
-            className="h-full w-full rounded-2xl"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white text-sm text-slate-500">
-            Aucune commande sélectionnée
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
 const LiveTrackingSection = () => {
   const {
     orders,
@@ -634,8 +466,7 @@ const LiveTrackingSection = () => {
     isRefreshing,
     appendMessage,
   } = useLiveTrackingStore();
-  const [activeView, setActiveView] = useState<"list" | "map" | "chat">("list");
-  const [contactOrderId, setContactOrderId] = useState<string | null>(null);
+  const [contactOrder, setContactOrder] = useState<TrackingOrder | null>(null);
   const [detailsOrder, setDetailsOrder] = useState<TrackingOrder | null>(null);
 
   const activeOrders = useMemo(
@@ -654,28 +485,12 @@ const LiveTrackingSection = () => {
     }
   }, [activeOrders, selectedOrder, setSelectedOrderId]);
 
-  useEffect(() => {
-    if (activeOrders.length === 0) {
-      setActiveView("list");
-      setContactOrderId(null);
-    }
-  }, [activeOrders.length]);
-
-  useEffect(() => {
-    if (activeView !== "list" && detailsOrder) {
-      setDetailsOrder(null);
-    }
-  }, [activeView, detailsOrder]);
-
-  const chatOrder = useMemo(() => {
-    if (!contactOrderId) return null;
-    return orders.find((order) => order.id === contactOrderId) ?? null;
-  }, [contactOrderId, orders]);
-
   const lastUpdateLabel = useMemo(() => {
     const reference = selectedOrder?.lastUpdateAt ?? lastRefreshAt;
     return formatRelativeTime(reference);
   }, [lastRefreshAt, selectedOrder]);
+
+  const isDetailsOpen = Boolean(detailsOrder);
 
   const handleContact = useCallback(
     (order: TrackingOrder, mode?: "call" | "chat" | "message") => {
@@ -684,24 +499,10 @@ const LiveTrackingSection = () => {
         window.location.href = `tel:${phone}`;
         return;
       }
-      setContactOrderId(order.id);
-      setActiveView("chat");
+      setContactOrder(order);
     },
     [],
   );
-
-  const handleTrackOrder = useCallback(
-    (orderId: string) => {
-      setSelectedOrderId(orderId);
-      setActiveView("map");
-    },
-    [setSelectedOrderId],
-  );
-
-  const handleCloseView = useCallback(() => {
-    setActiveView("list");
-    setContactOrderId(null);
-  }, []);
 
   return (
     <section className="space-y-6 rounded-3xl bg-[#F9FAFB] p-6">
@@ -748,76 +549,87 @@ const LiveTrackingSection = () => {
           </button>
         </motion.div>
       ) : (
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeView}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="space-y-6"
-          >
-            {activeView === "list" ? (
-              <div className="space-y-6">
-                <ActiveOrdersList
-                  orders={activeOrders}
-                  selectedOrderId={selectedOrder?.id ?? null}
-                  onSelect={setSelectedOrderId}
-                  onViewDetails={(order) => setDetailsOrder(order)}
-                  onTrack={handleTrackOrder}
-                  activeView={activeView}
+        <div className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
+            <ActiveOrdersList
+              orders={activeOrders}
+              selectedOrderId={selectedOrder?.id ?? null}
+              onSelect={setSelectedOrderId}
+              onViewDetails={(order) => setDetailsOrder(order)}
+            />
+            <motion.div
+              key={selectedOrder?.id ?? "map"}
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="flex flex-col gap-4"
+            >
+              <div className="space-y-1">
+                <h2 className="text-sm font-semibold text-slate-900">Carte de suivi</h2>
+                <p className="text-xs text-slate-500">Zoom et drag disponibles pour explorer le trajet sélectionné.</p>
+              </div>
+              <div className="relative h-[360px] w-full">
+                <TrackingMap
+                  order={selectedOrder ?? null}
+                  lastUpdateLabel={lastUpdateLabel}
+                  disableInteractions={isDetailsOpen}
+                  className={cn(
+                    "transition-all duration-300",
+                    isDetailsOpen && "scale-[0.995] blur-[1.5px] brightness-[0.92]",
+                  )}
                 />
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={`panel-${selectedOrder?.id ?? "none"}`}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -12 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <ActiveOrderPanel
-                      orders={activeOrders}
-                      onContact={handleContact}
-                      onViewDetails={(order) => setDetailsOrder(order)}
-                      activeView={activeView}
-                      activeChatOrderId={contactOrderId}
+                <AnimatePresence>
+                  {isDetailsOpen ? (
+                    <motion.div
+                      key="tracking-map-overlay"
+                      className="pointer-events-none absolute inset-0 rounded-[14px] border border-slate-200/60 bg-white/40 backdrop-blur-sm"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
                     />
-                  </motion.div>
+                  ) : null}
                 </AnimatePresence>
               </div>
-            ) : null}
+            </motion.div>
+          </div>
 
-            {activeView === "map" ? (
-              <TrackingMapView
-                order={selectedOrder ?? null}
-                onClose={handleCloseView}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={selectedOrder?.id ?? "panel"}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ActiveOrderPanel
+                orders={activeOrders}
                 onContact={handleContact}
-                lastUpdateLabel={lastUpdateLabel}
+                onViewDetails={(order) => setDetailsOrder(order)}
               />
-            ) : null}
-
-            {activeView === "chat" ? (
-              <ChatWithDriverPanel
-                order={chatOrder}
-                onClose={handleCloseView}
-                onSendMessage={(orderId, content) => {
-                  appendMessage(orderId, content);
-                }}
-              />
-            ) : null}
-          </motion.div>
-        </AnimatePresence>
+            </motion.div>
+          </AnimatePresence>
+        </div>
       )}
 
-      {activeView === "list" ? (
-        <OrderDetailsSlideOver
-          order={detailsOrder}
-          open={Boolean(detailsOrder)}
-          onOpenChange={(open) => {
-            if (!open) setDetailsOrder(null);
-          }}
-        />
-      ) : null}
+      <ContactDriverDrawer
+        order={contactOrder}
+        open={Boolean(contactOrder)}
+        onOpenChange={(open) => {
+          if (!open) setContactOrder(null);
+        }}
+        onSendMessage={(orderId, content) => {
+          appendMessage(orderId, content);
+        }}
+      />
+
+      <OrderDetailsSlideOver
+        order={detailsOrder}
+        open={Boolean(detailsOrder)}
+        onOpenChange={(open) => {
+          if (!open) setDetailsOrder(null);
+        }}
+      />
     </section>
   );
 };

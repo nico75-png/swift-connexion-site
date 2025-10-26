@@ -61,7 +61,7 @@ const STATUS_CONFIG = {
 
 const tableColumnHelper = createColumnHelper<Order>();
 
-const KPI_CARD_TRANSITION = { duration: 0.2, ease: [0.16, 1, 0.3, 1] };
+const KPI_CARD_TRANSITION = { duration: 0.2 };
 
 const MOCK_ORDERS: Order[] = [
   {
@@ -524,13 +524,10 @@ const Commandes = () => {
       >
         <div className="grid flex-1 grid-cols-[minmax(180px,1.2fr)_minmax(150px,1fr)_minmax(200px,1.4fr)_minmax(140px,0.9fr)_minmax(120px,0.6fr)] items-center gap-6">
           {row.getVisibleCells().map((cell) => {
-            const column = cell?.column;
-            const cellRenderer = column?.columnDef?.cell;
-            const fallbackValue = typeof cell.getValue === "function" ? cell.getValue() ?? "—" : "—";
-
+            const columnDef = columns.find(col => 'id' in col && col.id === cell.column.id);
             return (
-              <div key={cell.id} className={cn(column?.id === "total_amount" && "text-right")}>
-                {cellRenderer ? flexRender(cellRenderer, cell.getContext()) : fallbackValue}
+              <div key={cell.id} className={cn(cell.column.id === "total_amount" && "text-right")}>
+                {columnDef?.cell ? flexRender(columnDef.cell, cell.getContext()) : String(cell.getValue() ?? "—")}
               </div>
             );
           })}
@@ -649,7 +646,6 @@ const Commandes = () => {
                   <AnimatedCounter
                     value={card.counterValue}
                     decimals={card.counterProps?.decimals}
-                    prefix={card.counterProps?.prefix}
                     suffix={card.counterProps?.suffix}
                     className="text-2xl leading-7"
                   />

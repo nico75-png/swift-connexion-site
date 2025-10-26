@@ -20,20 +20,12 @@ const indicatorContainerVariants = {
 
 const indicatorItemVariants = {
   hidden: { opacity: 0, y: 24 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.38, ease: "easeOut" },
-  },
+  show: { opacity: 1, y: 0 },
 };
 
 const staggeredListVariants = {
   hidden: { opacity: 0, y: 20 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.34, ease: "easeOut" },
-  },
+  show: { opacity: 1, y: 0 },
 };
 
 const DashboardHome = () => {

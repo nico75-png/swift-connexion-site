@@ -3,7 +3,6 @@ import {
   type ColumnDef,
   type SortingState,
   type Table,
-  getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import { type VirtualItem, useVirtualizer } from "@tanstack/react-virtual";
@@ -53,35 +52,13 @@ export const useOrdersTable = ({ orders, columns }: UseOrdersTableParams): UseOr
   );
 
   const safeColumns = useMemo<ColumnDef<Order>[]>(() => {
-    if (!Array.isArray(columns)) {
+    if (!Array.isArray(columns) || columns.length === 0) {
       return [];
     }
 
-    return columns
-      .filter((column): column is ColumnDef<Order> => Boolean(column))
-      .map((column) => {
-        if (typeof column !== "object" || column === null) {
-          return column;
-        }
-
-        if (column.cell) {
-          return column;
-        }
-
-        return {
-          ...column,
-          cell: (context) => {
-            const value = typeof context.getValue === "function" ? context.getValue() : undefined;
-            if (value === null || value === undefined || value === "") {
-              return "—";
-            }
-            if (typeof value === "number") {
-              return Number.isFinite(value) ? value : "—";
-            }
-            return value as string;
-          },
-        } satisfies ColumnDef<Order>;
-      });
+    return columns.filter((column): column is ColumnDef<Order> => 
+      Boolean(column) && typeof column === "object" && column !== null
+    );
   }, [columns]);
 
   const filteredOrders = useMemo(() => {
@@ -121,7 +98,6 @@ export const useOrdersTable = ({ orders, columns }: UseOrdersTableParams): UseOr
     data: filteredOrders,
     columns: safeColumns,
     state: { sorting },
-    getCoreRowModel: getCoreRowModel(),
   });
 
   const tableContainerRef = useRef<HTMLDivElement>(null);

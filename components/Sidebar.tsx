@@ -30,6 +30,10 @@ const navigationItems = [
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const normalizedPathname =
+    pathname !== "/" && pathname.endsWith("/")
+      ? pathname.slice(0, -1)
+      : pathname;
 
   return (
     <div className="flex h-full flex-col justify-between bg-[#0B1437] text-white">
@@ -48,8 +52,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <nav className="flex flex-col gap-1 px-4" aria-label="Navigation principale">
           {navigationItems.map((item) => {
             const Icon = item.icon;
-            const isActive =
-              pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const isRootLink = item.href === "/";
+            const isActive = isRootLink
+              ? normalizedPathname === "/"
+              : normalizedPathname === item.href ||
+                normalizedPathname.startsWith(`${item.href}/`);
 
             return (
               <Link

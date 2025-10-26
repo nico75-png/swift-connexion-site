@@ -115,9 +115,9 @@ const OrderActionsBar = ({
         initial={{ opacity: 0, y: -6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, ease: "easeOut" }}
-        className="rounded-xl bg-white p-4 shadow-[0_2px_6px_rgba(0,0,0,0.05)] sm:p-5"
+        className="rounded-xl bg-white p-3 shadow-[0_2px_6px_rgba(0,0,0,0.05)] sm:p-4"
       >
-        <div className="flex flex-col gap-2 sm:flex-row sm:gap-3 sm:justify-between">
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
           {renderActionButton({
             label: "Suivre ma livraison",
             icon: MapPin,
@@ -151,7 +151,7 @@ const OrderActionsBar = ({
         </div>
 
         <p className="mt-4 text-center text-[13px] leading-5 text-[#6B7280]">
-          <strong>Le bon de livraison est disponible après validation.</strong>
+          Le bon de livraison est disponible après validation.
         </p>
       </motion.aside>
     </TooltipProvider>

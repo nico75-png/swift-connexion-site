@@ -1,3 +1,5 @@
+> 🔒 Version stable : validée et fusionnée avec `main` le 26/10/2025
+
 # 🤖 AGENTS.md — Manuel des agents et sécurisations du projet Swift Connexion
 
 ## 🧭 Objectif
@@ -32,7 +34,7 @@ git config core.hooksPath .husky
 ---
 
 ## ⚙️ Agent 2 : lint-staged
-**Rôle :** Lint ciblé sur les fichiers en staging  
+**Rôle :** Lint ciblé sur les fichiers modifiés  
 **Défini dans :** `package.json`
 
 ### Configuration recommandée
@@ -46,18 +48,15 @@ git config core.hooksPath .husky
 }
 ```
 
-### Objectif
-Seuls les fichiers modifiés sont vérifiés ; le lint global n’est plus bloquant pour les fichiers anciens.
-
 ---
 
 ## 🧠 Agent 3 : ESLint
-**Rôle :** Vérification globale du code source  
+**Rôle :** Vérification globale du code  
 **Commande :** `npm run lint:safe`
 
 ### Description
-- `--fix` corrige automatiquement les erreurs simples.  
-- `--quiet` masque les avertissements non bloquants.  
+- Corrige automatiquement les erreurs simples.  
+- Masque les avertissements non bloquants.  
 - Sert de test global avant build ou merge.
 
 ### En cas d’erreur « @eslint/js introuvable »
@@ -69,47 +68,38 @@ npm install --save-dev @eslint/js
 ---
 
 ## 🧩 Agent 4 : Dashboard Client
-**Rôle :** Composant principal d’interface utilisateur  
+**Rôle :** Composant principal du tableau de bord client  
 **Fichier :** `src/components/dashboard-client/DashboardClient.tsx`
 
 ### Description
-- Layout à trois colonnes (sidebar / espace principal / panneau latéral droit).  
-- Squelette visuel réactif, sans données réelles pour le moment.  
+- Layout à trois colonnes : sidebar, contenu principal, panneau latéral.  
+- Squelette visuel complet, sans données réelles (placeholder uniquement).  
 - Props dynamiques : `userName`, `userEmail`, `avatarUrl`.  
-- Prêt à être relié à Supabase ou autre backend.  
-- Compatible avec shadcn/ui, lucide-react et Tailwind.
-
-### Rappel
-Ce dashboard est **structurellement complet** mais **non connecté** à Supabase.  
-Il sert d’ossature pour construire les futures fonctionnalités.
+- Compatible Tailwind, lucide-react, shadcn/ui.  
+- Prêt à être connecté à Supabase.
 
 ---
 
 ## 🚀 Agent 5 : Build et environnement
-**Rôle :** Vérification complète du projet avant exécution ou déploiement.
-
-### Commandes
+**Commandes principales :**
 ```bash
 npm run lint:safe
 npm run build
 npm run dev
 ```
 
-💡 Si ces trois commandes passent sans erreur, ton environnement est garanti **stable et déployable**.
+💡 Si ces trois commandes passent sans erreur, l’environnement est **propre et stable**.
 
 ---
 
 ## 🧩 Agent 6 : Codex Pro
-**Rôle :** Superviseur IA local et auditeur technique.
+**Rôle :** Superviseur IA et auditeur technique local.
 
 ### Capacités
-- Analyse le code, détecte les erreurs structurelles.  
-- Vérifie la cohérence du typage et des dépendances.  
-- Suit ce manuel pour ajuster automatiquement les workflows (Husky, ESLint, Supabase…).  
-- Ne modifie jamais directement le code sans validation humaine.
-
-💬 Quand Codex Pro affiche « Je dois trouver le fichier AGENTS.md »,  
-cela signifie qu’il recherche ce manuel pour charger les règles du projet.
+- Analyse la cohérence du code et les dépendances.  
+- Vérifie la logique des fichiers et des hooks.  
+- Suit les consignes de ce manuel avant toute action automatique.  
+- Ne modifie rien sans validation humaine.
 
 ---
 
@@ -119,21 +109,19 @@ cela signifie qu’il recherche ce manuel pour charger les règles du projet.
 |-----------|----------------|-----------|
 | Husky ne se déclenche pas | Hook inactif | `chmod +x .husky/pre-commit` |
 | Lint échoue sans raison | Cache npm corrompu | `rm -rf node_modules && npm install` |
-| Erreur `403` npm | Mauvais registre | `npm config set registry https://registry.npmjs.org/` |
+| Erreur 403 npm | Mauvais registre | `npm config set registry https://registry.npmjs.org/` |
 | Typage cassé | Types Supabase modifiés | `npm run build` |
 
 ---
 
-## ✅ Vérification avant merge ou déploiement
-
-Avant tout merge, exécute :
+## ✅ Vérification avant merge
+Avant de fusionner une branche :
 ```bash
 npm run lint:safe
 npm run build
 npm run dev
 ```
-
-Si tout est vert :
+Si tout passe :
 ```bash
 git add .
 git commit -m "release stable"
@@ -145,8 +133,11 @@ git push origin v1.0.0-stable
 ---
 
 ## 💡 Notes finales
-- Ce fichier est **le cœur documentaire** de ton projet.  
-- Tous les agents (humains ou IA) s’y réfèrent avant d’agir.  
-- Ne le supprime jamais et garde-le à jour si tu ajoutes une intégration.
+- Ce fichier est **le cœur du projet**.  
+- Tous les agents (humains et IA) s’y réfèrent.  
+- Ne le supprime jamais, et mets-le à jour si tu modifies la structure.
 
 📘 **AGENTS.md** = zéro bug, zéro commit cassé, zéro build bloqué.
+
+🔚 **Fin du fichier AGENTS.md** 🔚
+━━━━━━━━━━━━━━━━━━

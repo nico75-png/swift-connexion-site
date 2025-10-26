@@ -43,17 +43,17 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   }, [pathname]);
 
   return (
-    <div className="flex h-full flex-col justify-between bg-[#0B1437] text-white">
+    <div className="flex h-full flex-col justify-between bg-gradient-to-b from-[#1E3A8A] via-[#2563EB] to-[#1E40AF] text-white">
       <div>
         <div className="flex items-center gap-3 px-6 pb-8 pt-6">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-lg font-bold">
-            CS
+            OC
           </div>
           <div>
             <p className="text-sm font-semibold uppercase tracking-wide text-white/80">
-              Connexion Swift
+              One Connexion
             </p>
-            <p className="text-xs text-white/60">Dashboard client</p>
+            <p className="text-xs text-white/60">L'efficacité logistique, en toute transparence.</p>
           </div>
         </div>
         <nav className="flex flex-col gap-1 px-4" aria-label="Navigation principale">
@@ -82,11 +82,16 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
       <div className="px-6 pb-6">
         <div className="rounded-lg bg-white/5 p-4 text-xs text-white/70">
-          <p className="font-semibold text-white">Support 24/7</p>
+          <p className="font-semibold text-white">Support One Connexion 24/7</p>
           <p className="mt-1 leading-relaxed">
-            Besoin d'aide ? Notre équipe est disponible à tout moment pour vous
-            accompagner.
+            Besoin d'aide ? Notre équipe est disponible en continu pour vous accompagner.
           </p>
+          <a
+            href="mailto:support@one-connexion.com"
+            className="mt-3 inline-flex text-xs font-semibold text-white/90 hover:text-white"
+          >
+            support@one-connexion.com
+          </a>
         </div>
       </div>
     </div>
@@ -104,7 +109,7 @@ export function Sidebar() {
             <Button
               variant="ghost"
               size="icon"
-              className="fixed left-4 top-4 z-50 h-10 w-10 rounded-full bg-[#0B1437] text-white shadow md:hidden"
+              className="fixed left-4 top-4 z-50 h-10 w-10 rounded-full bg-[#1E3A8A] text-white shadow md:hidden"
               aria-label="Ouvrir la navigation"
             >
               <Menu className="h-5 w-5" />
@@ -112,14 +117,14 @@ export function Sidebar() {
           </SheetTrigger>
           <SheetContent
             side="left"
-            className="w-72 border-none bg-[#0B1437] p-0 text-white"
+            className="w-72 border-none bg-gradient-to-b from-[#1E3A8A] via-[#2563EB] to-[#1E40AF] p-0 text-white"
           >
             <SidebarContent onNavigate={() => setOpen(false)} />
           </SheetContent>
         </Sheet>
       </div>
 
-      <aside className="hidden min-h-screen w-64 shrink-0 border-r border-white/10 bg-[#0B1437] md:block">
+      <aside className="hidden min-h-screen w-64 shrink-0 border-r border-white/10 bg-gradient-to-b from-[#1E3A8A] via-[#2563EB] to-[#1E40AF] md:block">
         <SidebarContent />
       </aside>
     </>

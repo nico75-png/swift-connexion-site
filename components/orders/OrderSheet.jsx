@@ -78,12 +78,12 @@ const FALLBACK_ORDER = {
   ],
   meta: {
     company: {
-      name: "Swift Connexion",
+      name: "One Connexion",
       industry: "Logistique",
-      address: "12 avenue de l'Innovation, 75008 Paris",
-      siret: "812 345 678 00012",
+      address: "18 avenue des Transports, 75010 Paris",
+      siret: "902 112 334 00045",
       phone: "+33 1 45 78 90 12",
-      email: "support@swift-connexion.fr",
+      email: "support@one-connexion.com",
     },
     parcel: {
       type: "Palette",
@@ -92,7 +92,7 @@ const FALLBACK_ORDER = {
       dimensions: "120 x 80 x 150",
     },
     pickup: {
-      name: "Swift Connexion - Hub Est",
+      name: "One Connexion - Hub Est",
       fullAddress: "Zone Industrielle, 12 rue des Frères Lumière, 54000 Nancy",
       datetime: "19 janv. 2025 - 07:30",
     },
@@ -103,7 +103,7 @@ const FALLBACK_ORDER = {
     },
     logistics: {
       driverName: "Julien Moreau",
-      carrier: "Swift Connexion Transport",
+      carrier: "One Connexion Transport",
     },
     plan: "Express",
     createdAt: "12 janv. 2025",

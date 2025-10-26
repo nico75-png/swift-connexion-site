@@ -92,7 +92,7 @@ const INITIAL_ORDERS: RawOrder[] = [
     progress: 52,
     lastUpdateAt: Date.now() - 60_000,
     contact: {
-      email: "logistique@swift.fr",
+      email: "logistique@one-connexion.com",
       phone: "+33 1 45 22 33 90",
     },
     messages: [
@@ -137,7 +137,7 @@ const INITIAL_ORDERS: RawOrder[] = [
     progress: 34,
     lastUpdateAt: Date.now() - 120_000,
     contact: {
-      email: "commandes@swift.fr",
+      email: "commandes@one-connexion.com",
       phone: "+33 1 88 20 55 80",
     },
     messages: [
@@ -175,7 +175,7 @@ const INITIAL_ORDERS: RawOrder[] = [
     progress: 0,
     lastUpdateAt: Date.now() - 1_800_000,
     contact: {
-      email: "dispatch@swift.fr",
+      email: "dispatch@one-connexion.com",
       phone: "+33 1 76 30 42 12",
     },
     messages: [],
@@ -205,7 +205,7 @@ const INITIAL_ORDERS: RawOrder[] = [
     progress: 100,
     lastUpdateAt: Date.now() - 7_200_000,
     contact: {
-      email: "support@swift.fr",
+      email: "support@one-connexion.com",
       phone: "+33 1 74 11 62 03",
     },
     messages: [],

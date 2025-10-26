@@ -2,8 +2,6 @@ import { Link } from "react-router-dom";
 import { Package, Mail, Phone, MapPin } from "lucide-react";
 
 const Footer = () => {
-  const currentYear = new Date().getFullYear();
-
   return (
     <footer className="bg-primary text-primary-foreground">
       <div className="container mx-auto px-4 py-12">
@@ -77,14 +75,17 @@ const Footer = () => {
               </li>
               <li className="flex items-start gap-2">
                 <Mail className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                <a href="mailto:contact@oneconnexion.fr" className="text-primary-foreground/80 hover:text-primary-foreground transition-smooth">
-                  contact@oneconnexion.fr
+                <a
+                  href="mailto:contact@one-connexion.com"
+                  className="text-primary-foreground/80 hover:text-primary-foreground transition-smooth"
+                >
+                  contact@one-connexion.com
                 </a>
               </li>
               <li className="flex items-start gap-2">
                 <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
                 <span className="text-primary-foreground/80">
-                  123 Avenue de Paris<br />75001 Paris, France
+                  18 avenue des Transports<br />75010 Paris, France
                 </span>
               </li>
             </ul>
@@ -94,9 +95,7 @@ const Footer = () => {
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-primary-foreground/10">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-primary-foreground/60">
-            <div>
-              © {currentYear} One Connexion. Tous droits réservés.
-            </div>
+            <div>© 2025 Une Connexion. Tous droits réservés.</div>
             <div className="flex flex-wrap justify-center gap-4">
               <Link to="/mentions-legales" className="hover:text-primary-foreground transition-smooth">
                 Mentions légales

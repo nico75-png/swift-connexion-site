@@ -10,9 +10,9 @@ import { Sidebar } from "../components/Sidebar";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Connexion Swift — Dashboard",
+  title: "One Connexion — Dashboard",
   description:
-    "Espace client Connexion Swift pour gérer les commandes, le suivi et les communications.",
+    "Espace client One Connexion pour gérer les commandes, le suivi et les communications en toute transparence.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

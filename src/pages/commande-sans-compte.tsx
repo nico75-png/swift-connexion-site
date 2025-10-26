@@ -725,7 +725,7 @@ const CommandeSansCompte = () => {
                               <FormItem className="md:col-span-2">
                                 <FormLabel>Nom de la société (facultatif)</FormLabel>
                                 <FormControl>
-                                  <Input {...field} autoComplete="organization" placeholder="Swift Connexion" />
+                                  <Input {...field} autoComplete="organization" placeholder="One Connexion" />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>

@@ -40,8 +40,8 @@ type PreferencesState = {
 const initialProfile: ProfileFormState = {
   avatar: "https://i.pravatar.cc/300?img=47",
   fullName: "Clara Dupont",
-  company: "Swift Connexion",
-  email: "clara.dupont@swift-connexion.com",
+  company: "One Connexion",
+  email: "clara.dupont@one-connexion.com",
   phone: "+33 6 12 34 56 78",
   siret: "123 456 789 00021",
 };
@@ -345,7 +345,7 @@ const Parametres = () => {
                   )}
                 />
                 <p className={cn("text-xs", isDarkMode ? "text-neutral-500" : "text-gray-500")}>
-                  Validé par l'équipe Swift Connexion.
+                  Validé par l'équipe One Connexion.
                 </p>
               </div>
 
@@ -668,13 +668,13 @@ const Parametres = () => {
           <span>
             Support technique :
             <a
-              href="mailto:support@swift-connexion.com"
+              href="mailto:support@one-connexion.com"
               className={cn(
                 "ml-1 font-medium transition hover:underline",
                 isDarkMode ? "text-blue-300" : "text-blue-600",
               )}
             >
-              support@swift-connexion.com
+              support@one-connexion.com
             </a>
           </span>
         </footer>

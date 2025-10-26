@@ -24,7 +24,7 @@ const commandesDetails: Record<string, CommandeDetail> = {
     paiementStatut: "Payé",
     livraisonStatut: "Livrée",
     produits: [
-      { nom: "Pack découverte Swift", quantite: 1, prixUnitaire: 79.99 },
+      { nom: "Pack découverte One Connexion", quantite: 1, prixUnitaire: 79.99 },
       { nom: "Atelier onboarding", quantite: 1, prixUnitaire: 50 },
     ],
     adresseLivraison: {

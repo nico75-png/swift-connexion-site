@@ -7,7 +7,7 @@ const escapePdfText = (value) =>
 const buildContentLines = (order) => {
   const lines = [];
   lines.push(`Bon de commande #${order?.orderInfo?.number ?? "-"}`);
-  lines.push("Document généré automatiquement par Swift Connexion");
+  lines.push("Document généré automatiquement par One Connexion");
   lines.push(" ");
   lines.push("1. Informations société");
   lines.push(`Nom de la société : ${order?.company?.name ?? "-"}`);

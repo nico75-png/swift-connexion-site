@@ -247,7 +247,7 @@ const Inscription = () => {
                               <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
                                 @
                               </span>
-                              <Input {...field} className="pl-8" placeholder="oneconnexion" autoComplete="username" />
+                              <Input {...field} className="pl-8" placeholder="one-connexion" autoComplete="username" />
                             </div>
                           </FormControl>
                           <FormMessage />

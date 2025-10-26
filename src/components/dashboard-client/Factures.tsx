@@ -668,7 +668,7 @@ const Factures = () => {
                                   <p>Téléphone : {selectedInvoice.customer.phone}</p>
                                 </div>
                                 <div className="space-y-2">
-                                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Swift Connexion</p>
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">One Connexion</p>
                                   <p className="font-medium text-slate-900">{selectedInvoice.issuer.name}</p>
                                   <p>{selectedInvoice.issuer.address}</p>
                                   <p>SIRET : {selectedInvoice.issuer.siret}</p>
@@ -894,7 +894,7 @@ const Factures = () => {
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div className="space-y-1">
                         <p className="text-sm font-semibold text-slate-900">🏦 Virement bancaire</p>
-                        <p className="text-xs text-slate-500">Utilisez les coordonnées bancaires Swift Connexion.</p>
+                        <p className="text-xs text-slate-500">Utilisez les coordonnées bancaires One Connexion.</p>
                       </div>
                       <Button type="button" size="sm" className="bg-green-50 px-4 text-sm font-semibold text-emerald-700 shadow-sm hover:bg-emerald-100" onClick={() => handleMockPayment(paymentInvoice, "bank")}>
                         Marquer comme payé
@@ -902,7 +902,7 @@ const Factures = () => {
                     </div>
                     <div className="grid gap-2 rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-600">
                       <p>
-                        <span className="font-semibold text-slate-800">Titulaire :</span> Swift Transport
+                        <span className="font-semibold text-slate-800">Titulaire :</span> One Connexion Transport
                       </p>
                       <p>
                         <span className="font-semibold text-slate-800">Banque :</span> BNP Paribas

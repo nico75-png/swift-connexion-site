@@ -161,7 +161,7 @@ const MOCK_ORDERS: Order[] = [
       vehicle: "Peugeot Boxer · FG-789-HI",
     },
     delivery: {
-      address: "Site logistique Swift, Bordeaux",
+      address: "Site logistique One Connexion, Bordeaux",
       expected_date: "2024-10-18T08:00:00.000Z",
       status: "Planifiée",
     },
@@ -200,7 +200,7 @@ const MOCK_ORDERS: Order[] = [
     source: "Support client",
     driver: {
       id: "driver_004",
-      name: "Equipe Swift",
+      name: "Equipe One Connexion",
       phone: "+33 1 70 00 11 22",
       vehicle: "—",
     },

@@ -133,8 +133,8 @@ const createClientParticipant = (identity: ReturnType<typeof deriveClientIdentit
   });
 
 const participants: Participant[] = [
-  buildParticipant("admin-1", "ADMIN", "Support One Connexion", "SC", {
-    email: "support@one-connexion.fr",
+  buildParticipant("admin-1", "ADMIN", "Support One Connexion", "OC", {
+    email: "support@one-connexion.com",
     phone: "+33123456789",
   }),
   createClientParticipant(deriveClientIdentity()),

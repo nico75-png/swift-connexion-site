@@ -23,7 +23,7 @@ async function testSupabaseConnection() {
     const testOrder = {
       'nom et prénom': 'Test Codex',
       entreprise: 'One Connexion',
-      'e-mail': 'test@oneconnexion.dev',
+      'e-mail': 'test@one-connexion.dev',
       telephone: '0600000000',
       type_colis: 'Test automatique',
       adresse_depart: 'Paris',

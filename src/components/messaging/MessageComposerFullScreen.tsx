@@ -386,7 +386,7 @@ const MessageComposerFullScreen = ({ open, actorId, onClose, onCreated }: Messag
                             <div className="flex flex-col text-left">
                               <span className="font-medium">{recipient.displayName}</span>
                               <span className="text-xs text-muted-foreground">
-                                {recipient.role === "ADMIN" && "Support OneConnexion (ADMIN)"}
+                                {recipient.role === "ADMIN" && "Support One Connexion (ADMIN)"}
                                 {recipient.role === "DRIVER" && "Chauffeur assigné"}
                                 {recipient.metadata?.orders?.length
                                   ? ` • Commandes ${recipient.metadata.orders.join(", ")}`

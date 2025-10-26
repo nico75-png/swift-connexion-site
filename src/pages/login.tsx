@@ -270,7 +270,7 @@ const Login = () => {
                   type="email"
                   name="email"
                   autoComplete="email"
-                  placeholder="exemple@oneconnexion.fr"
+                  placeholder="exemple@one-connexion.com"
                   required
                 />
               </label>

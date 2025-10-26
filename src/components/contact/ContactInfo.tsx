@@ -1,12 +1,13 @@
 import ContactCard from "./ContactCard";
 import { BookOpen, Mail, MapPin, Phone } from "lucide-react";
 
-const SUPPORT_DOCS_URL = import.meta.env.VITE_SUPPORT_DOCS_URL ?? "https://docs.oneconnexion.fr"; // Update with your live documentation URL if it differs.
-const SUPPORT_EMAIL = import.meta.env.VITE_CONTACT_EMAIL ?? "contact@oneconnexion.fr"; // Update when the official support email changes.
+const SUPPORT_DOCS_URL =
+  import.meta.env.VITE_SUPPORT_DOCS_URL ?? "https://docs.one-connexion.com"; // Update with your live documentation URL if it differs.
+const SUPPORT_EMAIL = import.meta.env.VITE_CONTACT_EMAIL ?? "contact@one-connexion.com"; // Update when the official support email changes.
 const SUPPORT_PHONE = import.meta.env.VITE_CONTACT_PHONE ?? "+33123456789"; // Update with the canonical international phone number.
 const SUPPORT_PHONE_DISPLAY = import.meta.env.VITE_CONTACT_PHONE_DISPLAY ?? "01 23 45 67 89"; // Update with your preferred local display format.
 const SUPPORT_ADDRESS =
-  import.meta.env.VITE_CONTACT_ADDRESS ?? "123 Avenue de Paris, 75001 Paris, France"; // Update with your actual office address.
+  import.meta.env.VITE_CONTACT_ADDRESS ?? "18 avenue des Transports, 75010 Paris, France"; // Update with your actual office address.
 const SUPPORT_VISIT_URL =
   import.meta.env.VITE_CONTACT_VISIT_URL ??
   `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(SUPPORT_ADDRESS)}`; // Replace with a dedicated maps link if available.

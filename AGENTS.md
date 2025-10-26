@@ -1,6 +1,6 @@
 > 🔒 Version stable : validée et fusionnée avec `main` le 26/10/2025
 
-# 🤖 AGENTS.md — Manuel des agents et sécurisations du projet Swift Connexion
+# 🤖 AGENTS.md — Manuel des agents et sécurisations du projet One Connexion
 
 ## 🧭 Objectif
 Ce projet est conçu pour être **auto-protégé** et **auto-documenté**.  
@@ -68,7 +68,7 @@ npm install --save-dev @eslint/js
 ---
 
 ## 🧩 Agent 4 : Dashboard Client
-**Rôle :** Composant principal du tableau de bord client  
+**Rôle :** Composant principal du tableau de bord client
 **Fichier :** `src/components/dashboard-client/DashboardClient.tsx`
 
 ### Description

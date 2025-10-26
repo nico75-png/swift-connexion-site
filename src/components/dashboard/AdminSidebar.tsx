@@ -135,7 +135,7 @@ const AdminSidebar = () => {
           </div>
           <div className="flex flex-1 flex-col">
             <span className={cn("font-['Inter'] text-sm font-medium uppercase tracking-[0.12em]", sidebarPalette.secondaryText)}>
-              swift connexion
+              One Connexion
             </span>
             <span className={cn("font-['Inter'] text-xl font-semibold", sidebarPalette.text)}>Tableau pro</span>
           </div>

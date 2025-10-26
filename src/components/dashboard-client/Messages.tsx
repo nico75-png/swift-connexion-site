@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, UIEvent, useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -34,7 +34,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -285,6 +284,7 @@ const Messages = () => {
   const [replyDraft, setReplyDraft] = useState("");
   const [isReplying, setIsReplying] = useState(false);
   const [replyError, setReplyError] = useState<string | null>(null);
+  const [hasScrolledConversation, setHasScrolledConversation] = useState(false);
 
   const filters: Array<{ id: StatusFilter; label: string; indicator?: string }> = [
     { id: "all", label: "Toutes" },
@@ -438,264 +438,226 @@ const Messages = () => {
     }
   };
 
+  const handleMessagesScroll = (event: UIEvent<HTMLDivElement>) => {
+    setHasScrolledConversation(event.currentTarget.scrollTop > 6);
+  };
+
   return (
-    <section className="flex h-full flex-col gap-6">
-      <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-blue-500">
-            <MessageSquareDashed className="h-3.5 w-3.5" />
-            <span>Support client</span>
-          </div>
-          <h1 className="text-3xl font-semibold text-slate-900">Messagerie &amp; assistance</h1>
-          <p className="max-w-2xl text-sm text-slate-600">
-            Consultez vos échanges avec notre équipe support, suivez leurs statuts en temps réel et démarrez une nouvelle
-            conversation sans quitter votre tableau de bord.
-          </p>
-        </div>
-        <div className="flex items-center gap-3 text-xs text-slate-500">
-          <div className="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-600">
-            Temps moyen de réponse : <span className="text-slate-900">1 h 45</span>
-          </div>
-          <Separator orientation="vertical" className="hidden h-6 lg:block" />
-          <div className="hidden items-center gap-2 rounded-full bg-white px-3 py-1 shadow-sm lg:flex">
-            <Clock3 className="h-4 w-4 text-blue-500" />
-            <span>Dernière activité : {formatRelative(conversations[0]?.lastActivityAt ?? new Date().toISOString())}</span>
-          </div>
-        </div>
-      </header>
-
-      <Card className="flex min-h-[620px] flex-1 overflow-hidden border-slate-200/80 shadow-xl shadow-slate-900/5">
-        <div className="flex w-full flex-col gap-0 overflow-hidden lg:flex-row">
-          {/* Conversations list */}
-          <aside className="w-full border-b border-slate-200/80 bg-white/70 backdrop-blur lg:w-[320px] lg:border-b-0 lg:border-r">
-            <div className="flex items-center justify-between gap-3 p-4">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-[0.28em] text-slate-400">Conversations</p>
-                <p className="text-sm text-slate-600">{unreadTotal} message(s) non lu(s)</p>
-              </div>
-              <Button
-                type="button"
-                onClick={handleOpenComposer}
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-700 px-3 py-2 text-xs font-semibold shadow-lg shadow-blue-600/20 hover:from-blue-500 hover:to-blue-600"
-              >
-                <CirclePlus className="h-4 w-4" />
-                Nouveau
-              </Button>
+    <section className="relative h-full w-full bg-gray-50 py-4">
+      <div className="mx-auto grid h-[calc(100vh-100px)] max-w-[1400px] grid-cols-[360px_1fr_320px] items-start gap-6">
+        <aside className="flex h-full w-[360px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_2px_10px_rgba(0,0,0,0.04)]">
+          <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-4">
+            <div className="space-y-1">
+              <p className="text-xs font-medium uppercase tracking-[0.28em] text-slate-400">Conversations</p>
+              <p className="text-sm text-slate-600">{unreadTotal} message(s) non lu(s)</p>
             </div>
+            <Button
+              type="button"
+              onClick={handleOpenComposer}
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-700 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:from-blue-500 hover:to-blue-600"
+            >
+              <CirclePlus className="h-4 w-4" />
+              Nouveau
+            </Button>
+          </div>
 
-            <div className="flex gap-2 overflow-x-auto px-4 pb-3 text-xs">
-              {filters.map((item) => {
-                const isActive = filter === item.id;
+          <div className="flex gap-2 overflow-x-auto px-4 pb-3 text-xs">
+            {filters.map((item) => {
+              const isActive = filter === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setFilter(item.id)}
+                  className={`flex items-center gap-2 rounded-full border px-3 py-1.5 transition ${
+                    isActive
+                      ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:text-blue-600"
+                  }`}
+                >
+                  {item.indicator && <span>{item.indicator}</span>}
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <Separator className="bg-slate-100" />
+
+          <div className="flex-1 overflow-y-auto px-2 pb-6">
+            <div className="flex flex-col gap-3">
+              {filteredConversations.map((conversation) => {
+                const isActive = conversation.id === activeConversationId;
                 return (
                   <button
-                    key={item.id}
+                    key={conversation.id}
                     type="button"
-                    onClick={() => setFilter(item.id)}
-                    className={`flex items-center gap-2 rounded-full border px-3 py-1.5 transition ${
+                    onClick={() => setActiveConversationId(conversation.id)}
+                    className={`flex flex-col gap-2 rounded-xl border px-3 py-3 text-left transition ${
                       isActive
-                        ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
-                        : "border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:text-blue-600"
+                        ? "border-blue-200 bg-blue-50/80 shadow-sm"
+                        : "border-transparent hover:border-blue-100 hover:bg-slate-50"
                     }`}
                   >
-                    {item.indicator && <span>{item.indicator}</span>}
-                    <span>{item.label}</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.24em] text-slate-400">
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold tracking-[0.14em] text-slate-600">
+                          {conversation.reference}
+                        </span>
+                        <span>{format(new Date(conversation.lastActivityAt), "dd MMM", { locale: fr })}</span>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={`flex items-center gap-1.5 border text-[11px] font-medium ${STATUS_STYLES[conversation.status].badge} ${STATUS_STYLES[conversation.status].border}`}
+                      >
+                        <span className={`h-2 w-2 rounded-full ${STATUS_STYLES[conversation.status].dot}`} />
+                        {STATUS_LABELS[conversation.status]}
+                      </Badge>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="text-sm font-semibold text-slate-900">{conversation.subject}</h3>
+                        <Badge variant="outline" className={`border text-xs font-medium ${CATEGORY_BADGES[conversation.category].className}`}>
+                          {CATEGORY_BADGES[conversation.category].label}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-slate-600">{conversation.lastMessagePreview}</p>
+                    </div>
                   </button>
                 );
               })}
             </div>
-
-            <Separator className="bg-slate-200" />
-
-            <ScrollArea className="h-[420px]">
-              <div className="flex flex-col">
-                {filteredConversations.map((conversation) => {
-                  const isActive = conversation.id === activeConversationId;
-                  return (
-                    <button
-                      key={conversation.id}
-                      type="button"
-                      onClick={() => setActiveConversationId(conversation.id)}
-                      className={`flex flex-col gap-2 border-l-4 px-4 py-4 text-left transition hover:bg-slate-50 ${
-                        isActive
-                          ? "border-l-blue-500 bg-blue-50/50"
-                          : "border-l-transparent"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">
-                          <MessageSquare className="h-3.5 w-3.5" />
-                          <span>{conversation.reference}</span>
-                        </div>
-                        {conversation.unreadCount > 0 && (
-                          <Badge className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow">
-                            {conversation.unreadCount}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="line-clamp-2 text-sm font-medium text-slate-900">{conversation.subject}</p>
-                          <span className={`mt-1 h-2.5 w-2.5 rounded-full ${STATUS_STYLES[conversation.status].dot}`} />
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2 text-xs">
-                          <Badge
-                            variant="outline"
-                            className={`rounded-full border ${CATEGORY_BADGES[conversation.category].className}`}
-                          >
-                            {CATEGORY_BADGES[conversation.category].label}
-                          </Badge>
-                          <Badge
-                            variant="outline"
-                            className={`rounded-full border ${STATUS_STYLES[conversation.status].badge}`}
-                          >
-                            {STATUS_LABELS[conversation.status]}
-                          </Badge>
-                          <span className="text-slate-500">
-                            {formatRelative(conversation.lastActivityAt)}
-                          </span>
-                        </div>
-                        <p className="line-clamp-2 text-xs text-slate-500">{conversation.lastMessagePreview}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-
-                {filteredConversations.length === 0 && (
-                  <div className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center text-sm text-slate-500">
-                    <ShieldQuestion className="h-10 w-10 text-slate-300" />
-                    <p>Aucune conversation pour ce filtre pour le moment.</p>
-                  </div>
-                )}
+          </div>
+        </aside>
+        <div className="flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-sm">
+          <div className="border-b border-slate-100 px-6 py-4">
+            <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-blue-500">
+                  <MessageSquareDashed className="h-3.5 w-3.5" />
+                  <span>Support client</span>
+                </div>
+                <h1 className="text-3xl font-semibold text-slate-900">Messagerie &amp; assistance</h1>
+                <p className="max-w-2xl text-sm text-slate-600">
+                  Consultez vos échanges avec notre équipe support, suivez leurs statuts en temps réel et démarrez une nouvelle conversation sans quitter votre tableau de bord.
+                </p>
               </div>
-            </ScrollArea>
-          </aside>
+              <div className="flex items-center gap-3 text-xs text-slate-500">
+                <div className="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-600">
+                  Temps moyen de réponse : <span className="text-slate-900">1 h 45</span>
+                </div>
+                <Separator orientation="vertical" className="hidden h-6 lg:block" />
+                <div className="hidden items-center gap-2 rounded-full bg-white px-3 py-1 shadow-sm lg:flex">
+                  <Clock3 className="h-4 w-4 text-blue-500" />
+                  <span>Dernière activité : {formatRelative(conversations[0]?.lastActivityAt ?? new Date().toISOString())}</span>
+                </div>
+              </div>
+            </header>
+          </div>
 
-          {/* Conversation detail */}
-          <div className="flex min-h-[420px] flex-1 flex-col bg-slate-50">
+          <div
+            className="flex-1 overflow-y-auto px-6 py-4 text-[15px] leading-relaxed max-[800px]:px-4 max-[800px]:py-3"
+            onScroll={handleMessagesScroll}
+          >
             {activeConversation ? (
-              <>
-                <div className="flex flex-col gap-4 border-b border-slate-200 bg-white/80 px-6 py-5 backdrop-blur">
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div className="mx-auto flex h-full max-w-3xl flex-col space-y-4">
+                <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">
-                        <span>{activeConversation.reference}</span>
-                        <ArrowUpRight className="h-4 w-4 text-blue-500" />
-                      </div>
-                      <h2 className="text-xl font-semibold text-slate-900">{activeConversation.subject}</h2>
-                      <div className="flex flex-wrap items-center gap-2 text-xs">
-                        <Badge
-                          variant="outline"
-                          className={`rounded-full border ${CATEGORY_BADGES[activeConversation.category].className}`}
-                        >
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                        <Badge variant="outline" className={`border text-xs font-medium ${CATEGORY_BADGES[activeConversation.category].className}`}>
                           {CATEGORY_BADGES[activeConversation.category].label}
                         </Badge>
-                        <Badge
-                          variant="outline"
-                          className={`rounded-full border ${STATUS_STYLES[activeConversation.status].badge}`}
-                        >
-                          {STATUS_LABELS[activeConversation.status]}
-                        </Badge>
-                        <span className="flex items-center gap-1 text-slate-500">
+                        <span className="text-xs font-medium uppercase tracking-[0.24em] text-slate-400">
+                          {activeConversation.reference}
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-xs text-slate-500">
                           <Clock3 className="h-3.5 w-3.5" />
                           {formatRelative(activeConversation.lastActivityAt)}
                         </span>
                       </div>
+                      <h2 className="text-2xl font-semibold text-slate-900">{activeConversation.subject}</h2>
                     </div>
-                    <div className="flex flex-col gap-2 text-xs text-slate-500">
-                      <span>Dernière mise à jour</span>
-                      <span className="font-medium text-slate-900">{formatDate(activeConversation.lastActivityAt)}</span>
-                    </div>
-                  </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white/60 p-4 text-xs text-slate-500 shadow-inner">
-                    <div className="flex items-center gap-2 text-slate-700">
-                      <BadgeCheck className="h-4 w-4 text-emerald-500" />
-                      <span>
-                        {activeConversation.status === "resolu"
-                          ? "Cette conversation est marquée comme résolue. Vous pouvez rouvrir le fil en répondant ci-dessous."
-                          : "Notre équipe suit actuellement votre demande. Vous serez notifié(e) dès qu'une mise à jour sera disponible."}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <ScrollArea className="flex-1">
-                  <div className="flex flex-col gap-6 px-6 py-6">
-                    {activeConversation.messages.map((message) => {
-                      const isClient = message.author === "client";
-                      return (
-                        <div key={message.id} className={`flex ${isClient ? "justify-end" : "justify-start"}`}>
-                          <div
-                            className={`max-w-xl rounded-3xl border px-4 py-3 text-sm shadow-sm transition ${
-                              isClient
-                                ? "rounded-br-md border-blue-200/80 bg-blue-50 text-slate-800"
-                                : "rounded-bl-md border-white bg-white text-slate-700"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
-                              <span className="font-medium text-slate-600">
-                                {isClient ? "Vous" : "Support Swift Connexion"}
-                              </span>
-                              <span>{formatDate(message.createdAt)}</span>
-                            </div>
-                            <p className="mt-2 whitespace-pre-line leading-relaxed">{message.content}</p>
-                            {message.statusNote && (
-                              <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
-                                <MessageCircleReply className="h-3.5 w-3.5 text-blue-500" />
-                                <span>{message.statusNote}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </ScrollArea>
-
-                <div className="border-t border-slate-200 bg-white/80 px-6 py-5 backdrop-blur">
-                  <div className="flex flex-col gap-4">
-                    <div className="flex items-center justify-between text-xs text-slate-500">
-                      <span>
-                        {activeConversation.status === "resolu"
-                          ? "Besoin de rouvrir la conversation ? Ajoutez un message ci-dessous."
-                          : "Vous avez une précision à apporter ? Répondez directement dans le fil."}
-                      </span>
-                      <span className="hidden items-center gap-2 rounded-full bg-slate-100 px-3 py-1 lg:inline-flex">
-                        <Clock3 className="h-3.5 w-3.5" />
-                        Temps estimé de réponse : 1 h
-                      </span>
-                    </div>
-                    <div className="rounded-3xl border border-slate-200 bg-white/80 p-4 shadow-sm">
-                      <Textarea
-                        value={replyDraft}
-                        onChange={(event) => setReplyDraft(event.target.value)}
-                        placeholder="Rédigez votre réponse ici..."
-                        className="min-h-[120px] border-none bg-transparent p-0 text-sm focus-visible:ring-0"
-                      />
-                      {replyError && <p className="mt-2 text-xs font-medium text-rose-600">{replyError}</p>}
-                      <div className="mt-4 flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                          <span>Envoi sécurisé et tracé</span>
-                          <span className="hidden h-1.5 w-1.5 rounded-full bg-slate-300 md:block" />
-                          <span className="hidden md:block">Support actif de 8h à 19h</span>
-                        </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className={`flex items-center gap-2 border ${STATUS_STYLES[activeConversation.status].badge} ${STATUS_STYLES[activeConversation.status].border}`}
+                      >
+                        <span className={`h-2 w-2 rounded-full ${STATUS_STYLES[activeConversation.status].dot}`} />
+                        {STATUS_LABELS[activeConversation.status]}
+                      </Badge>
+                      {activeConversation.status !== "resolu" && (
                         <Button
                           type="button"
-                          onClick={handleSendReply}
-                          disabled={isReplying}
-                          className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-700 px-4 py-2 text-sm font-semibold shadow-lg shadow-blue-600/20 hover:from-blue-500 hover:to-blue-600"
+                          variant="outline"
+                          className="inline-flex items-center gap-2 rounded-full border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 shadow-sm transition hover:border-blue-200 hover:text-blue-600"
                         >
-                          {isReplying ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircleReply className="h-4 w-4" />}
-                          {isReplying ? "Envoi..." : "Envoyer"}
+                          <BadgeCheck className="h-4 w-4" />
+                          Marquer comme résolu
                         </Button>
+                      )}
+                    </div>
+                  </div>
+                  <Separator className="my-4 bg-slate-200/70" />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-slate-200/80 bg-white/80 p-4 shadow-sm">
+                      <div className="flex items-center gap-3 text-xs text-slate-500">
+                        <MessageSquare className="h-4 w-4 text-blue-500" />
+                        <span className="font-semibold text-slate-600">Chronologie détaillée</span>
                       </div>
+                      <p className="mt-2 text-sm text-slate-600">
+                        {activeConversation.messages.length} message(s) échangé(s)
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200/80 bg-white/80 p-4 shadow-sm">
+                      <div className="flex items-center gap-3 text-xs text-slate-500">
+                        <ArrowUpRight className="h-4 w-4 text-emerald-500" />
+                        <span className="font-semibold text-slate-600">Prochaine action</span>
+                      </div>
+                      <p className="mt-2 text-sm text-slate-600">
+                        {activeConversation.messages[activeConversation.messages.length - 1]?.statusNote ?? "En attente d'un retour de votre part"}
+                      </p>
                     </div>
                   </div>
                 </div>
-              </>
+
+                <div className="flex flex-col space-y-4">
+                  {activeConversation.messages.map((message) => {
+                    const isClient = message.author === "client";
+                    return (
+                      <div key={message.id} className={`flex ${isClient ? "justify-end" : "justify-start"}`}>
+                        <div
+                          className={`max-w-xl rounded-3xl border px-5 py-4 shadow-sm transition ${
+                            isClient
+                              ? "border-blue-200/80 bg-blue-50 text-slate-800"
+                              : "border-slate-200/80 bg-white text-slate-700"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
+                            <span className="font-semibold text-slate-700">{isClient ? "Vous" : "Équipe support"}</span>
+                            <span>{formatDate(message.createdAt)}</span>
+                          </div>
+                          <p className="mt-3 text-[15px] leading-relaxed text-slate-700 max-[800px]:overflow-hidden max-[800px]:[display:-webkit-box] max-[800px]:[-webkit-line-clamp:5] max-[800px]:[-webkit-box-orient:vertical]">
+                            {message.content}
+                          </p>
+                          {message.statusNote && (
+                            <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-600">
+                              <AlertTriangle className="h-3.5 w-3.5" />
+                              {message.statusNote}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             ) : (
-              <div className="flex flex-1 flex-col items-center justify-center gap-3 p-10 text-center text-sm text-slate-500">
+              <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-sm text-slate-500">
                 <ShieldQuestion className="h-12 w-12 text-slate-300" />
-                <p>Sélectionnez une conversation pour visualiser l'échange avec notre équipe support.</p>
+                <p className="max-w-sm text-[15px] leading-relaxed">
+                  Sélectionnez une conversation pour visualiser l'échange avec notre équipe support.
+                </p>
                 <Button
                   type="button"
                   onClick={handleOpenComposer}
@@ -708,15 +670,63 @@ const Messages = () => {
             )}
           </div>
 
-          {/* Support info panel */}
-          <aside className="hidden w-full max-w-lg border-l border-slate-200/80 bg-white/70 p-6 text-sm text-slate-600 lg:block">
-            <div className="flex flex-col gap-6">
-              <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-slate-800 to-slate-900 p-6 text-slate-100 shadow-2xl">
+          <div
+            className={`border-t border-slate-100 bg-white px-6 py-4 transition-shadow max-[800px]:px-4 max-[800px]:py-3 ${
+              hasScrolledConversation ? "shadow-[0_-4px_8px_-2px_rgba(0,0,0,0.05)]" : ""
+            }`}
+          >
+            {activeConversation ? (
+              <div className="mx-auto flex max-w-3xl flex-col gap-4">
+                <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
+                  <div className="flex items-center gap-2">
+                    <MessageCircleReply className="h-4 w-4 text-blue-500" />
+                    <span>Rédigez votre réponse</span>
+                  </div>
+                  {replyError && <p className="text-xs font-medium text-rose-500">{replyError}</p>}
+                </div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                  <Textarea
+                    value={replyDraft}
+                    onChange={(event) => setReplyDraft(event.target.value)}
+                    placeholder="Ajoutez des précisions, des pièces jointes ou un complément d'information pour accélérer la prise en charge."
+                    className="min-h-[140px] flex-1 rounded-2xl border-slate-200 bg-white/90 px-4 py-3 text-sm text-slate-700 shadow-sm transition focus:border-blue-300 focus-visible:ring-2 focus-visible:ring-blue-200 max-[800px]:py-2"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleSendReply}
+                    disabled={isReplying}
+                    className="inline-flex w-[130px] items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-700 px-4 py-3 text-sm font-medium text-white shadow-lg shadow-blue-600/20 transition duration-200 hover:from-blue-500 hover:to-blue-600 disabled:cursor-not-allowed disabled:opacity-60 max-[800px]:py-2"
+                  >
+                    {isReplying ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircleReply className="h-4 w-4" />}
+                    {isReplying ? "Envoi..." : "Envoyer"}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
+                <div className="flex items-center gap-2">
+                  <MessageCircleReply className="h-4 w-4 text-blue-500" />
+                  <span>Sélectionnez une conversation pour répondre</span>
+                </div>
+                <Button
+                  type="button"
+                  onClick={handleOpenComposer}
+                  className="inline-flex w-[130px] items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-700 px-4 py-3 text-sm font-medium text-white shadow-lg shadow-blue-600/20 transition hover:from-blue-500 hover:to-blue-600 max-[800px]:py-2"
+                >
+                  <CirclePlus className="h-4 w-4" />
+                  Nouveau
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+        <aside className="hidden h-full w-[320px] flex-col rounded-2xl bg-white p-6 shadow-[0_2px_10px_rgba(0,0,0,0.04)] lg:flex">
+          <div className="flex h-full flex-col justify-between space-y-4">
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-800 to-slate-900 p-6 text-slate-100 shadow-2xl">
                 <div className="flex flex-col gap-4">
                   <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500 text-sm font-semibold">
-                      SC
-                    </div>
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500 text-sm font-semibold">SC</div>
                     <div className="space-y-1">
                       <p className="text-[11px] uppercase tracking-[0.32em] text-blue-200/70">Support dédié</p>
                       <h3 className="text-lg font-semibold sm:text-xl">Swift Connexion</h3>
@@ -743,15 +753,15 @@ const Messages = () => {
                 </div>
               </div>
 
-              <Card className="rounded-3xl border border-slate-200/80 bg-white/95 shadow-lg">
+              <Card className="max-w-[320px] rounded-2xl border border-slate-200/80 bg-white/95 shadow-[0_2px_10px_rgba(0,0,0,0.04)]">
                 <CardHeader className="space-y-2 pb-4">
                   <CardTitle className="text-lg font-semibold text-slate-900 sm:text-xl">Conseil express</CardTitle>
                   <CardDescription className="text-sm leading-relaxed text-slate-600 sm:text-base">
                     Ajoutez un maximum de détails (horaires, références, captures d'écran) pour accélérer la résolution et permettre une prise en charge sur-mesure.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4 text-sm leading-relaxed text-slate-600">
-                  <div className="group flex items-start gap-3 rounded-xl bg-blue-50 p-3 text-slate-700 transition-transform duration-200 hover:scale-[1.01]">
+                <CardContent className="space-y-4 p-6 text-sm leading-relaxed text-slate-600">
+                  <div className="group flex items-start gap-3 rounded-xl bg-blue-50 p-4 text-slate-700 transition-transform duration-200 hover:scale-[1.01]">
                     <span className="mt-1 flex h-9 w-9 items-center justify-center rounded-full bg-blue-500/10 text-blue-600">
                       <Bell className="h-5 w-5" />
                     </span>
@@ -762,7 +772,7 @@ const Messages = () => {
                       </p>
                     </div>
                   </div>
-                  <div className="group flex items-start gap-3 rounded-xl bg-gray-50 p-3 text-slate-700 transition-transform duration-200 hover:scale-[1.01]">
+                  <div className="group flex items-start gap-3 rounded-xl bg-gray-50 p-4 text-slate-700 transition-transform duration-200 hover:scale-[1.01]">
                     <span className="mt-1 flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
                       <AlertTriangle className="h-5 w-5" />
                     </span>
@@ -773,12 +783,35 @@ const Messages = () => {
                       </p>
                     </div>
                   </div>
+                  <div className="group flex items-start gap-3 rounded-xl bg-emerald-50 p-4 text-slate-700 transition-transform duration-200 hover:scale-[1.01]">
+                    <span className="mt-1 flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
+                      <ShieldQuestion className="h-5 w-5" />
+                    </span>
+                    <div className="space-y-1">
+                      <p className="text-base font-semibold text-slate-900">Guides interactifs</p>
+                      <p className="text-sm leading-relaxed text-slate-600 sm:text-base">
+                        Explorez nos tutoriels pas-à-pas pour résoudre les demandes fréquentes en toute autonomie.
+                      </p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
-          </aside>
-        </div>
-      </Card>
+
+            <div className="rounded-2xl border border-slate-200/80 bg-slate-50 p-5 text-sm leading-relaxed text-slate-600 shadow-[0_2px_10px_rgba(0,0,0,0.04)]">
+              <div className="flex items-start gap-3">
+                <CirclePlus className="h-5 w-5 text-blue-500" />
+                <div className="space-y-1">
+                  <p className="text-base font-semibold text-slate-900">Besoin d'un accompagnement express ?</p>
+                  <p className="text-sm leading-relaxed text-slate-600">
+                    Lancez une session d'assistance prioritaire en indiquant votre créneau idéal, nous vous rappelons sous 30 minutes.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
 
       <Dialog open={isComposerOpen} onOpenChange={setIsComposerOpen}>
         <DialogContent className="max-w-2xl rounded-3xl border border-slate-200 bg-white/95 p-0 shadow-2xl">

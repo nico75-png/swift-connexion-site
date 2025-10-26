@@ -10,6 +10,7 @@ import {
   Info,
   Clock4,
   XOctagon,
+  Plus,
 } from "lucide-react";
 import { createColumnHelper, flexRender } from "@tanstack/react-table";
 
@@ -26,6 +27,8 @@ import { cn } from "@/lib/utils";
 import type { Order } from "./orders.types";
 import { useKpiCounters } from "./useKpiCounters";
 import { STATUS_FILTERS, useOrdersTable } from "./useOrdersTable";
+import { QuickOrderModal } from "./QuickOrderModal";
+import type { QuickOrderFormValues } from "./QuickOrderModal";
 
 const KPI_CARD_VARIANTS = {
   hidden: { opacity: 0, y: 12 },
@@ -274,6 +277,27 @@ const FilterPill = ({
   </button>
 );
 
+const QUICK_ORDER_CUSTOMER_INFO = {
+  companyName: "Clara Logistique SAS",
+  email: "clara.dupont@swift.fr",
+  phone: "+33 1 84 92 67 45",
+  siret: "812 345 678 00027",
+  sector: "Logistique / E-commerce",
+} as const;
+
+const QUICK_ORDER_PACKAGE_LABELS: Record<QuickOrderFormValues["packageType"], string> = {
+  palette: "palette",
+  boite: "boîte",
+  documents: "documents",
+  autre: "expédition",
+};
+
+const QUICK_ORDER_FORMULA_LABELS: Record<QuickOrderFormValues["deliveryFormula"], string> = {
+  standard: "Standard",
+  express: "Express",
+  flash: "Flash Express",
+};
+
 const Commandes = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -281,6 +305,7 @@ const Commandes = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState<boolean>(false);
   const [loadingRowId, setLoadingRowId] = useState<string | null>(null);
+  const [isQuickOrderOpen, setIsQuickOrderOpen] = useState<boolean>(false);
   const { toast } = useToast();
   const hasLoggedRef = useRef(false);
 
@@ -493,6 +518,28 @@ const Commandes = () => {
     setSearchQuery(value);
   };
 
+  const handleQuickOrderSubmit = (values: QuickOrderFormValues) => {
+    const shippingDateLabel = values.shippingDate
+      ? new Intl.DateTimeFormat("fr-FR", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+        }).format(new Date(`${values.shippingDate}T00:00:00`))
+      : "le prochain créneau disponible";
+
+    const packageLabel = QUICK_ORDER_PACKAGE_LABELS[values.packageType];
+    const formulaLabel = QUICK_ORDER_FORMULA_LABELS[values.deliveryFormula];
+
+    toast({
+      title: "Commande enregistrée",
+      description: `Votre ${packageLabel} en formule ${formulaLabel} est planifiée pour ${shippingDateLabel}.`,
+      duration: 3200,
+      className: "border border-blue-100 bg-white/95 text-slate-800 shadow-lg backdrop-blur",
+    });
+
+    setIsQuickOrderOpen(false);
+  };
+
   const renderRow = (row: (typeof tableRows)[number] | undefined, index: number) => {
     if (!row) {
       return null;
@@ -555,7 +602,7 @@ const Commandes = () => {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.24, ease: "easeOut" }}
-          className="flex flex-col gap-3 text-[#1F2937]"
+          className="flex flex-col gap-4 text-[#1F2937]"
         >
           <div>
             <h1 className="text-2xl font-semibold leading-8">Commandes</h1>
@@ -564,6 +611,20 @@ const Commandes = () => {
           <p className="max-w-2xl text-sm text-[#475569]">
             Visualisez l'état de vos commandes, vérifiez vos chauffeurs et accédez en un clic aux fiches détaillées pour garder une longueur d'avance sur vos opérations.
           </p>
+          <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+            <div className="flex items-center gap-2 text-[#1E3A8A]">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/80 text-base shadow-sm">⚡</span>
+              <span>Créez une expédition en quelques secondes avec la commande rapide.</span>
+            </div>
+            <Button
+              type="button"
+              onClick={() => setIsQuickOrderOpen(true)}
+              className="rounded-xl bg-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_16px_35px_rgba(29,78,216,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#1E40AF] focus-visible:ring-[#1E3A8A]"
+            >
+              <Plus className="h-4 w-4" aria-hidden />
+              Nouvelle commande rapide
+            </Button>
+          </div>
         </motion.div>
       </div>
 
@@ -877,6 +938,12 @@ const Commandes = () => {
         </div>
       </div>
 
+        <QuickOrderModal
+          open={isQuickOrderOpen}
+          onClose={() => setIsQuickOrderOpen(false)}
+          onSubmit={handleQuickOrderSubmit}
+          customerInfo={QUICK_ORDER_CUSTOMER_INFO}
+        />
         <OrderDetailsModal order={selectedOrder ?? undefined} open={isDetailsOpen} onClose={handleCloseDetails} />
       </section>
     </TooltipProvider>

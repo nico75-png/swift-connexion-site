@@ -264,7 +264,12 @@ const DashboardClient = () => {
         </header>
 
         {/* Content area */}
-        <main className="flex-1 overflow-y-auto bg-neutral-50 p-4 lg:p-8">
+        <main
+          className={cn(
+            "flex-1 bg-neutral-50 p-4 lg:p-6",
+            activeSection === "dashboard" ? "overflow-hidden" : "overflow-y-auto"
+          )}
+        >
           <AnimatePresence mode="wait">
             <motion.div
               key={activeSection}
@@ -359,27 +364,34 @@ const DashboardSection: FC<DashboardSectionProps> = ({ setActiveSection }) => {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-neutral-800">Tableau de bord</h1>
-        <p className="mt-1 text-sm text-neutral-600">Vue d'ensemble de votre activité</p>
+    <section className="flex min-h-full flex-col gap-4 overflow-hidden lg:h-[calc(100vh-64px)] lg:max-h-[calc(100vh-64px)]">
+      <div className="flex flex-1 flex-col gap-4 overflow-y-auto lg:overflow-hidden">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold text-neutral-800">Tableau de bord</h1>
+          <p className="text-sm text-neutral-600">Vue d'ensemble de votre activité</p>
+        </div>
+
+        <div className="grid flex-1 gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] lg:overflow-hidden">
+          <div className="flex flex-1 flex-col gap-4 overflow-hidden">
+            <DashboardStats
+              orders={{ value: ordersCount, trend: ordersTrend, target: ordersTarget }}
+              delivery={{ value: deliveryRate, trend: deliveryTrend }}
+              amount={{ value: amountConsumed, sparkline }}
+              delay={{ value: averageDelay, variation: delayVariation }}
+            />
+
+            <ActivityChart activityData={activityData} monthlyStats={monthlyStats} />
+          </div>
+
+          <div className="flex flex-col gap-4 overflow-y-auto pr-1 lg:overflow-hidden">
+            <ProfileAlert onCompleteProfile={() => setActiveSection("parametres")} />
+            <Suggestions />
+          </div>
+        </div>
       </div>
 
-      <ProfileAlert onCompleteProfile={() => setActiveSection("parametres")} />
-
-      <DashboardStats
-        orders={{ value: ordersCount, trend: ordersTrend, target: ordersTarget }}
-        delivery={{ value: deliveryRate, trend: deliveryTrend }}
-        amount={{ value: amountConsumed, sparkline }}
-        delay={{ value: averageDelay, variation: delayVariation }}
-      />
-
-      <ActivityChart activityData={activityData} monthlyStats={monthlyStats} />
-
-      <QuickActions onNavigate={setActiveSection} />
-
-      <Suggestions />
-    </div>
+      <QuickActions onNavigate={setActiveSection} className="mt-2 lg:mt-auto" />
+    </section>
   );
 };
 
@@ -432,7 +444,7 @@ const DashboardStats: FC<DashboardStatsProps> = ({ orders, delivery, amount, del
           </span>
         </CardHeader>
         <CardContent className="space-y-2">
-          <div className="text-3xl font-semibold text-neutral-900">
+          <div className="text-2xl font-semibold text-neutral-900">
             {orders.value.toLocaleString("fr-FR")}
           </div>
           <p className="text-xs font-medium text-blue-600">+{orders.trend.toFixed(1)}% ce mois</p>
@@ -453,7 +465,7 @@ const DashboardStats: FC<DashboardStatsProps> = ({ orders, delivery, amount, del
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-semibold text-neutral-900">{delivery.value}%</span>
+            <span className="text-2xl font-semibold text-neutral-900">{delivery.value}%</span>
             <span className={cn("text-xs font-semibold", deliveryTrendColor)}>
               {deliveryTrendLabel}
             </span>
@@ -479,7 +491,7 @@ const DashboardStats: FC<DashboardStatsProps> = ({ orders, delivery, amount, del
           </span>
         </CardHeader>
         <CardContent className="space-y-2">
-          <div className="text-3xl font-semibold text-neutral-900">
+          <div className="text-2xl font-semibold text-neutral-900">
             {currencyFormatter.format(Math.round(amount.value))}
           </div>
           <svg viewBox="0 0 100 40" className="h-12 w-full text-blue-500" preserveAspectRatio="none">
@@ -507,7 +519,7 @@ const DashboardStats: FC<DashboardStatsProps> = ({ orders, delivery, amount, del
           </span>
         </CardHeader>
         <CardContent className="space-y-2">
-          <div className="text-3xl font-semibold text-neutral-900">{delay.value.toFixed(1)} min</div>
+          <div className="text-2xl font-semibold text-neutral-900">{delay.value.toFixed(1)} min</div>
           <div className="flex items-center gap-1 text-xs font-semibold">
             <DelayIcon className={cn("h-4 w-4", delayColor)} />
             <span className={delayColor}>{delayLabel}</span>
@@ -533,25 +545,27 @@ const ActivityChart: FC<ActivityChartProps> = ({ activityData, monthlyStats }) =
   ];
 
   return (
-    <Card className="border-neutral-200 bg-white">
-      <CardHeader className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+    <Card className="flex h-full flex-col border-neutral-200 bg-white">
+      <CardHeader className="flex flex-col gap-2 pb-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <CardTitle className="text-neutral-800">Activité mensuelle</CardTitle>
-          <CardDescription>Vue d'ensemble des commandes du mois</CardDescription>
+          <CardTitle className="text-lg font-semibold text-neutral-800">Activité mensuelle</CardTitle>
+          <CardDescription className="text-xs text-neutral-500">
+            Vue d'ensemble des commandes du mois
+          </CardDescription>
         </div>
-        <Badge className="w-fit rounded-full bg-blue-100 px-4 py-1 text-xs font-medium text-blue-600">
+        <Badge className="w-fit rounded-full bg-blue-100 px-3 py-1 text-[11px] font-medium text-blue-600">
           Actualisé en temps réel
         </Badge>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-end justify-between gap-4">
+      <CardContent className="flex flex-1 flex-col gap-4 pt-0">
+        <div className="grid flex-1 gap-4 lg:grid-cols-[2fr,1fr]">
+          <div className="flex flex-1 flex-col gap-4">
+            <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-wide text-neutral-500">
                   Commandes totales ce mois
                 </p>
-                <p className="text-3xl font-semibold text-neutral-900">
+                <p className="text-2xl font-semibold text-neutral-900">
                   {monthlyStats.total.toLocaleString("fr-FR")}
                 </p>
               </div>
@@ -559,7 +573,7 @@ const ActivityChart: FC<ActivityChartProps> = ({ activityData, monthlyStats }) =
                 <span className="font-semibold text-blue-600">{successRate}%</span> de réussite
               </div>
             </div>
-            <div className="h-48 w-full">
+            <div className="h-[180px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
                   data={activityData}
@@ -581,20 +595,20 @@ const ActivityChart: FC<ActivityChartProps> = ({ activityData, monthlyStats }) =
               </ResponsiveContainer>
             </div>
           </div>
-          <div className="flex h-full flex-col justify-between gap-4 rounded-2xl bg-neutral-50 p-4">
+          <div className="flex h-full flex-col justify-between gap-3 rounded-2xl bg-neutral-50 p-4">
             <div>
               <p className="text-xs uppercase tracking-wide text-neutral-500">Montant total</p>
-              <p className="text-xl font-semibold text-neutral-900">
+              <p className="text-lg font-semibold text-neutral-900">
                 {currencyFormatter.format(Math.round(monthlyStats.totalAmount))}
               </p>
             </div>
             <div>
               <p className="text-xs uppercase tracking-wide text-neutral-500">Délai moyen</p>
-              <p className="text-xl font-semibold text-neutral-900">
+              <p className="text-lg font-semibold text-neutral-900">
                 {monthlyStats.avgDelay.toFixed(1)} min
               </p>
             </div>
-            <div className="h-32 w-full">
+            <div className="h-[140px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={barData}>
                   <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" vertical={false} />
@@ -618,10 +632,16 @@ const ActivityChart: FC<ActivityChartProps> = ({ activityData, monthlyStats }) =
 
 type QuickActionsProps = {
   onNavigate: (section: Section) => void;
+  className?: string;
 };
 
-const QuickActions: FC<QuickActionsProps> = ({ onNavigate }) => {
-  const actions: { label: string; icon: LucideIcon; section: Section; className: string }[] = [
+const QuickActions: FC<QuickActionsProps> = ({ onNavigate, className }) => {
+  const actions: {
+    label: string;
+    icon: LucideIcon;
+    section: Section;
+    className: string;
+  }[] = [
     {
       label: "Suivi en direct",
       icon: MapPin,
@@ -643,19 +663,21 @@ const QuickActions: FC<QuickActionsProps> = ({ onNavigate }) => {
   ];
 
   return (
-    <Card className="border-neutral-200 bg-white">
-      <CardHeader>
-        <CardTitle className="text-neutral-800">Actions rapides</CardTitle>
-        <CardDescription>Accédez immédiatement aux sections clés</CardDescription>
+    <Card className={cn("border-neutral-200 bg-white", className)}>
+      <CardHeader className="space-y-1 pb-2">
+        <CardTitle className="text-lg font-semibold text-neutral-800">Actions rapides</CardTitle>
+        <CardDescription className="text-xs text-neutral-500">
+          Accédez immédiatement aux sections clés
+        </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="grid gap-4 sm:grid-cols-3">
-          {actions.map(({ label, icon: Icon, section, className }) => (
+      <CardContent className="pt-2">
+        <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:justify-between">
+          {actions.map(({ label, icon: Icon, section, className: actionClassName }) => (
             <Button
               key={section}
               className={cn(
-                "h-auto flex-col gap-2 rounded-2xl py-6 text-sm font-semibold text-white transition-transform duration-150 hover:scale-105",
-                className
+                "h-auto min-w-[140px] flex-1 flex-col gap-2 rounded-2xl py-4 text-sm font-semibold text-white transition-transform duration-150 hover:scale-105",
+                actionClassName
               )}
               onClick={() => onNavigate(section)}
             >
@@ -678,20 +700,20 @@ const ProfileAlert: FC<ProfileAlertProps> = ({ onCompleteProfile }) => {
 
   return (
     <Alert className="border-amber-200 bg-amber-50">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 items-start gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-1 items-start gap-3">
           <span className="rounded-full bg-amber-100 p-2 text-amber-600">
             <Info className="h-5 w-5" />
           </span>
           <div className="flex-1">
-            <AlertTitle className="text-base font-semibold text-amber-800">
+            <AlertTitle className="text-sm font-semibold text-amber-800">
               Profil incomplet
             </AlertTitle>
-            <AlertDescription className="mt-1 text-sm text-amber-700">
+            <AlertDescription className="mt-1 text-xs text-amber-700">
               Complétez votre adresse et vos préférences pour accéder au suivi en temps réel.
             </AlertDescription>
-            <div className="mt-4 space-y-2">
-              <div className="flex items-center justify-between text-xs font-semibold text-amber-700">
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-amber-700">
                 <span>Profil complété à {completion}%</span>
               </div>
               <Progress value={completion} className="h-2 bg-amber-100 [&>div]:bg-amber-500" />
@@ -700,7 +722,7 @@ const ProfileAlert: FC<ProfileAlertProps> = ({ onCompleteProfile }) => {
         </div>
         <Button
           onClick={onCompleteProfile}
-          className="w-full rounded-2xl bg-amber-600 hover:bg-amber-700 sm:w-auto"
+          className="w-full rounded-2xl bg-amber-600 py-2 text-sm hover:bg-amber-700 sm:w-auto"
         >
           Compléter maintenant
         </Button>
@@ -733,20 +755,22 @@ const Suggestions: FC = () => {
 
   return (
     <Card className="border-neutral-200 bg-white">
-      <CardHeader>
-        <CardTitle className="text-neutral-800">Suggestions personnalisées</CardTitle>
-        <CardDescription>Des recommandations adaptées à votre activité récente</CardDescription>
+      <CardHeader className="space-y-1 pb-2">
+        <CardTitle className="text-lg font-semibold text-neutral-800">Suggestions personnalisées</CardTitle>
+        <CardDescription className="text-xs text-neutral-500">
+          Des recommandations adaptées à votre activité récente
+        </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="grid gap-4 md:grid-cols-3">
+      <CardContent className="pt-2">
+        <div className="grid gap-3 md:grid-cols-3">
           {suggestions.map(({ title, description, icon: Icon, accent }) => (
             <div
               key={title}
-              className="flex h-full flex-col justify-between rounded-2xl bg-neutral-100 p-4 transition-colors duration-150 hover:bg-neutral-200"
+              className="flex h-full flex-col justify-between rounded-2xl bg-neutral-100 p-3 transition-colors duration-150 hover:bg-neutral-200"
             >
               <span
                 className={cn(
-                  "mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full",
+                  "mb-2 inline-flex h-9 w-9 items-center justify-center rounded-full",
                   accent
                 )}
               >

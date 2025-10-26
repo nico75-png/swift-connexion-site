@@ -1,17 +1,45 @@
-import js from "@eslint/js";
-import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
-export default tseslint.config(
+const tsRecommended = tseslint.configs.recommended;
+
+const sharedGlobals = {
+  console: "readonly",
+  window: "readonly",
+  document: "readonly",
+  navigator: "readonly",
+  localStorage: "readonly",
+  sessionStorage: "readonly",
+  fetch: "readonly",
+  Request: "readonly",
+  Response: "readonly",
+  URL: "readonly",
+  setTimeout: "readonly",
+  clearTimeout: "readonly",
+  setInterval: "readonly",
+  clearInterval: "readonly",
+  queueMicrotask: "readonly",
+  IntersectionObserver: "readonly",
+  MutationObserver: "readonly",
+  ResizeObserver: "readonly",
+  location: "readonly",
+  process: "readonly",
+  module: "readonly",
+  require: "readonly",
+  __dirname: "readonly",
+  __filename: "readonly",
+};
+
+export default [
   { ignores: ["dist"] },
+  ...tsRecommended,
   {
-    extends: [js.configs.recommended, ...tseslint.configs.recommended],
-    files: ["**/*.{ts,tsx}"],
+    files: ["**/*.{ts,tsx,js,jsx}"],
     languageOptions: {
       ecmaVersion: 2020,
-      globals: globals.browser,
+      sourceType: "module",
+      globals: sharedGlobals,
     },
     plugins: {
       "react-hooks": reactHooks,
@@ -23,4 +51,4 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
-);
+];

@@ -58,14 +58,24 @@ const DashboardClient = () => {
   };
 
   return (
-    <div className="flex h-screen bg-[#F2F6FA] text-slate-900">
-      <aside className="w-64 shrink-0 bg-[#0B2D55] p-6 text-white">
-        <div className="mb-8">
-          <p className="text-xs uppercase text-[#BBD4EF]">Swift Connexion</p>
-          <p className="text-lg font-semibold">Espace client</p>
+    <div className="flex h-screen bg-slate-50">
+      {/* Sidebar */}
+      <aside className="w-64 shrink-0 bg-[#2C3E50] flex flex-col">
+        {/* Logo et titre */}
+        <div className="p-6 border-b border-slate-700">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-sm">
+              SC
+            </div>
+            <div>
+              <p className="text-xs text-slate-400">Connexion Swift</p>
+              <p className="text-sm font-semibold text-white">Tableau de bord</p>
+            </div>
+          </div>
         </div>
 
-        <nav className="flex flex-col gap-2" aria-label="Navigation du tableau de bord">
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-1" aria-label="Navigation du tableau de bord">
           {SIDEBAR_ITEMS.map((item) => {
             const isActive = activeSection === item.id;
 
@@ -74,13 +84,13 @@ const DashboardClient = () => {
                 key={item.id}
                 type="button"
                 onClick={() => setActiveSection(item.id)}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 ${
+                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${
                   isActive
-                    ? "bg-white/15 font-semibold text-white shadow-sm"
-                    : "text-[#D0E3F9] hover:bg-white/10 hover:text-white"
+                    ? "bg-slate-700 font-medium text-white"
+                    : "text-slate-300 hover:bg-slate-700/50 hover:text-white"
                 }`}
               >
-                <span aria-hidden="true" className="text-lg">
+                <span aria-hidden="true" className="text-base">
                   {item.icon}
                 </span>
                 <span>{item.label}</span>
@@ -90,11 +100,44 @@ const DashboardClient = () => {
         </nav>
       </aside>
 
-      <main className="flex-1 overflow-y-auto p-6">
-        <div className="mx-auto w-full max-w-6xl">
-          {renderSection()}
-        </div>
-      </main>
+      {/* Main content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top bar */}
+        <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between">
+          <div className="flex-1" />
+          <div className="flex items-center gap-4">
+            <button className="relative">
+              <span className="text-xl">🔔</span>
+              <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-blue-600" />
+            </button>
+            <div className="flex items-center gap-3 border-l border-slate-200 pl-4">
+              <div className="text-right">
+                <p className="text-sm font-medium text-slate-900">Clara Dupont</p>
+                <p className="text-xs text-slate-500">clara.dupont@swift.fr</p>
+              </div>
+              <div className="relative">
+                <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-sm">
+                  CD
+                </div>
+                <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white" />
+              </div>
+            </div>
+            <div className="text-xs text-slate-600">
+              <div>Profil <span className="font-semibold">72%</span></div>
+              <div className="mt-0.5 h-1.5 w-20 rounded-full bg-slate-200 overflow-hidden">
+                <div className="h-full w-[72%] bg-blue-600" />
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Content area */}
+        <main className="flex-1 overflow-y-auto p-6 bg-slate-50">
+          <div className="mx-auto w-full max-w-7xl">
+            {renderSection()}
+          </div>
+        </main>
+      </div>
     </div>
   );
 };

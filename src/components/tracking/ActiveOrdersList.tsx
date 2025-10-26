@@ -9,12 +9,24 @@ type ActiveOrdersListProps = {
   selectedOrderId: string | null;
   onSelect: (orderId: string) => void;
   onViewDetails: (order: TrackingOrder) => void;
+  className?: string;
 };
 
-
-const ActiveOrdersList = ({ orders, selectedOrderId, onSelect, onViewDetails }: ActiveOrdersListProps) => {
+const ActiveOrdersList = ({
+  orders,
+  selectedOrderId,
+  onSelect,
+  onViewDetails,
+  className,
+}: ActiveOrdersListProps) => {
   return (
-    <div className="flex h-full flex-col gap-4 rounded-2xl bg-[#F9FAFB] p-4">
+    <div
+      className={cn(
+        "flex h-full min-h-[320px] max-h-[calc(100vh-200px)] flex-col gap-4 rounded-2xl border border-slate-200/70 bg-[#F9FAFB] p-4 shadow-sm transition-shadow duration-200 ease-out",
+        "backdrop-blur-sm",
+        className,
+      )}
+    >
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-base font-semibold text-slate-900">Commandes en transit</h2>
@@ -24,7 +36,7 @@ const ActiveOrdersList = ({ orders, selectedOrderId, onSelect, onViewDetails }: 
           {orders.length} en cours
         </span>
       </div>
-      <ul className="flex flex-col gap-3" role="list">
+      <ul className="flex flex-1 flex-col gap-3 overflow-y-auto pr-1 scroll-smooth" role="list">
         {orders.map((order, index) => {
           const isActive = order.id === selectedOrderId;
 

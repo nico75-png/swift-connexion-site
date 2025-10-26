@@ -468,6 +468,7 @@ const LiveTrackingSection = () => {
   } = useLiveTrackingStore();
   const [contactOrder, setContactOrder] = useState<TrackingOrder | null>(null);
   const [detailsOrder, setDetailsOrder] = useState<TrackingOrder | null>(null);
+  const [isCompactMode, setIsCompactMode] = useState(false);
 
   const isContactOpen = Boolean(contactOrder);
 
@@ -506,8 +507,30 @@ const LiveTrackingSection = () => {
     [],
   );
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const evaluateViewport = () => {
+      setIsCompactMode(window.innerHeight < 850);
+    };
+
+    evaluateViewport();
+    window.addEventListener("resize", evaluateViewport);
+
+    return () => {
+      window.removeEventListener("resize", evaluateViewport);
+    };
+  }, []);
+
   return (
-    <section className="space-y-6 rounded-3xl bg-[#F9FAFB] p-6">
+    <section
+      className={cn(
+        "flex min-h-[calc(100vh-100px)] flex-col gap-6 rounded-3xl bg-[#F9FAFB] shadow-sm transition-[padding] duration-200",
+        isCompactMode ? "p-4" : "p-6",
+      )}
+    >
       <header className="space-y-2">
         <div className="flex items-center gap-2 text-[#2563EB]">
           <span className="text-xl" aria-hidden>
@@ -534,7 +557,7 @@ const LiveTrackingSection = () => {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm"
+          className="flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm"
         >
           <motion.div animate={{ y: [0, -8, 0] }} transition={{ repeat: Infinity, duration: 3 }}>
             <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-[#EFF6FF] text-3xl">🚚</span>
@@ -551,35 +574,44 @@ const LiveTrackingSection = () => {
           </button>
         </motion.div>
       ) : (
-        <div className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
+        <div className="flex flex-1 flex-col gap-6 overflow-hidden">
+          <div className="grid flex-1 grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(340px,380px)_1fr]">
             <ActiveOrdersList
               orders={activeOrders}
               selectedOrderId={selectedOrder?.id ?? null}
               onSelect={setSelectedOrderId}
               onViewDetails={(order) => setDetailsOrder(order)}
+              className="scroll-smooth bg-white/80"
             />
             <motion.div
               key={selectedOrder?.id ?? "map"}
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="flex flex-col gap-4"
+              className="flex h-full min-h-[360px] flex-col gap-4"
             >
               <div className="space-y-1">
                 <h2 className="text-sm font-semibold text-slate-900">Carte de suivi</h2>
                 <p className="text-xs text-slate-500">Zoom et drag disponibles pour explorer le trajet sélectionné.</p>
               </div>
-              <div className="relative h-[360px] w-full">
+              <div
+                className={cn(
+                  "relative flex-1 w-full overflow-hidden",
+                  isCompactMode
+                    ? "min-h-[360px] max-h-[calc(100vh-260px)]"
+                    : "min-h-[400px] max-h-[calc(100vh-250px)]",
+                )}
+              >
                 <TrackingMap
                   order={selectedOrder ?? null}
                   lastUpdateLabel={lastUpdateLabel}
                   disableInteractions={isDetailsOpen || isContactOpen}
                   className={cn(
-                    "h-full w-full transition-all duration-300",
+                    "h-full w-full object-cover transition-all duration-300",
                     (isDetailsOpen || isContactOpen) && "scale-[0.995]",
                     isDetailsOpen && "blur-[1.5px] brightness-[0.92]",
                     isContactOpen && "pointer-events-none opacity-50 [filter:blur(4px)_saturate(0.8)]",
+                    isCompactMode ? "min-h-[360px]" : "min-h-[400px]",
                   )}
                 />
                 <AnimatePresence>
@@ -615,6 +647,7 @@ const LiveTrackingSection = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.2 }}
+              className="flex-shrink-0"
             >
               <ActiveOrderPanel
                 orders={activeOrders}

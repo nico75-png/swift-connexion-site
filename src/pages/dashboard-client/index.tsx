@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { FC, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -28,6 +28,11 @@ import {
   Eye,
   RefreshCw,
   ChevronRight,
+  ArrowDown,
+  ArrowUp,
+  Info,
+  Lightbulb,
+  BellRing,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -45,6 +50,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -56,6 +62,19 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import type { LucideIcon } from "lucide-react";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  BarChart,
+  Bar,
+  Cell,
+} from "recharts";
 
 type Section =
   | "dashboard"
@@ -65,6 +84,56 @@ type Section =
   | "messages"
   | "parametres"
   | "aide";
+
+type DashboardSectionProps = {
+  setActiveSection: (section: Section) => void;
+};
+
+type MonthlyStats = {
+  total: number;
+  delivered: number;
+  pending: number;
+  totalAmount: number;
+  avgDelay: number;
+};
+
+type ActivityPoint = {
+  day: string;
+  orders: number;
+};
+
+const generateActivityData = (): ActivityPoint[] => {
+  const days = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+  return days.map((day) => ({
+    day,
+    orders: Math.floor(Math.random() * 31) + 10,
+  }));
+};
+
+const generateMonthlyStats = (): MonthlyStats => {
+  const total = Math.floor(Math.random() * 60) + 90;
+  const delivered = Math.floor(total * (0.75 + Math.random() * 0.15));
+  const pending = Math.max(total - delivered, 0);
+  const totalAmount = parseFloat((delivered * (45 + Math.random() * 65)).toFixed(2));
+  const avgDelay = parseFloat((25 + Math.random() * 15).toFixed(1));
+
+  return {
+    total,
+    delivered,
+    pending,
+    totalAmount,
+    avgDelay,
+  };
+};
+
+const generateSparklineData = () =>
+  Array.from({ length: 8 }, () => Math.floor(Math.random() * 70) + 30);
+
+const currencyFormatter = new Intl.NumberFormat("fr-FR", {
+  style: "currency",
+  currency: "EUR",
+  maximumFractionDigits: 0,
+});
 
 const NAVIGATION_ITEMS = [
   { label: "Tableau de bord", icon: LayoutDashboard, value: "dashboard" as Section },
@@ -204,7 +273,9 @@ const DashboardClient = () => {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
             >
-              {activeSection === "dashboard" && <DashboardSection />}
+              {activeSection === "dashboard" && (
+                <DashboardSection setActiveSection={setActiveSection} />
+              )}
               {activeSection === "commandes" && <CommandesSection />}
               {activeSection === "suivi" && <SuiviSection />}
               {activeSection === "factures" && <FacturesSection />}
@@ -220,103 +291,478 @@ const DashboardClient = () => {
 };
 
 // 🟣 Tableau de bord Section
-const DashboardSection = () => (
-  <div className="space-y-6">
-    <div>
-      <h1 className="text-3xl font-bold text-neutral-800">Tableau de bord</h1>
-      <p className="mt-1 text-sm text-neutral-600">Vue d'ensemble de votre activité</p>
+const DashboardSection: FC<DashboardSectionProps> = ({ setActiveSection }) => {
+  const [loading, setLoading] = useState(true);
+  const [ordersTarget] = useState(() => Math.floor(Math.random() * 40) + 85);
+  const [ordersTrend] = useState(() => parseFloat((5 + Math.random() * 10).toFixed(1)));
+  const [ordersCount, setOrdersCount] = useState(0);
+  const [deliveryRate] = useState(() => Math.floor(Math.random() * 21) + 78);
+  const [deliveryTrend] = useState(() => parseFloat((Math.random() * 6 - 2).toFixed(1)));
+  const [amountConsumed] = useState(() => 2200 + Math.random() * 2200);
+  const [sparkline] = useState<number[]>(() => generateSparklineData());
+  const [averageDelay] = useState(() => parseFloat((28 + Math.random() * 14).toFixed(1)));
+  const [delayVariation] = useState(() => parseFloat((Math.random() * 8 - 4).toFixed(1)));
+  const [activityData, setActivityData] = useState<ActivityPoint[]>([]);
+  const [monthlyStats, setMonthlyStats] = useState<MonthlyStats>({
+    total: 0,
+    delivered: 0,
+    pending: 0,
+    totalAmount: 0,
+    avgDelay: 0,
+  });
+
+  useEffect(() => {
+    const timeout = setTimeout(() => setLoading(false), 1000);
+    return () => clearTimeout(timeout);
+  }, []);
+
+  useEffect(() => {
+    setActivityData(generateActivityData());
+  }, []);
+
+  useEffect(() => {
+    setMonthlyStats(generateMonthlyStats());
+  }, []);
+
+  useEffect(() => {
+    if (loading) {
+      setOrdersCount(0);
+      return;
+    }
+
+    let frame = 0;
+    const frames = 24;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    const animate = () => {
+      frame += 1;
+      const progress =
+        frame >= frames ? ordersTarget : Math.round((ordersTarget / frames) * frame);
+      setOrdersCount(progress);
+
+      if (frame < frames) {
+        timeoutId = setTimeout(animate, 40);
+      }
+    };
+
+    timeoutId = setTimeout(animate, 80);
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [loading, ordersTarget]);
+
+  if (loading) {
+    return <Skeleton className="h-48 w-full rounded-xl" />;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-neutral-800">Tableau de bord</h1>
+        <p className="mt-1 text-sm text-neutral-600">Vue d'ensemble de votre activité</p>
+      </div>
+
+      <ProfileAlert onCompleteProfile={() => setActiveSection("parametres")} />
+
+      <DashboardStats
+        orders={{ value: ordersCount, trend: ordersTrend, target: ordersTarget }}
+        delivery={{ value: deliveryRate, trend: deliveryTrend }}
+        amount={{ value: amountConsumed, sparkline }}
+        delay={{ value: averageDelay, variation: delayVariation }}
+      />
+
+      <ActivityChart activityData={activityData} monthlyStats={monthlyStats} />
+
+      <QuickActions onNavigate={setActiveSection} />
+
+      <Suggestions />
     </div>
+  );
+};
 
-    {/* Alert profil incomplet */}
-    <Alert className="border-amber-300 bg-amber-50">
-      <AlertTitle className="text-amber-800">Profil incomplet</AlertTitle>
-      <AlertDescription className="text-amber-700">
-        Complétez votre profil pour bénéficier de toutes les fonctionnalités.
-      </AlertDescription>
-    </Alert>
+type DashboardStatsProps = {
+  orders: { value: number; trend: number; target: number };
+  delivery: { value: number; trend: number };
+  amount: { value: number; sparkline: number[] };
+  delay: { value: number; variation: number };
+};
 
-    {/* Stats cards */}
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+const DashboardStats: FC<DashboardStatsProps> = ({ orders, delivery, amount, delay }) => {
+  const DelayIcon = delay.variation <= 0 ? ArrowDown : ArrowUp;
+  const delayColor = delay.variation <= 0 ? "text-green-600" : "text-red-600";
+  const delayLabel = `${delay.variation > 0 ? "+" : ""}${delay.variation.toFixed(1)} min`;
+  const deliveryTrendLabel = `${delivery.trend >= 0 ? "+" : ""}${delivery.trend.toFixed(1)}%`;
+  const deliveryTrendColor = delivery.trend >= 0 ? "text-green-600" : "text-red-600";
+  const deliveryColorClass =
+    delivery.value >= 95
+      ? "[&>div]:bg-green-500"
+      : delivery.value >= 80
+      ? "[&>div]:bg-amber-500"
+      : "[&>div]:bg-red-500";
+
+  const sparklineMax = Math.max(...amount.sparkline);
+  const sparklineMin = Math.min(...amount.sparkline);
+  const points = amount.sparkline
+    .map((point, index) => {
+      const x = (index / Math.max(amount.sparkline.length - 1, 1)) * 100;
+      const normalized =
+        sparklineMax === sparklineMin
+          ? 50
+          : ((point - sparklineMin) / (sparklineMax - sparklineMin)) * 100;
+      const y = 100 - normalized;
+      return `${x},${y}`;
+    })
+    .join(" ");
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <Card className="border-neutral-200 bg-white">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium text-neutral-600">Commandes</CardTitle>
-          <Package className="h-5 w-5 text-blue-600" />
+        <CardHeader className="flex flex-row items-start justify-between pb-2">
+          <div>
+            <CardTitle className="text-sm font-medium text-neutral-600">Commandes</CardTitle>
+            <CardDescription className="text-xs text-neutral-500">
+              Objectif : {orders.target.toLocaleString("fr-FR")}
+            </CardDescription>
+          </div>
+          <span className="rounded-full bg-blue-100 p-2 text-blue-600">
+            <Package className="h-5 w-5" />
+          </span>
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-neutral-800">24</div>
-          <p className="text-xs text-neutral-500">+12% ce mois</p>
+        <CardContent className="space-y-2">
+          <div className="text-3xl font-semibold text-neutral-900">
+            {orders.value.toLocaleString("fr-FR")}
+          </div>
+          <p className="text-xs font-medium text-blue-600">+{orders.trend.toFixed(1)}% ce mois</p>
         </CardContent>
       </Card>
 
       <Card className="border-neutral-200 bg-white">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium text-neutral-600">Taux de livraison</CardTitle>
-          <Truck className="h-5 w-5 text-green-600" />
+        <CardHeader className="flex flex-row items-start justify-between pb-2">
+          <div>
+            <CardTitle className="text-sm font-medium text-neutral-600">Taux de livraison</CardTitle>
+            <CardDescription className="text-xs text-neutral-500">
+              Performances en temps réel
+            </CardDescription>
+          </div>
+          <span className="rounded-full bg-green-100 p-2 text-green-600">
+            <Truck className="h-5 w-5" />
+          </span>
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-neutral-800">98.5%</div>
-          <p className="text-xs text-neutral-500">+2% ce mois</p>
+        <CardContent className="space-y-3">
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl font-semibold text-neutral-900">{delivery.value}%</span>
+            <span className={cn("text-xs font-semibold", deliveryTrendColor)}>
+              {deliveryTrendLabel}
+            </span>
+          </div>
+          <Progress
+            value={delivery.value}
+            className={cn("h-2 bg-neutral-200", deliveryColorClass)}
+            max={100}
+          />
         </CardContent>
       </Card>
 
       <Card className="border-neutral-200 bg-white">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium text-neutral-600">Montant consommé</CardTitle>
-          <DollarSign className="h-5 w-5 text-amber-600" />
+        <CardHeader className="flex flex-row items-start justify-between pb-2">
+          <div>
+            <CardTitle className="text-sm font-medium text-neutral-600">Montant consommé</CardTitle>
+            <CardDescription className="text-xs text-neutral-500">
+              Total mensuel simulé
+            </CardDescription>
+          </div>
+          <span className="rounded-full bg-amber-100 p-2 text-amber-600">
+            <DollarSign className="h-5 w-5" />
+          </span>
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-neutral-800">2,450€</div>
-          <p className="text-xs text-neutral-500">Ce mois</p>
+        <CardContent className="space-y-2">
+          <div className="text-3xl font-semibold text-neutral-900">
+            {currencyFormatter.format(Math.round(amount.value))}
+          </div>
+          <svg viewBox="0 0 100 40" className="h-12 w-full text-blue-500" preserveAspectRatio="none">
+            <polyline
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              points={points}
+            />
+          </svg>
         </CardContent>
       </Card>
 
       <Card className="border-neutral-200 bg-white">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium text-neutral-600">Délai moyen</CardTitle>
-          <Clock className="h-5 w-5 text-purple-600" />
+        <CardHeader className="flex flex-row items-start justify-between pb-2">
+          <div>
+            <CardTitle className="text-sm font-medium text-neutral-600">Délai moyen</CardTitle>
+            <CardDescription className="text-xs text-neutral-500">
+              Temps estimé de livraison
+            </CardDescription>
+          </div>
+          <span className="rounded-full bg-purple-100 p-2 text-purple-600">
+            <Clock className="h-5 w-5" />
+          </span>
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-neutral-800">45 min</div>
-          <p className="text-xs text-neutral-500">-5 min ce mois</p>
+        <CardContent className="space-y-2">
+          <div className="text-3xl font-semibold text-neutral-900">{delay.value.toFixed(1)} min</div>
+          <div className="flex items-center gap-1 text-xs font-semibold">
+            <DelayIcon className={cn("h-4 w-4", delayColor)} />
+            <span className={delayColor}>{delayLabel}</span>
+          </div>
         </CardContent>
       </Card>
     </div>
+  );
+};
 
-    {/* Graphique d'activité */}
-    <Card className="border-neutral-200 bg-white">
-      <CardHeader>
-        <CardTitle className="text-neutral-800">Activité mensuelle</CardTitle>
-        <CardDescription>Évolution de vos commandes</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Skeleton className="h-64 w-full rounded-xl" />
-      </CardContent>
-    </Card>
+type ActivityChartProps = {
+  activityData: ActivityPoint[];
+  monthlyStats: MonthlyStats;
+};
 
-    {/* Actions rapides */}
+const ActivityChart: FC<ActivityChartProps> = ({ activityData, monthlyStats }) => {
+  const successRate = monthlyStats.total
+    ? Math.round((monthlyStats.delivered / monthlyStats.total) * 100)
+    : 0;
+  const barData = [
+    { name: "Livrées", value: monthlyStats.delivered, fill: "#16a34a" },
+    { name: "En attente", value: monthlyStats.pending, fill: "#f97316" },
+  ];
+
+  return (
     <Card className="border-neutral-200 bg-white">
-      <CardHeader>
-        <CardTitle className="text-neutral-800">Actions rapides</CardTitle>
+      <CardHeader className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <CardTitle className="text-neutral-800">Activité mensuelle</CardTitle>
+          <CardDescription>Vue d'ensemble des commandes du mois</CardDescription>
+        </div>
+        <Badge className="w-fit rounded-full bg-blue-100 px-4 py-1 text-xs font-medium text-blue-600">
+          Actualisé en temps réel
+        </Badge>
       </CardHeader>
-      <CardContent>
-        <div className="grid gap-4 md:grid-cols-3">
-          <Button className="h-auto flex-col gap-2 rounded-2xl bg-blue-600 py-6 hover:bg-blue-700">
-            <MapPin className="h-6 w-6" />
-            <span>Suivi en direct</span>
-          </Button>
-          <Button className="h-auto flex-col gap-2 rounded-2xl bg-green-600 py-6 hover:bg-green-700">
-            <Receipt className="h-6 w-6" />
-            <span>Mes factures</span>
-          </Button>
-          <Button className="h-auto flex-col gap-2 rounded-2xl bg-purple-600 py-6 hover:bg-purple-700">
-            <MessageSquare className="h-6 w-6" />
-            <span>Messagerie</span>
-          </Button>
+      <CardContent className="space-y-6">
+        <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-neutral-500">
+                  Commandes totales ce mois
+                </p>
+                <p className="text-3xl font-semibold text-neutral-900">
+                  {monthlyStats.total.toLocaleString("fr-FR")}
+                </p>
+              </div>
+              <div className="text-sm text-neutral-600">
+                <span className="font-semibold text-blue-600">{successRate}%</span> de réussite
+              </div>
+            </div>
+            <div className="h-48 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={activityData}
+                  margin={{ top: 10, left: -10, right: 10, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" />
+                  <XAxis dataKey="day" stroke="#9ca3af" tickLine={false} axisLine={false} />
+                  <YAxis stroke="#9ca3af" tickLine={false} axisLine={false} allowDecimals={false} />
+                  <Tooltip contentStyle={{ borderRadius: 12, borderColor: "#e5e7eb" }} />
+                  <Line
+                    type="monotone"
+                    dataKey="orders"
+                    stroke="#2563eb"
+                    strokeWidth={2}
+                    dot={false}
+                    isAnimationActive
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <div className="flex h-full flex-col justify-between gap-4 rounded-2xl bg-neutral-50 p-4">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-neutral-500">Montant total</p>
+              <p className="text-xl font-semibold text-neutral-900">
+                {currencyFormatter.format(Math.round(monthlyStats.totalAmount))}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-neutral-500">Délai moyen</p>
+              <p className="text-xl font-semibold text-neutral-900">
+                {monthlyStats.avgDelay.toFixed(1)} min
+              </p>
+            </div>
+            <div className="h-32 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={barData}>
+                  <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" vertical={false} />
+                  <XAxis dataKey="name" stroke="#9ca3af" tickLine={false} axisLine={false} />
+                  <YAxis stroke="#9ca3af" tickLine={false} axisLine={false} allowDecimals={false} />
+                  <Tooltip contentStyle={{ borderRadius: 12, borderColor: "#e5e7eb" }} />
+                  <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                    {barData.map((entry) => (
+                      <Cell key={entry.name} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
-  </div>
-);
+  );
+};
+
+type QuickActionsProps = {
+  onNavigate: (section: Section) => void;
+};
+
+const QuickActions: FC<QuickActionsProps> = ({ onNavigate }) => {
+  const actions: { label: string; icon: LucideIcon; section: Section; className: string }[] = [
+    {
+      label: "Suivi en direct",
+      icon: MapPin,
+      section: "suivi",
+      className: "bg-blue-600 hover:bg-blue-700",
+    },
+    {
+      label: "Mes factures",
+      icon: Receipt,
+      section: "factures",
+      className: "bg-green-600 hover:bg-green-700",
+    },
+    {
+      label: "Messagerie",
+      icon: MessageSquare,
+      section: "messages",
+      className: "bg-purple-600 hover:bg-purple-700",
+    },
+  ];
+
+  return (
+    <Card className="border-neutral-200 bg-white">
+      <CardHeader>
+        <CardTitle className="text-neutral-800">Actions rapides</CardTitle>
+        <CardDescription>Accédez immédiatement aux sections clés</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {actions.map(({ label, icon: Icon, section, className }) => (
+            <Button
+              key={section}
+              className={cn(
+                "h-auto flex-col gap-2 rounded-2xl py-6 text-sm font-semibold text-white transition-transform duration-150 hover:scale-105",
+                className
+              )}
+              onClick={() => onNavigate(section)}
+            >
+              <Icon className="h-6 w-6" />
+              <span>{label}</span>
+            </Button>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+type ProfileAlertProps = {
+  onCompleteProfile: () => void;
+};
+
+const ProfileAlert: FC<ProfileAlertProps> = ({ onCompleteProfile }) => {
+  const completion = 60;
+
+  return (
+    <Alert className="border-amber-200 bg-amber-50">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-1 items-start gap-4">
+          <span className="rounded-full bg-amber-100 p-2 text-amber-600">
+            <Info className="h-5 w-5" />
+          </span>
+          <div className="flex-1">
+            <AlertTitle className="text-base font-semibold text-amber-800">
+              Profil incomplet
+            </AlertTitle>
+            <AlertDescription className="mt-1 text-sm text-amber-700">
+              Complétez votre adresse et vos préférences pour accéder au suivi en temps réel.
+            </AlertDescription>
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center justify-between text-xs font-semibold text-amber-700">
+                <span>Profil complété à {completion}%</span>
+              </div>
+              <Progress value={completion} className="h-2 bg-amber-100 [&>div]:bg-amber-500" />
+            </div>
+          </div>
+        </div>
+        <Button
+          onClick={onCompleteProfile}
+          className="w-full rounded-2xl bg-amber-600 hover:bg-amber-700 sm:w-auto"
+        >
+          Compléter maintenant
+        </Button>
+      </div>
+    </Alert>
+  );
+};
+
+const Suggestions: FC = () => {
+  const suggestions: { title: string; description: string; icon: LucideIcon; accent: string }[] = [
+    {
+      title: "Optimisez vos trajets",
+      description: "Regroupez vos commandes proches pour réduire les kilomètres parcourus.",
+      icon: Lightbulb,
+      accent: "bg-amber-100 text-amber-600",
+    },
+    {
+      title: "Débloquez la fidélité",
+      description: "Profitez de notre réduction exclusive après 50 commandes ce trimestre.",
+      icon: TrendingUp,
+      accent: "bg-blue-100 text-blue-600",
+    },
+    {
+      title: "Activez les alertes SMS",
+      description: "Soyez averti instantanément des étapes clés grâce aux notifications SMS.",
+      icon: BellRing,
+      accent: "bg-purple-100 text-purple-600",
+    },
+  ];
+
+  return (
+    <Card className="border-neutral-200 bg-white">
+      <CardHeader>
+        <CardTitle className="text-neutral-800">Suggestions personnalisées</CardTitle>
+        <CardDescription>Des recommandations adaptées à votre activité récente</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4 md:grid-cols-3">
+          {suggestions.map(({ title, description, icon: Icon, accent }) => (
+            <div
+              key={title}
+              className="flex h-full flex-col justify-between rounded-2xl bg-neutral-100 p-4 transition-colors duration-150 hover:bg-neutral-200"
+            >
+              <span
+                className={cn(
+                  "mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full",
+                  accent
+                )}
+              >
+                <Icon className="h-5 w-5" />
+              </span>
+              <div>
+                <h3 className="text-sm font-semibold text-neutral-800">{title}</h3>
+                <p className="mt-2 text-xs text-neutral-600">{description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 // 🔵 Commandes Section
 const CommandesSection = () => (

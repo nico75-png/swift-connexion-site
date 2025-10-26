@@ -418,7 +418,7 @@ const Commandes = () => {
               key={order.status}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.12, ease: "easeOut" }}
+              transition={{ duration: 0.12 }}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold",
                 config.bgClass,
@@ -504,7 +504,6 @@ const Commandes = () => {
     return (
       <motion.div
         key={row.id}
-        layout
         role="button"
         tabIndex={0}
         onClick={() => handleViewOrder(order)}
@@ -741,7 +740,6 @@ const Commandes = () => {
                 return (
                   <motion.div
                     key={row.id}
-                    layout
                     className="flex flex-col gap-3 rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm"
                     whileHover={{ y: -2 }}
                   >

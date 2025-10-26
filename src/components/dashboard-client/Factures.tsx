@@ -1,11 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
-import {
-  ArrowUpDown,
-  Download,
-  FileDown,
-  Search,
-} from "lucide-react";
+import { LayoutGroup, motion } from "framer-motion";
+import { Download, FileDown, Search } from "lucide-react";
 
 import invoicesData from "@/data/invoices.json";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +22,14 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -82,18 +85,18 @@ const PERIOD_OPTIONS: { label: string; value: PeriodFilter }[] = [
   { label: "Année", value: "year" },
 ];
 
-const STATUS_CONFIG: Record<InvoiceStatus, { badgeClass: string; icon: string }> = {
+const STATUS_CONFIG: Record<InvoiceStatus, { badgeClass: string; label: string }> = {
   Payée: {
     badgeClass: "bg-[#D1FAE5] text-[#047857]",
-    icon: "✅",
+    label: "Payée ✅",
   },
   "En attente": {
     badgeClass: "bg-[#FEF3C7] text-[#B45309]",
-    icon: "⏳",
+    label: "En attente ⏳",
   },
   "En retard": {
     badgeClass: "bg-[#FEE2E2] text-[#DC2626]",
-    icon: "❌",
+    label: "En retard ❌",
   },
 };
 
@@ -168,6 +171,8 @@ const Factures = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [paymentInvoice, setPaymentInvoice] = useState<Invoice | null>(null);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -280,6 +285,55 @@ const Factures = () => {
     setSelectedInvoice(invoice);
     setIsSheetOpen(true);
   }, []);
+
+  const openPaymentModal = useCallback((invoice: Invoice) => {
+    setPaymentInvoice(invoice);
+    setIsPaymentModalOpen(true);
+  }, []);
+
+  const closePaymentModal = useCallback(() => {
+    setIsPaymentModalOpen(false);
+    setPaymentInvoice(null);
+  }, []);
+
+  const handleMockPayment = useCallback(
+    (invoice: Invoice, method: "card" | "bank") => {
+      const paymentUrl = `/paiement?invoice=${encodeURIComponent(invoice.invoice_number)}&method=${method}`;
+      const paymentMethodLabel = method === "card" ? "Carte bancaire" : "Virement bancaire";
+
+      if (typeof window !== "undefined") {
+        window.open(paymentUrl, "_blank", "noopener,noreferrer");
+      }
+
+      setInvoices((previousInvoices) =>
+        previousInvoices.map((currentInvoice) =>
+          currentInvoice.invoice_number === invoice.invoice_number
+            ? {
+                ...currentInvoice,
+                status: "Payée",
+                payment_method: paymentMethodLabel,
+              }
+            : currentInvoice,
+        ),
+      );
+
+      setSelectedInvoice((current) =>
+        current && current.invoice_number === invoice.invoice_number
+          ? { ...current, status: "Payée", payment_method: paymentMethodLabel }
+          : current,
+      );
+
+      toast({
+        title: "Redirection vers la page de paiement",
+        description: `Un nouvel onglet s'ouvre pour finaliser le paiement ${
+          method === "card" ? "par carte bancaire" : "par virement bancaire"
+        } de ${invoice.invoice_number}.`,
+      });
+
+      closePaymentModal();
+    },
+    [closePaymentModal, toast],
+  );
 
   const handleDownload = useCallback(
     (invoice: Invoice) => {
@@ -446,16 +500,35 @@ const Factures = () => {
                             <div className="text-right text-sm font-semibold text-slate-900">{formatCurrency(invoice.total)}</div>
                           </td>
                           <td className="px-4 py-4 align-top">
-                            <span className={cn("inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold shadow-sm", STATUS_CONFIG[invoice.status].badgeClass)}>
-                              <span aria-hidden>{STATUS_CONFIG[invoice.status].icon}</span>
-                              {invoice.status}
+                            <span
+                              className={cn(
+                                "inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-medium uppercase leading-4 shadow-sm",
+                                STATUS_CONFIG[invoice.status].badgeClass,
+                              )}
+                            >
+                              {STATUS_CONFIG[invoice.status].label}
                             </span>
                           </td>
                           <td className="px-4 py-4 align-top">
-                            <div className="flex items-center gap-2 text-sm text-slate-600">
-                              <span aria-hidden className="text-base">{getPaymentEmoji(invoice.payment_method)}</span>
-                              <span>{invoice.payment_method}</span>
-                            </div>
+                            {invoice.status === "Payée" ? (
+                              <div className="flex items-center gap-2 text-sm text-slate-600">
+                                <span aria-hidden className="text-base">{getPaymentEmoji(invoice.payment_method)}</span>
+                                <span>{invoice.payment_method}</span>
+                              </div>
+                            ) : (
+                              <Button
+                                type="button"
+                                size="sm"
+                                className="bg-[#2563EB] px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1D4ED8]"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  openPaymentModal(invoice);
+                                }}
+                                aria-label={`Payer la facture ${invoice.invoice_number}`}
+                              >
+                                💶 Payer maintenant
+                              </Button>
+                            )}
                           </td>
                           <td className="px-4 py-4 align-top text-right">
                             <div className="flex justify-end">
@@ -533,12 +606,11 @@ const Factures = () => {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     className={cn(
-                      "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold",
+                      "inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-medium uppercase leading-4",
                       STATUS_CONFIG[selectedInvoice.status].badgeClass,
                     )}
                   >
-                    <span aria-hidden>{STATUS_CONFIG[selectedInvoice.status].icon}</span>
-                    {selectedInvoice.status}
+                    {STATUS_CONFIG[selectedInvoice.status].label}
                   </motion.span>
                 </div>
 
@@ -691,6 +763,125 @@ const Factures = () => {
           ) : null}
         </SheetContent>
       </Sheet>
+
+      <Dialog
+        open={isPaymentModalOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            closePaymentModal();
+          }
+        }}
+      >
+        <DialogContent className="max-w-[480px] rounded-[14px] border-none bg-white p-0 shadow-[0_24px_60px_rgba(15,23,42,0.18)]">
+          {paymentInvoice ? (
+            <div className="overflow-hidden rounded-[14px]">
+              <div className="border-b border-slate-100 bg-slate-50 px-6 py-5">
+                <DialogHeader className="items-start space-y-4 text-left">
+                  <div className="space-y-2">
+                    <DialogTitle className="text-lg font-semibold text-slate-900">
+                      Paiement de la facture {paymentInvoice.invoice_number}
+                    </DialogTitle>
+                    <DialogDescription className="text-sm text-slate-600">
+                      Choisissez un moyen de paiement sécurisé pour régler cette facture.
+                    </DialogDescription>
+                  </div>
+                  <div className="grid w-full gap-3 sm:grid-cols-2">
+                    <div className="rounded-xl bg-white px-4 py-3 shadow-inner">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Montant TTC</p>
+                      <p className="text-base font-semibold text-slate-900">
+                        {formatCurrency(paymentInvoice.total)}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-white px-4 py-3 shadow-inner">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Date d'échéance</p>
+                      <p className="text-sm font-medium text-slate-800">
+                        {formatDate(paymentInvoice.due_date)}
+                      </p>
+                    </div>
+                  </div>
+                </DialogHeader>
+              </div>
+
+              <div className="space-y-5 px-6 py-6">
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold text-slate-900">Moyens de paiement disponibles</h3>
+                  <p className="text-sm text-slate-600">
+                    Choisissez la solution la plus adaptée pour finaliser le règlement.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="rounded-xl border border-slate-200 p-4 shadow-sm">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold text-slate-900">💳 Carte bancaire</p>
+                        <p className="text-xs text-slate-500">Paiement immédiat et sécurisé en ligne.</p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="bg-[#2563EB] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#1D4ED8]"
+                        onClick={() => handleMockPayment(paymentInvoice, "card")}
+                      >
+                        Payer par carte
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 rounded-xl border border-slate-200 p-4 shadow-sm">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold text-slate-900">🏦 Virement bancaire</p>
+                        <p className="text-xs text-slate-500">Utilisez les coordonnées bancaires Swift Connexion.</p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="bg-slate-200 px-4 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-300"
+                        onClick={() => handleMockPayment(paymentInvoice, "bank")}
+                      >
+                        Payer par virement
+                      </Button>
+                    </div>
+                    <div className="grid gap-2 rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                      <p>
+                        <span className="font-semibold text-slate-800">Titulaire :</span> Swift Transport
+                      </p>
+                      <p>
+                        <span className="font-semibold text-slate-800">Banque :</span> BNP Paribas
+                      </p>
+                      <p>
+                        <span className="font-semibold text-slate-800">IBAN :</span> FR76 3000 4000 1234 5678 9012 345
+                      </p>
+                      <p>
+                        <span className="font-semibold text-slate-800">BIC :</span> BNPAFRPPXXX
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter className="flex flex-col gap-2 border-t border-slate-100 bg-slate-50 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="text-sm font-semibold text-slate-600 hover:text-slate-900"
+                  onClick={closePaymentModal}
+                >
+                  Fermer
+                </Button>
+                <Button
+                  type="button"
+                  disabled
+                  className="cursor-not-allowed bg-slate-200 px-4 text-sm font-semibold text-slate-500 hover:bg-slate-200"
+                >
+                  Confirmer le paiement
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </section>
   );
 };

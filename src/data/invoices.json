@@ -1,0 +1,284 @@
+[
+  {
+    "invoice_number": "FAC-2025-032",
+    "order_number": "CMD-2025-456",
+    "date_issued": "2025-10-12",
+    "due_date": "2025-10-19",
+    "status": "En attente",
+    "total": 820.5,
+    "total_ht": 683.75,
+    "tva": 136.75,
+    "currency": "EUR",
+    "payment_method": "Virement bancaire",
+    "payment_reference": "VIR-2025-7781",
+    "customer": {
+      "name": "Clara Logistique SAS",
+      "siret": "812 345 678 00029",
+      "address": "24 rue du Port, 75012 Paris",
+      "email": "facturation@claralogistique.fr",
+      "phone": "+33 1 84 52 76 00"
+    },
+    "issuer": {
+      "name": "Swift Connexion",
+      "siret": "902 112 334 00045",
+      "address": "18 avenue des Transports, 75010 Paris",
+      "email": "compta@swift-connexion.fr",
+      "phone": "+33 1 92 00 45 12"
+    },
+    "items": [
+      {
+        "description": "Transport express Paris → Lyon",
+        "quantity": 1,
+        "unit_price": 420,
+        "total": 420
+      },
+      {
+        "description": "Gestion douanière",
+        "quantity": 1,
+        "unit_price": 65,
+        "total": 65
+      },
+      {
+        "description": "Assurance premium marchandises",
+        "quantity": 1,
+        "unit_price": 198.75,
+        "total": 198.75
+      }
+    ],
+    "notes": "Référence de livraison : HUB-LY-9883"
+  },
+  {
+    "invoice_number": "FAC-2025-031",
+    "order_number": "CMD-2025-441",
+    "date_issued": "2025-10-04",
+    "due_date": "2025-10-11",
+    "status": "Payée",
+    "total": 1452,
+    "total_ht": 1210,
+    "tva": 242,
+    "currency": "EUR",
+    "payment_method": "Carte bancaire",
+    "payment_reference": "CB-2025-9921",
+    "customer": {
+      "name": "Clara Logistique SAS",
+      "siret": "812 345 678 00029",
+      "address": "24 rue du Port, 75012 Paris",
+      "email": "facturation@claralogistique.fr",
+      "phone": "+33 1 84 52 76 00"
+    },
+    "issuer": {
+      "name": "Swift Connexion",
+      "siret": "902 112 334 00045",
+      "address": "18 avenue des Transports, 75010 Paris",
+      "email": "compta@swift-connexion.fr",
+      "phone": "+33 1 92 00 45 12"
+    },
+    "items": [
+      {
+        "description": "Transport température dirigée",
+        "quantity": 2,
+        "unit_price": 350,
+        "total": 700
+      },
+      {
+        "description": "Stockage 48h en hub sécurisé",
+        "quantity": 1,
+        "unit_price": 180,
+        "total": 180
+      },
+      {
+        "description": "Assurance dommages étendue",
+        "quantity": 1,
+        "unit_price": 330,
+        "total": 330
+      }
+    ],
+    "notes": "Réglée le 05/10/2025 par CB entreprise"
+  },
+  {
+    "invoice_number": "FAC-2025-029",
+    "order_number": "CMD-2025-433",
+    "date_issued": "2025-09-20",
+    "due_date": "2025-09-27",
+    "status": "Payée",
+    "total": 972,
+    "total_ht": 810,
+    "tva": 162,
+    "currency": "EUR",
+    "payment_method": "Prélèvement SEPA",
+    "payment_reference": "SEPA-2025-6221",
+    "customer": {
+      "name": "Clara Logistique SAS",
+      "siret": "812 345 678 00029",
+      "address": "24 rue du Port, 75012 Paris",
+      "email": "facturation@claralogistique.fr",
+      "phone": "+33 1 84 52 76 00"
+    },
+    "issuer": {
+      "name": "Swift Connexion",
+      "siret": "902 112 334 00045",
+      "address": "18 avenue des Transports, 75010 Paris",
+      "email": "compta@swift-connexion.fr",
+      "phone": "+33 1 92 00 45 12"
+    },
+    "items": [
+      {
+        "description": "Distribution régionale 12 points",
+        "quantity": 1,
+        "unit_price": 540,
+        "total": 540
+      },
+      {
+        "description": "Gestion des retours",
+        "quantity": 1,
+        "unit_price": 120,
+        "total": 120
+      },
+      {
+        "description": "Tracking premium",
+        "quantity": 1,
+        "unit_price": 150,
+        "total": 150
+      }
+    ],
+    "notes": "Facture liée à la campagne retail Q3"
+  },
+  {
+    "invoice_number": "FAC-2025-028",
+    "order_number": "CMD-2025-427",
+    "date_issued": "2025-09-10",
+    "due_date": "2025-09-17",
+    "status": "En retard",
+    "total": 600,
+    "total_ht": 500,
+    "tva": 100,
+    "currency": "EUR",
+    "payment_method": "Virement bancaire",
+    "payment_reference": "VIR-2025-6630",
+    "customer": {
+      "name": "Clara Logistique SAS",
+      "siret": "812 345 678 00029",
+      "address": "24 rue du Port, 75012 Paris",
+      "email": "facturation@claralogistique.fr",
+      "phone": "+33 1 84 52 76 00"
+    },
+    "issuer": {
+      "name": "Swift Connexion",
+      "siret": "902 112 334 00045",
+      "address": "18 avenue des Transports, 75010 Paris",
+      "email": "compta@swift-connexion.fr",
+      "phone": "+33 1 92 00 45 12"
+    },
+    "items": [
+      {
+        "description": "Transport spot international",
+        "quantity": 1,
+        "unit_price": 420,
+        "total": 420
+      },
+      {
+        "description": "Surcharge gasoil",
+        "quantity": 1,
+        "unit_price": 80,
+        "total": 80
+      }
+    ],
+    "notes": "Relance envoyée le 28/09/2025"
+  },
+  {
+    "invoice_number": "FAC-2025-024",
+    "order_number": "CMD-2025-411",
+    "date_issued": "2025-08-18",
+    "due_date": "2025-08-25",
+    "status": "Payée",
+    "total": 1824,
+    "total_ht": 1520,
+    "tva": 304,
+    "currency": "EUR",
+    "payment_method": "Carte bancaire",
+    "payment_reference": "CB-2025-8720",
+    "customer": {
+      "name": "Clara Logistique SAS",
+      "siret": "812 345 678 00029",
+      "address": "24 rue du Port, 75012 Paris",
+      "email": "facturation@claralogistique.fr",
+      "phone": "+33 1 84 52 76 00"
+    },
+    "issuer": {
+      "name": "Swift Connexion",
+      "siret": "902 112 334 00045",
+      "address": "18 avenue des Transports, 75010 Paris",
+      "email": "compta@swift-connexion.fr",
+      "phone": "+33 1 92 00 45 12"
+    },
+    "items": [
+      {
+        "description": "Gestion de flotte dédiée",
+        "quantity": 1,
+        "unit_price": 980,
+        "total": 980
+      },
+      {
+        "description": "Maintenance préventive",
+        "quantity": 1,
+        "unit_price": 320,
+        "total": 320
+      },
+      {
+        "description": "Support 24/7 premium",
+        "quantity": 1,
+        "unit_price": 220,
+        "total": 220
+      }
+    ],
+    "notes": "Contrat cadre logistique - Août 2025"
+  },
+  {
+    "invoice_number": "FAC-2025-023",
+    "order_number": "CMD-2025-406",
+    "date_issued": "2025-08-07",
+    "due_date": "2025-08-14",
+    "status": "En retard",
+    "total": 432,
+    "total_ht": 360,
+    "tva": 72,
+    "currency": "EUR",
+    "payment_method": "Prélèvement SEPA",
+    "payment_reference": "SEPA-2025-5998",
+    "customer": {
+      "name": "Clara Logistique SAS",
+      "siret": "812 345 678 00029",
+      "address": "24 rue du Port, 75012 Paris",
+      "email": "facturation@claralogistique.fr",
+      "phone": "+33 1 84 52 76 00"
+    },
+    "issuer": {
+      "name": "Swift Connexion",
+      "siret": "902 112 334 00045",
+      "address": "18 avenue des Transports, 75010 Paris",
+      "email": "compta@swift-connexion.fr",
+      "phone": "+33 1 92 00 45 12"
+    },
+    "items": [
+      {
+        "description": "Livraisons urbaines planifiées",
+        "quantity": 1,
+        "unit_price": 210,
+        "total": 210
+      },
+      {
+        "description": "Surcharge carburant",
+        "quantity": 1,
+        "unit_price": 90,
+        "total": 90
+      },
+      {
+        "description": "Option suivi temps réel",
+        "quantity": 1,
+        "unit_price": 60,
+        "total": 60
+      }
+    ],
+    "notes": "En attente de validation comptable"
+  }
+]

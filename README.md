@@ -71,3 +71,19 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+## Targeted ESLint runs
+
+Legacy files in this repository may still contain lint violations. When you need to validate a specific component without touching the rest of the codebase, you can run ESLint on a scoped path:
+
+```bash
+npm run lint -- src/components/layout/Sidebar.tsx
+```
+
+For convenience, there is also a dedicated script for the sidebar component:
+
+```bash
+npm run lint:sidebar
+```
+
+Once the legacy issues are addressed, remember to switch back to the standard `npm run lint` command so the full project remains compliant.

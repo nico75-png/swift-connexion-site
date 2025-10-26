@@ -20,6 +20,13 @@ If you want to work locally using your own IDE, you can clone this repo and push
 
 The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
+> **Tip:** If npm commands are unexpectedly routing through an old proxy, clear the proxy-related configs locally with:
+> ```sh
+> npm config delete http-proxy
+> npm config delete https-proxy
+> npm config delete proxy
+> ```
+
 Follow these steps:
 
 ```sh

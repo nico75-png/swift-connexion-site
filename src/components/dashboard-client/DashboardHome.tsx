@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { MapPin, FileText, MessageCircle } from "lucide-react";
 import AnimatedSection from "@/components/dashboard-client/AnimatedSection";
 import ClientActivityChart from "./ClientActivityChart";
+import AnimatedCounter from "./AnimatedCounter";
 
 const indicatorContainerVariants = {
   hidden: { opacity: 0 },
@@ -84,7 +85,11 @@ const DashboardHome = () => {
               <CardContent>
                 <div className="space-y-2">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-bold text-slate-900">117</span>
+                    <AnimatedCounter
+                      value={117}
+                      className="text-4xl font-bold text-slate-900"
+                      delay={0.1}
+                    />
                     <span className="text-sm text-slate-500">/ 122 objectif</span>
                   </div>
                   <p className="text-sm text-green-600">+12 % vs. mois dernier</p>

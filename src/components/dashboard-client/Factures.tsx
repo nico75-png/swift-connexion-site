@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { LayoutGroup, AnimatePresence, motion } from "framer-motion";
-import { Download, FileDown, Search } from "lucide-react";
+import { CheckCircle2, CreditCard, Download, FileDown, Search } from "lucide-react";
 
 import invoicesData from "@/data/invoices.json";
 import { Badge } from "@/components/ui/badge";
@@ -333,10 +333,10 @@ const Factures = () => {
 
   const handleMockPayment = useCallback(
     (invoice: Invoice, method: "card" | "bank") => {
-      const paymentUrl = `/paiement?invoice=${encodeURIComponent(invoice.invoice_number)}&method=${method}`;
       const paymentMethodLabel = method === "card" ? "Carte bancaire" : "Virement bancaire";
 
-      if (typeof window !== "undefined") {
+      if (method === "card" && typeof window !== "undefined") {
+        const paymentUrl = `/paiement?invoice=${encodeURIComponent(invoice.invoice_number)}&method=${method}`;
         window.open(paymentUrl, "_blank", "noopener,noreferrer");
       }
 
@@ -359,10 +359,12 @@ const Factures = () => {
       );
 
       toast({
-        title: "Redirection vers la page de paiement",
-        description: `Un nouvel onglet s'ouvre pour finaliser le paiement ${
-          method === "card" ? "par carte bancaire" : "par virement bancaire"
-        } de ${invoice.invoice_number}.`,
+        title:
+          method === "card" ? "Paiement par carte initié" : "Facture marquée comme payée",
+        description:
+          method === "card"
+            ? `Redirection vers la page de paiement sécurisée pour ${invoice.invoice_number}.`
+            : `Le virement bancaire est confirmé pour la facture ${invoice.invoice_number}.`,
       });
 
       closePaymentModal();
@@ -783,18 +785,50 @@ const Factures = () => {
                                   </p>
                                 </div>
                               </div>
-                              <div className="flex flex-col gap-2 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="flex flex-col gap-3 text-sm text-slate-600">
                                 <p className="flex items-center gap-2 text-slate-700">
                                   <span role="img" aria-hidden>
                                     {getPaymentEmoji(selectedInvoice.payment_method)}
                                   </span>
                                   <span>Moyen de paiement : {selectedInvoice.payment_method}</span>
                                 </p>
-                                <div className="flex items-center gap-2">
+                                {selectedInvoice.status !== "Payée" ? (
+                                  <p className="text-sm font-medium text-slate-700">
+                                    Montant à payer : {formatCurrency(selectedInvoice.total)} — Échéance : {formatDate(selectedInvoice.due_date)}
+                                  </p>
+                                ) : (
+                                  <p className="text-sm font-semibold text-emerald-600">Facture réglée ✅</p>
+                                )}
+                                <div className="flex flex-col space-y-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-start sm:space-y-0 sm:space-x-3">
                                   <Button
                                     type="button"
                                     size="sm"
-                                    className="bg-[#2563EB] text-white shadow-sm hover:bg-[#1D4ED8]"
+                                    disabled={selectedInvoice.status === "Payée"}
+                                    onClick={() => openPaymentModal(selectedInvoice)}
+                                    className={cn(
+                                      "inline-flex h-[42px] w-full items-center justify-center rounded-xl px-5 py-2.5 text-sm font-medium shadow-sm transition-colors duration-200 sm:w-auto",
+                                      selectedInvoice.status === "Payée"
+                                        ? "cursor-not-allowed bg-slate-200 text-slate-500 opacity-60"
+                                        : "bg-green-600 text-white hover:bg-green-700",
+                                    )}
+                                    aria-disabled={selectedInvoice.status === "Payée"}
+                                  >
+                                    {selectedInvoice.status === "Payée" ? (
+                                      <>
+                                        <CheckCircle2 className="mr-2 h-4 w-4" aria-hidden />
+                                        Déjà payée ✅
+                                      </>
+                                    ) : (
+                                      <>
+                                        <CreditCard className="mr-2 h-4 w-4" aria-hidden />
+                                        💳 Payer la facture
+                                      </>
+                                    )}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    className="inline-flex h-[42px] w-full items-center justify-center rounded-xl bg-[#2563EB] px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors duration-200 hover:bg-[#1D4ED8] sm:w-auto"
                                     onClick={() => handleDownload(selectedInvoice)}
                                     aria-label="Télécharger la facture"
                                   >
@@ -805,7 +839,7 @@ const Factures = () => {
                                     type="button"
                                     size="sm"
                                     variant="outline"
-                                    className="border-[#BFDBFE] text-[#1D4ED8]"
+                                    className="inline-flex h-[42px] w-full items-center justify-center rounded-xl border-[#BFDBFE] px-5 py-2.5 text-sm font-medium text-[#1D4ED8] shadow-sm transition-colors duration-200 hover:bg-[#DBEAFE] sm:w-auto"
                                     onClick={() =>
                                       toast({
                                         title: "Service facturation",
@@ -814,6 +848,14 @@ const Factures = () => {
                                     }
                                   >
                                     Contacter un conseiller
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    className="inline-flex h-[42px] w-full items-center justify-center rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors duration-200 hover:bg-slate-700 sm:w-auto"
+                                    onClick={() => setDetailView("orders")}
+                                  >
+                                    Accéder aux commandes associées
                                   </Button>
                                 </div>
                               </div>
@@ -833,16 +875,9 @@ const Factures = () => {
                                     </p>
                                   </div>
                                 </div>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  className="bg-slate-900 text-white transition-all duration-300 hover:bg-slate-700"
-                                  onClick={() => setDetailView("orders")}
-                                >
-                                  {hasMultipleSelectedOrders
-                                    ? "Accéder aux commandes associées"
-                                    : "Accéder à la commande associée"}
-                                </Button>
+                                <div className="text-xs text-slate-500">
+                                  Utilisez l'action « Accéder aux commandes associées » ci-dessus pour consulter le détail.
+                                </div>
                               </div>
                             </div>
 
@@ -1067,17 +1102,17 @@ const Factures = () => {
           }
         }}
       >
-        <DialogContent className="max-w-[480px] rounded-[14px] border-none bg-white p-0 shadow-[0_24px_60px_rgba(15,23,42,0.18)]">
+        <DialogContent className="max-w-[520px] rounded-[14px] border-none bg-white p-0 shadow-[0_24px_60px_rgba(15,23,42,0.18)]">
           {paymentInvoice ? (
             <div className="overflow-hidden rounded-[14px]">
               <div className="border-b border-slate-100 bg-slate-50 px-6 py-5">
                 <DialogHeader className="items-start space-y-4 text-left">
                   <div className="space-y-2">
                     <DialogTitle className="text-lg font-semibold text-slate-900">
-                      Paiement de la facture {paymentInvoice.invoice_number}
+                      Choisir un mode de paiement
                     </DialogTitle>
                     <DialogDescription className="text-sm text-slate-600">
-                      Choisissez un moyen de paiement sécurisé pour régler cette facture.
+                      Sélectionnez votre méthode de règlement pour la facture {paymentInvoice.invoice_number}.
                     </DialogDescription>
                   </div>
                   <div className="grid w-full gap-3 sm:grid-cols-2">
@@ -1132,10 +1167,10 @@ const Factures = () => {
                       <Button
                         type="button"
                         size="sm"
-                        className="bg-slate-200 px-4 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-300"
+                        className="bg-green-50 px-4 text-sm font-semibold text-emerald-700 shadow-sm hover:bg-emerald-100"
                         onClick={() => handleMockPayment(paymentInvoice, "bank")}
                       >
-                        Payer par virement
+                        Marquer comme payé
                       </Button>
                     </div>
                     <div className="grid gap-2 rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-600">
@@ -1156,21 +1191,14 @@ const Factures = () => {
                 </div>
               </div>
 
-              <DialogFooter className="flex flex-col gap-2 border-t border-slate-100 bg-slate-50 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <DialogFooter className="flex flex-col gap-2 border-t border-slate-100 bg-slate-50 px-6 py-4 sm:flex-row sm:items-center sm:justify-end">
                 <Button
                   type="button"
                   variant="ghost"
                   className="text-sm font-semibold text-slate-600 hover:text-slate-900"
                   onClick={closePaymentModal}
                 >
-                  Fermer
-                </Button>
-                <Button
-                  type="button"
-                  disabled
-                  className="cursor-not-allowed bg-slate-200 px-4 text-sm font-semibold text-slate-500 hover:bg-slate-200"
-                >
-                  Confirmer le paiement
+                  Annuler
                 </Button>
               </DialogFooter>
             </div>

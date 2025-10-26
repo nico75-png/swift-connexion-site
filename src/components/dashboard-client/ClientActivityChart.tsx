@@ -82,6 +82,8 @@ const generateMockActivity = (period: PeriodKey): ActivityPoint[] => {
   });
 };
 
+const MotionTabsTrigger = motion(TabsTrigger);
+
 const ClientActivityChart = ({ className }: ClientActivityChartProps) => {
   const [activePeriod, setActivePeriod] = useState<PeriodKey>("mois");
 
@@ -120,17 +122,25 @@ const ClientActivityChart = ({ className }: ClientActivityChartProps) => {
             onValueChange={(value) => setActivePeriod(value as PeriodKey)}
             className="w-full max-w-xs self-start lg:self-auto"
           >
-            <TabsList className="grid grid-cols-3 bg-slate-100">
+            <TabsList className="grid grid-cols-3 rounded-lg bg-slate-100 p-1 shadow-inner transition-all duration-300 ease-out">
               {PERIOD_OPTIONS.map((option) => (
-                <TabsTrigger key={option.key} value={option.key} className="text-xs sm:text-sm">
+                <MotionTabsTrigger
+                  key={option.key}
+                  value={option.key}
+                  className="text-xs sm:text-sm transition-all duration-300 ease-out data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-md"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                >
                   {option.label}
-                </TabsTrigger>
+                </MotionTabsTrigger>
               ))}
             </TabsList>
           </Tabs>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Fondu croisé du graphique à chaque changement de période */}
         <AnimatePresence mode="wait">
           <motion.div
             key={activePeriod}
@@ -252,14 +262,19 @@ const SummaryTile = ({
   accent: string;
 }) => {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_18px_35px_-30px_rgba(30,41,59,0.45)] transition-all hover:translate-y-[-2px] hover:shadow-[0_18px_30px_-20px_rgba(30,41,59,0.35)]">
+    <motion.div
+      className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_18px_35px_-30px_rgba(30,41,59,0.45)] transition-all duration-300 ease-out hover:shadow-[0_18px_30px_-20px_rgba(30,41,59,0.35)]"
+      whileHover={{ y: -4 }}
+      whileTap={{ scale: 0.97 }}
+      transition={{ type: "spring", stiffness: 260, damping: 24 }}
+    >
       <div className="flex items-start justify-between">
         <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{title}</p>
         <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", accent)}>Live</span>
       </div>
       <p className="mt-2 text-2xl font-semibold text-slate-900">{value}</p>
       <p className="mt-1 text-[11px] text-slate-500">{trendLabel}</p>
-    </div>
+    </motion.div>
   );
 };
 

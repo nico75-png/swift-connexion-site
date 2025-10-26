@@ -1,8 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, MapPin, FileText, MessageCircle } from "lucide-react";
+import { MapPin, FileText, MessageCircle } from "lucide-react";
+import ClientActivityChart from "./ClientActivityChart";
 
 const DashboardHome = () => {
   return (
@@ -88,32 +88,7 @@ const DashboardHome = () => {
       {/* Activité mensuelle & Livrées vs En attente */}
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Activité mensuelle */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg font-semibold text-slate-900">
-                  Activité mensuelle
-                </CardTitle>
-                <p className="text-sm text-slate-600">
-                  Visualisez les commandes et livraisons selon la période.
-                </p>
-              </div>
-              <Tabs defaultValue="mois" className="w-auto">
-                <TabsList>
-                  <TabsTrigger value="semaine">Semaine</TabsTrigger>
-                  <TabsTrigger value="mois">Mois</TabsTrigger>
-                  <TabsTrigger value="trimestre">Trimestre</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64 w-full rounded-lg bg-slate-50 flex items-center justify-center">
-              <p className="text-sm text-slate-500">Graphique d'activité (S2, S3, S4)</p>
-            </div>
-          </CardContent>
-        </Card>
+        <ClientActivityChart />
 
         {/* Livrées vs En attente */}
         <Card>

@@ -366,17 +366,17 @@ const DashboardClient = () => {
             </Card>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-3">
-            <Card className="border-none bg-white shadow-lg lg:col-span-2 lg:row-span-1 rounded-3xl">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card className="flex h-full flex-col rounded-3xl border-none bg-white shadow-lg">
               <CardHeader className="space-y-1 border-b border-slate-100 pb-5">
                 <CardTitle className="text-lg font-semibold text-slate-900">Actions rapides</CardTitle>
                 <p className="text-sm text-slate-500">
                   Accédez immédiatement aux fonctionnalités clés pour suivre, facturer et échanger avec vos clients.
                 </p>
               </CardHeader>
-              <CardContent className="grid gap-4 pt-6 md:grid-cols-2">
+              <CardContent className="grid gap-4 pt-6 sm:grid-cols-3">
                 <Button
-                  className="group flex h-full w-full flex-col items-start justify-between gap-4 rounded-3xl bg-[#2563eb] p-6 text-left text-white shadow-md transition-all hover:-translate-y-0.5 hover:shadow-xl"
+                  className="group flex h-full w-full min-h-[180px] flex-col items-start justify-between gap-4 rounded-3xl bg-[#2563eb] p-6 text-left text-white shadow-md transition-all hover:-translate-y-1 hover:shadow-xl"
                 >
                   <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white transition group-hover:bg-white/20">
                     <MapPin className="h-6 w-6" />
@@ -387,7 +387,7 @@ const DashboardClient = () => {
                   </div>
                 </Button>
                 <Button
-                  className="group flex h-full w-full flex-col items-start justify-between gap-4 rounded-3xl bg-[#16a34a] p-6 text-left text-white shadow-md transition-all hover:-translate-y-0.5 hover:shadow-xl"
+                  className="group flex h-full w-full min-h-[180px] flex-col items-start justify-between gap-4 rounded-3xl bg-[#16a34a] p-6 text-left text-white shadow-md transition-all hover:-translate-y-1 hover:shadow-xl"
                 >
                   <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white transition group-hover:bg-white/20">
                     <FileText className="h-6 w-6" />
@@ -398,7 +398,7 @@ const DashboardClient = () => {
                   </div>
                 </Button>
                 <Button
-                  className="group flex h-full w-full flex-col items-start justify-between gap-4 rounded-3xl bg-[#8b5cf6] p-6 text-left text-white shadow-md transition-all hover:-translate-y-0.5 hover:shadow-xl md:col-span-2"
+                  className="group flex h-full w-full min-h-[180px] flex-col items-start justify-between gap-4 rounded-3xl bg-[#8b5cf6] p-6 text-left text-white shadow-md transition-all hover:-translate-y-1 hover:shadow-xl"
                 >
                   <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white transition group-hover:bg-white/20">
                     <MessageCircle className="h-6 w-6" />
@@ -411,23 +411,35 @@ const DashboardClient = () => {
               </CardContent>
             </Card>
 
-            <Card className="border border-slate-100 bg-[#f9fafb] shadow-sm rounded-3xl">
+            <Card className="flex h-full flex-col rounded-3xl border border-slate-100 bg-[#f9fafb] shadow-sm">
               <CardHeader className="flex flex-row items-start justify-between gap-3 pb-4">
-                <div>
-                  <CardTitle className="text-lg font-semibold text-slate-900">Activités récentes</CardTitle>
-                  <p className="mt-1 text-sm text-slate-500">Un aperçu instantané des dernières interactions.</p>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-lg font-semibold text-slate-900">Activités récentes</CardTitle>
+                    <Badge className="bg-[#2563eb]/10 text-xs font-medium text-[#2563eb]">Mis à jour en direct</Badge>
+                  </div>
+                  <p className="text-sm text-slate-500">Un aperçu instantané des dernières interactions.</p>
                 </div>
-                <Badge className="mt-1 bg-[#2563eb]/10 text-xs font-medium text-[#2563eb]">Mis à jour en direct</Badge>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-sm font-medium text-[#2563eb] hover:text-[#1d4ed8]"
+                >
+                  Voir plus
+                </Button>
               </CardHeader>
-              <CardContent className="space-y-3 pt-2">
+              <CardContent className="grid gap-4 pt-2 sm:grid-cols-3">
                 {RECENT_ACTIVITIES.map((activity) => (
                   <div
                     key={activity.id}
-                    className="rounded-2xl border border-slate-100 bg-white/80 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-[#2563eb]/40 hover:bg-white hover:shadow-md"
+                    className="flex h-full flex-col justify-between rounded-2xl border border-slate-100 bg-white/80 p-4 text-left shadow-sm transition hover:-translate-y-1 hover:border-[#2563eb]/40 hover:bg-white hover:shadow-md"
                   >
-                    <p className="text-sm font-semibold text-slate-900">{activity.title}</p>
-                    <p className="mt-1 text-sm text-slate-500">{activity.description}</p>
-                    <span className="mt-2 block text-xs font-medium text-slate-400">{activity.time}</span>
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold text-slate-900">{activity.title}</p>
+                      <p className="text-sm text-slate-500">{activity.description}</p>
+                    </div>
+                    <span className="mt-3 block text-xs font-medium uppercase tracking-wide text-slate-400">{activity.time}</span>
                   </div>
                 ))}
               </CardContent>

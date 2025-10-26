@@ -29,7 +29,6 @@ import {
   ChevronRight,
   ArrowDown,
   ArrowUp,
-  Info,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -44,7 +43,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
@@ -263,7 +262,7 @@ const DashboardClient = () => {
         {/* Content area */}
         <main
           className={cn(
-            "flex-1 bg-neutral-50 p-4 lg:p-6",
+            "flex-1 bg-neutral-50 px-4 py-4 sm:px-6 lg:px-8 lg:py-6",
             activeSection === "dashboard" ? "overflow-hidden" : "overflow-y-auto"
           )}
         >
@@ -361,32 +360,29 @@ const DashboardSection: FC<DashboardSectionProps> = ({ setActiveSection }) => {
   }
 
   return (
-    <section className="flex min-h-full flex-col gap-4 overflow-hidden lg:h-[calc(100vh-64px)] lg:max-h-[calc(100vh-64px)]">
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto lg:overflow-hidden">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold text-neutral-800">Tableau de bord</h1>
-          <p className="text-sm text-neutral-600">Vue d'ensemble de votre activité</p>
-        </div>
-
-        <div className="grid flex-1 gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] lg:overflow-hidden">
-          <div className="flex flex-1 flex-col gap-4 overflow-hidden">
-            <DashboardStats
-              orders={{ value: ordersCount, trend: ordersTrend, target: ordersTarget }}
-              delivery={{ value: deliveryRate, trend: deliveryTrend }}
-              amount={{ value: amountConsumed, sparkline }}
-              delay={{ value: averageDelay, variation: delayVariation }}
-            />
-
-            <ActivityChart activityData={activityData} monthlyStats={monthlyStats} />
-          </div>
-
-          <div className="flex flex-col overflow-y-auto pr-1 lg:overflow-hidden">
-            <ProfileAlert onCompleteProfile={() => setActiveSection("parametres")} />
-          </div>
-        </div>
+    <section className="flex min-h-full flex-col overflow-hidden lg:h-[calc(100vh-64px)] lg:max-h-[calc(100vh-64px)]">
+      <div className="space-y-2">
+        <h1 className="text-2xl font-semibold text-neutral-800">Tableau de bord</h1>
+        <p className="text-sm text-neutral-600">Vue d'ensemble de votre activité</p>
       </div>
 
-      <QuickActions onNavigate={setActiveSection} className="mt-1 lg:mt-auto" />
+      <ProfileAlert
+        onCompleteProfile={() => setActiveSection("parametres")}
+        className="mt-4 mb-6"
+      />
+
+      <div className="flex flex-1 flex-col gap-6 overflow-y-auto pb-2">
+        <DashboardStats
+          orders={{ value: ordersCount, trend: ordersTrend, target: ordersTarget }}
+          delivery={{ value: deliveryRate, trend: deliveryTrend }}
+          amount={{ value: amountConsumed, sparkline }}
+          delay={{ value: averageDelay, variation: delayVariation }}
+        />
+
+        <ActivityChart activityData={activityData} monthlyStats={monthlyStats} />
+
+        <QuickActions onNavigate={setActiveSection} className="w-full" />
+      </div>
     </section>
   );
 };
@@ -689,41 +685,34 @@ const QuickActions: FC<QuickActionsProps> = ({ onNavigate, className }) => {
 
 type ProfileAlertProps = {
   onCompleteProfile: () => void;
+  className?: string;
 };
 
-const ProfileAlert: FC<ProfileAlertProps> = ({ onCompleteProfile }) => {
+const ProfileAlert: FC<ProfileAlertProps> = ({ onCompleteProfile, className }) => {
   const completion = 60;
 
   return (
-    <Alert className="border-amber-200 bg-amber-50">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 items-start gap-3">
-          <span className="rounded-full bg-amber-100 p-2 text-amber-600">
-            <Info className="h-5 w-5" />
-          </span>
-          <div className="flex-1">
-            <AlertTitle className="text-sm font-semibold text-amber-800">
-              Profil incomplet
-            </AlertTitle>
-            <AlertDescription className="mt-1 text-xs text-amber-700">
-              Complétez votre adresse et vos préférences pour accéder au suivi en temps réel.
-            </AlertDescription>
-            <div className="mt-3 space-y-2">
-              <div className="flex items-center justify-between text-[11px] font-semibold text-amber-700">
-                <span>Profil complété à {completion}%</span>
-              </div>
-              <Progress value={completion} className="h-2 bg-amber-100 [&>div]:bg-amber-500" />
-            </div>
-          </div>
-        </div>
-        <Button
-          onClick={onCompleteProfile}
-          className="w-full rounded-2xl bg-amber-600 py-2 text-sm hover:bg-amber-700 sm:w-auto"
-        >
-          Compléter maintenant
-        </Button>
+    <div
+      className={cn(
+        "w-full rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:p-5",
+        "flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between",
+        className
+      )}
+    >
+      <div className="flex-1">
+        <h3 className="text-base font-semibold text-amber-800">Profil incomplet</h3>
+        <p className="mt-1 text-sm text-amber-700">
+          Complétez votre adresse et vos préférences pour accéder au suivi en temps réel.
+        </p>
+        <Progress value={completion} className="mt-3 h-2 bg-amber-100 [&>div]:bg-amber-500" />
       </div>
-    </Alert>
+      <Button
+        onClick={onCompleteProfile}
+        className="w-full rounded-full bg-amber-600 px-6 py-2 text-sm font-semibold text-white hover:bg-amber-700 sm:w-auto"
+      >
+        Compléter maintenant
+      </Button>
+    </div>
   );
 };
 

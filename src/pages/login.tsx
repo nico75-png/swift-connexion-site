@@ -204,14 +204,14 @@ const Login = () => {
             <button
               type="button"
               className="onecx-auth__quick-button onecx-auth__quick-button--admin"
-              onClick={() => handleQuickAccess("/admin-dashboard")}
+              onClick={() => handleQuickAccess("/dashboard-admin")}
             >
               Se connecter en tant qu’administrateur
             </button>
             <button
               type="button"
               className="onecx-auth__quick-button onecx-auth__quick-button--client"
-              onClick={() => handleQuickAccess("/client-dashboard")}
+              onClick={() => handleQuickAccess("/dashboard-client")}
             >
               Se connecter en tant que client (test)
             </button>

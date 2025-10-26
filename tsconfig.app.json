@@ -23,7 +23,11 @@
 
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@tanstack/react-table": ["./src/vendor/tanstack/react-table"],
+      "@tanstack/react-virtual": ["./src/vendor/tanstack/react-virtual"],
+      "@tanstack/react-table/*": ["./src/vendor/tanstack/react-table"],
+      "@tanstack/react-virtual/*": ["./src/vendor/tanstack/react-virtual"],
     },
     "types": ["vitest"]
   },

@@ -13,6 +13,8 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@tanstack/react-table": path.resolve(__dirname, "./src/vendor/tanstack/react-table"),
+      "@tanstack/react-virtual": path.resolve(__dirname, "./src/vendor/tanstack/react-virtual"),
     },
   },
   test: {

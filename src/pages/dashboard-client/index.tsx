@@ -1,7 +1,6 @@
 "use client";
 
-import { FC, useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useMemo, useState, type ComponentType } from "react";
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -10,1078 +9,428 @@ import {
   MessageSquare,
   Settings,
   HelpCircle,
-  User,
-  Search,
   Bell,
-  Menu,
-  X,
-  Package,
-  Truck,
-  Clock,
-  DollarSign,
-  Phone,
-  Mail,
-  Download,
+  TrendingUp,
+  TrendingDown,
+  Radio,
   CreditCard,
-  Plus,
-  Eye,
-  RefreshCw,
-  ChevronRight,
-  ArrowDown,
-  ArrowUp,
+  MessageCircle,
 } from "lucide-react";
-
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
-import type { LucideIcon } from "lucide-react";
 import {
   ResponsiveContainer,
   LineChart,
   Line,
   XAxis,
-  YAxis,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   CartesianGrid,
-  BarChart,
-  Bar,
+  PieChart,
+  Pie,
   Cell,
+  AreaChart,
+  Area,
 } from "recharts";
 
-type Section =
-  | "dashboard"
-  | "commandes"
-  | "suivi"
-  | "factures"
-  | "messages"
-  | "parametres"
-  | "aide";
-
-type DashboardSectionProps = {
-  setActiveSection: (section: Section) => void;
-};
-
-type MonthlyStats = {
-  total: number;
-  delivered: number;
-  pending: number;
-  totalAmount: number;
-  avgDelay: number;
-};
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 
 type ActivityPoint = {
-  day: string;
-  orders: number;
+  label: string;
+  commandes: number;
+  livraisons: number;
 };
 
-const generateActivityData = (): ActivityPoint[] => {
-  const days = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
-  return days.map((day) => ({
-    day,
-    orders: Math.floor(Math.random() * 31) + 10,
-  }));
+type RecentActivity = {
+  id: number;
+  title: string;
+  description: string;
+  time: string;
 };
 
-const generateMonthlyStats = (): MonthlyStats => {
-  const total = Math.floor(Math.random() * 60) + 90;
-  const delivered = Math.floor(total * (0.75 + Math.random() * 0.15));
-  const pending = Math.max(total - delivered, 0);
-  const totalAmount = parseFloat((delivered * (45 + Math.random() * 65)).toFixed(2));
-  const avgDelay = parseFloat((25 + Math.random() * 15).toFixed(1));
-
-  return {
-    total,
-    delivered,
-    pending,
-    totalAmount,
-    avgDelay,
-  };
+type SidebarItem = {
+  label: string;
+  icon: ComponentType<{ className?: string }>;
 };
 
-const generateSparklineData = () =>
-  Array.from({ length: 8 }, () => Math.floor(Math.random() * 70) + 30);
-
-const currencyFormatter = new Intl.NumberFormat("fr-FR", {
-  style: "currency",
-  currency: "EUR",
-  maximumFractionDigits: 0,
-});
-
-const NAVIGATION_ITEMS = [
-  { label: "Tableau de bord", icon: LayoutDashboard, value: "dashboard" as Section },
-  { label: "Commandes", icon: ShoppingBag, value: "commandes" as Section },
-  { label: "Suivi", icon: MapPin, value: "suivi" as Section },
-  { label: "Factures", icon: Receipt, value: "factures" as Section },
-  { label: "Messages", icon: MessageSquare, value: "messages" as Section },
-  { label: "Paramètres", icon: Settings, value: "parametres" as Section },
-  { label: "Aide", icon: HelpCircle, value: "aide" as Section },
+const SIDEBAR_ITEMS: SidebarItem[] = [
+  { label: "Tableau de bord", icon: LayoutDashboard },
+  { label: "Commandes", icon: ShoppingBag },
+  { label: "Suivi", icon: MapPin },
+  { label: "Factures", icon: Receipt },
+  { label: "Messages", icon: MessageSquare },
+  { label: "Paramètres", icon: Settings },
+  { label: "Aide", icon: HelpCircle },
 ];
 
+const KPI_SPARKLINE = [
+  { name: "S1", value: 32 },
+  { name: "S2", value: 44 },
+  { name: "S3", value: 38 },
+  { name: "S4", value: 52 },
+  { name: "S5", value: 61 },
+  { name: "S6", value: 58 },
+  { name: "S7", value: 72 },
+];
+
+const RECENT_ACTIVITIES: RecentActivity[] = [
+  {
+    id: 1,
+    title: "Commande #SC-2048",
+    description: "Livrée à temps avec signature électronique confirmée.",
+    time: "Il y a 12 minutes",
+  },
+  {
+    id: 2,
+    title: "Nouvelle facture disponible",
+    description: "Facture de mars générée et envoyée par email.",
+    time: "Il y a 2 heures",
+  },
+  {
+    id: 3,
+    title: "Message de Laura Martin",
+    description: "Question concernant la prise en charge express.",
+    time: "Il y a 5 heures",
+  },
+];
+
+const FILTERS = ["semaine", "mois", "trimestre"] as const;
+
+type FilterValue = (typeof FILTERS)[number];
+
 const DashboardClient = () => {
-  const [activeSection, setActiveSection] = useState<Section>("dashboard");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<FilterValue>("mois");
+
+  const activityData = useMemo<Record<FilterValue, ActivityPoint[]>>(
+    () => ({
+      semaine: [
+        { label: "Lun", commandes: 22, livraisons: 18 },
+        { label: "Mar", commandes: 26, livraisons: 21 },
+        { label: "Mer", commandes: 19, livraisons: 17 },
+        { label: "Jeu", commandes: 28, livraisons: 24 },
+        { label: "Ven", commandes: 34, livraisons: 29 },
+        { label: "Sam", commandes: 18, livraisons: 15 },
+        { label: "Dim", commandes: 14, livraisons: 12 },
+      ],
+      mois: [
+        { label: "S1", commandes: 85, livraisons: 74 },
+        { label: "S2", commandes: 96, livraisons: 81 },
+        { label: "S3", commandes: 112, livraisons: 95 },
+        { label: "S4", commandes: 104, livraisons: 92 },
+      ],
+      trimestre: [
+        { label: "Jan", commandes: 312, livraisons: 275 },
+        { label: "Fév", commandes: 356, livraisons: 318 },
+        { label: "Mar", commandes: 402, livraisons: 365 },
+      ],
+    }),
+    []
+  );
+
+  const selectedActivity = activityData[activeFilter];
+  const totalLivrees = selectedActivity.reduce((sum, point) => sum + point.livraisons, 0);
+  const totalEnAttente = selectedActivity.reduce((sum, point) => sum + Math.max(point.commandes - point.livraisons, 0), 0);
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-neutral-50">
-      {/* Sidebar sombre */}
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 transform bg-neutral-900 transition-transform duration-300 lg:relative lg:translate-x-0",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        )}
-      >
-        <div className="flex h-full flex-col">
-          {/* Logo & Close button */}
-          <div className="flex items-center justify-between border-b border-neutral-800 px-6 py-4">
-            <h1 className="text-xl font-bold text-gray-100">Swift Connexion</h1>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-gray-400 hover:text-gray-100 lg:hidden"
-              onClick={() => setSidebarOpen(false)}
+    <div className="flex min-h-screen bg-[#f8f9fb] text-slate-900">
+      <aside className="hidden w-72 flex-col border-r border-slate-200 bg-slate-900/95 px-6 py-8 text-slate-100 shadow-xl lg:flex">
+        <div className="mb-8 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2563eb] text-lg font-semibold">
+            SC
+          </div>
+          <div>
+            <p className="text-sm text-slate-400">Connexion Swift</p>
+            <p className="text-lg font-semibold text-white">Tableau de bord</p>
+          </div>
+        </div>
+
+        <nav className="flex-1 space-y-2">
+          {SIDEBAR_ITEMS.map(({ icon: Icon, label }) => (
+            <button
+              key={label}
+              type="button"
+              className={cn(
+                "group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition",
+                label === "Tableau de bord"
+                  ? "bg-white/10 text-white shadow-lg"
+                  : "text-slate-300 hover:bg-white/10 hover:text-white"
+              )}
             >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
+              <Icon className="h-5 w-5" />
+              <span>{label}</span>
+            </button>
+          ))}
+        </nav>
 
-          {/* Profil client */}
-          <div className="border-b border-neutral-800 px-6 py-6">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-12 w-12 border-2 border-neutral-700">
-                <AvatarImage src="" alt="Client" />
-                <AvatarFallback className="bg-neutral-700 text-gray-100">CL</AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-gray-100">Client Swift</p>
-                <p className="text-xs text-gray-400">client@swift.com</p>
-                <Badge className="mt-1 bg-green-600 text-xs text-white hover:bg-green-700">
-                  Connecté
-                </Badge>
-              </div>
-            </div>
-          </div>
-
-          {/* Navigation */}
-          <ScrollArea className="flex-1 px-3 py-4">
-            <nav className="space-y-1">
-              {NAVIGATION_ITEMS.map(({ label, icon: Icon, value }) => {
-                const isActive = activeSection === value;
-                return (
-                  <button
-                    key={value}
-                    onClick={() => {
-                      setActiveSection(value);
-                      setSidebarOpen(false);
-                    }}
-                    className={cn(
-                      "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition-colors",
-                      isActive
-                        ? "bg-blue-600 text-white shadow-lg"
-                        : "text-gray-300 hover:bg-neutral-800 hover:text-gray-100"
-                    )}
-                  >
-                    <Icon className="h-5 w-5" />
-                    <span>{label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </ScrollArea>
-
-          {/* Footer sidebar */}
-          <div className="border-t border-neutral-800 px-6 py-4">
-            <p className="text-xs text-gray-500">© 2025 Swift Connexion</p>
-          </div>
+        <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-4 shadow-inner">
+          <p className="text-sm font-semibold text-white">Assistance premium</p>
+          <p className="mt-1 text-xs text-slate-300">
+            Notre équipe répond en moins de 10 minutes pour les clients Pro.
+          </p>
+          <Button className="mt-4 w-full bg-[#8b5cf6] text-white hover:bg-[#7c3aed]">Contacter</Button>
         </div>
       </aside>
 
-      {/* Overlay mobile */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      <main className="flex flex-1 flex-col">
+        <header className="flex flex-col gap-6 border-b border-slate-200 bg-white/80 px-6 py-6 backdrop-blur">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-sm uppercase tracking-wide text-slate-400">Bienvenue</p>
+              <h1 className="text-2xl font-semibold text-slate-900">Bonjour, Clara Dupont 👋</h1>
+              <p className="text-sm text-slate-500">Suivez vos commandes et optimisez vos livraisons en temps réel.</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <Button
+                type="button"
+                variant="outline"
+                className="relative h-11 w-11 rounded-xl border-slate-200 bg-white text-slate-600 hover:border-[#2563eb] hover:text-[#2563eb]"
+              >
+                <Bell className="h-5 w-5" />
+                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#2563eb]" aria-hidden />
+              </Button>
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                <Avatar className="h-11 w-11 border-2 border-[#2563eb]/20">
+                  <AvatarImage src="https://i.pravatar.cc/100?img=48" alt="Clara Dupont" />
+                  <AvatarFallback>CD</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Clara Dupont</p>
+                  <p className="text-xs text-slate-500">clara.dupont@swift.fr</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <Progress value={72} className="h-2 w-32 bg-slate-100" />
+                    <span className="text-xs text-slate-500">Profil 72%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-      {/* Main content */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Topbar */}
-        <header className="flex items-center gap-4 border-b border-neutral-200 bg-white px-4 py-3 shadow-sm lg:px-6">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-neutral-700 lg:hidden"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-6 w-6" />
-          </Button>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <Card className="border-none bg-white shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-slate-500">Commandes</CardTitle>
+                <Badge className="bg-[#2563eb]/10 text-[#2563eb]">Objectif 150</Badge>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-semibold text-slate-900">128</p>
+                <div className="mt-2 flex items-center gap-2 text-sm">
+                  <TrendingUp className="h-4 w-4 text-[#16a34a]" />
+                  <span className="text-[#16a34a]">+12% vs mois dernier</span>
+                </div>
+              </CardContent>
+            </Card>
 
-          <div className="flex flex-1 items-center justify-end gap-3">
-            <Button variant="ghost" size="icon" className="relative text-neutral-700">
-              <Bell className="h-5 w-5" />
-              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
-            </Button>
+            <Card className="border-none bg-white shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-slate-500">Taux de livraison</CardTitle>
+                <Badge className="bg-[#16a34a]/10 text-[#16a34a]">Cible 95%</Badge>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-semibold text-slate-900">92%</p>
+                <div className="mt-2 flex items-center gap-2 text-sm">
+                  <TrendingUp className="h-4 w-4 text-[#16a34a]" />
+                  <span className="text-[#16a34a]">+4 pts</span>
+                </div>
+              </CardContent>
+            </Card>
 
-            <Avatar className="h-9 w-9 border border-neutral-300">
-              <AvatarImage src="" alt="User" />
-              <AvatarFallback className="bg-neutral-200 text-neutral-700">CL</AvatarFallback>
-            </Avatar>
+            <Card className="border-none bg-white shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-slate-500">Montant consommé</CardTitle>
+                <Badge className="bg-[#8b5cf6]/10 text-[#8b5cf6]">Budget 45K€</Badge>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-3xl font-semibold text-slate-900">32 450€</p>
+                <div className="h-16">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={KPI_SPARKLINE}>
+                      <defs>
+                        <linearGradient id="sparkline" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.1} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eef2ff" />
+                      <XAxis dataKey="name" hide />
+                      <RechartsTooltip cursor={false} />
+                      <Area type="monotone" dataKey="value" stroke="#8b5cf6" fill="url(#sparkline)" strokeWidth={2} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-none bg-white shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-slate-500">Temps moyen de livraison</CardTitle>
+                <Badge className="bg-[#2563eb]/10 text-[#2563eb]">Objectif 28 min</Badge>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-semibold text-slate-900">31 min</p>
+                <div className="mt-2 flex items-center gap-2 text-sm">
+                  <TrendingDown className="h-4 w-4 text-[#2563eb]" />
+                  <span className="text-[#2563eb]">-3 min</span>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </header>
 
-        {/* Content area */}
-        <main
-          className={cn(
-            "flex-1 bg-neutral-50 px-4 py-4 sm:px-6 lg:px-8 lg:py-6",
-            activeSection === "dashboard" ? "overflow-hidden" : "overflow-y-auto"
-          )}
-        >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeSection}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              {activeSection === "dashboard" && (
-                <DashboardSection setActiveSection={setActiveSection} />
-              )}
-              {activeSection === "commandes" && <CommandesSection />}
-              {activeSection === "suivi" && <SuiviSection />}
-              {activeSection === "factures" && <FacturesSection />}
-              {activeSection === "messages" && <MessagesSection />}
-              {activeSection === "parametres" && <ParametresSection />}
-              {activeSection === "aide" && <AideSection />}
-            </motion.div>
-          </AnimatePresence>
-        </main>
-      </div>
-    </div>
-  );
-};
-
-// 🟣 Tableau de bord Section
-const DashboardSection: FC<DashboardSectionProps> = ({ setActiveSection }) => {
-  const [loading, setLoading] = useState(true);
-  const [ordersTarget] = useState(() => Math.floor(Math.random() * 40) + 85);
-  const [ordersTrend] = useState(() => parseFloat((5 + Math.random() * 10).toFixed(1)));
-  const [ordersCount, setOrdersCount] = useState(0);
-  const [deliveryRate] = useState(() => Math.floor(Math.random() * 21) + 78);
-  const [deliveryTrend] = useState(() => parseFloat((Math.random() * 6 - 2).toFixed(1)));
-  const [amountConsumed] = useState(() => 2200 + Math.random() * 2200);
-  const [sparkline] = useState<number[]>(() => generateSparklineData());
-  const [averageDelay] = useState(() => parseFloat((28 + Math.random() * 14).toFixed(1)));
-  const [delayVariation] = useState(() => parseFloat((Math.random() * 8 - 4).toFixed(1)));
-  const [activityData, setActivityData] = useState<ActivityPoint[]>([]);
-  const [monthlyStats, setMonthlyStats] = useState<MonthlyStats>({
-    total: 0,
-    delivered: 0,
-    pending: 0,
-    totalAmount: 0,
-    avgDelay: 0,
-  });
-
-  useEffect(() => {
-    const timeout = setTimeout(() => setLoading(false), 1000);
-    return () => clearTimeout(timeout);
-  }, []);
-
-  useEffect(() => {
-    setActivityData(generateActivityData());
-  }, []);
-
-  useEffect(() => {
-    setMonthlyStats(generateMonthlyStats());
-  }, []);
-
-  useEffect(() => {
-    if (loading) {
-      setOrdersCount(0);
-      return;
-    }
-
-    let frame = 0;
-    const frames = 24;
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-
-    const animate = () => {
-      frame += 1;
-      const progress =
-        frame >= frames ? ordersTarget : Math.round((ordersTarget / frames) * frame);
-      setOrdersCount(progress);
-
-      if (frame < frames) {
-        timeoutId = setTimeout(animate, 40);
-      }
-    };
-
-    timeoutId = setTimeout(animate, 80);
-
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
-  }, [loading, ordersTarget]);
-
-  if (loading) {
-    return <Skeleton className="h-48 w-full rounded-xl" />;
-  }
-
-  return (
-    <main className="flex flex-col gap-6 w-full h-full overflow-hidden">
-      <ProfileAlert onCompleteProfile={() => setActiveSection("parametres")} />
-
-      <DashboardStats
-        orders={{ value: ordersCount, trend: ordersTrend, target: ordersTarget }}
-        delivery={{ value: deliveryRate, trend: deliveryTrend }}
-        amount={{ value: amountConsumed, sparkline }}
-        delay={{ value: averageDelay, variation: delayVariation }}
-      />
-
-      <ActivityChart activityData={activityData} monthlyStats={monthlyStats} />
-
-      <QuickActions onNavigate={setActiveSection} className="w-full" />
-    </main>
-  );
-};
-
-type DashboardStatsProps = {
-  orders: { value: number; trend: number; target: number };
-  delivery: { value: number; trend: number };
-  amount: { value: number; sparkline: number[] };
-  delay: { value: number; variation: number };
-};
-
-const DashboardStats: FC<DashboardStatsProps> = ({ orders, delivery, amount, delay }) => {
-  const DelayIcon = delay.variation <= 0 ? ArrowDown : ArrowUp;
-  const delayColor = delay.variation <= 0 ? "text-green-600" : "text-red-600";
-  const delayLabel = `${delay.variation > 0 ? "+" : ""}${delay.variation.toFixed(1)} min`;
-  const deliveryTrendLabel = `${delivery.trend >= 0 ? "+" : ""}${delivery.trend.toFixed(1)}%`;
-  const deliveryTrendColor = delivery.trend >= 0 ? "text-green-600" : "text-red-600";
-  const deliveryColorClass =
-    delivery.value >= 95
-      ? "[&>div]:bg-green-500"
-      : delivery.value >= 80
-      ? "[&>div]:bg-amber-500"
-      : "[&>div]:bg-red-500";
-
-  const sparklineMax = Math.max(...amount.sparkline);
-  const sparklineMin = Math.min(...amount.sparkline);
-  const points = amount.sparkline
-    .map((point, index) => {
-      const x = (index / Math.max(amount.sparkline.length - 1, 1)) * 100;
-      const normalized =
-        sparklineMax === sparklineMin
-          ? 50
-          : ((point - sparklineMin) / (sparklineMax - sparklineMin)) * 100;
-      const y = 100 - normalized;
-      return `${x},${y}`;
-    })
-    .join(" ");
-
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <Card className="border-neutral-200 bg-white">
-        <CardHeader className="flex flex-row items-start justify-between pb-2">
-          <div>
-            <CardTitle className="text-sm font-medium text-neutral-600">Commandes</CardTitle>
-            <CardDescription className="text-xs text-neutral-500">
-              Objectif : {orders.target.toLocaleString("fr-FR")}
-            </CardDescription>
-          </div>
-          <span className="rounded-full bg-blue-100 p-2 text-blue-600">
-            <Package className="h-5 w-5" />
-          </span>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="text-2xl font-semibold text-neutral-900">
-            {orders.value.toLocaleString("fr-FR")}
-          </div>
-          <p className="text-xs font-medium text-blue-600">+{orders.trend.toFixed(1)}% ce mois</p>
-        </CardContent>
-      </Card>
-
-      <Card className="border-neutral-200 bg-white">
-        <CardHeader className="flex flex-row items-start justify-between pb-2">
-          <div>
-            <CardTitle className="text-sm font-medium text-neutral-600">Taux de livraison</CardTitle>
-            <CardDescription className="text-xs text-neutral-500">
-              Performances en temps réel
-            </CardDescription>
-          </div>
-          <span className="rounded-full bg-green-100 p-2 text-green-600">
-            <Truck className="h-5 w-5" />
-          </span>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-semibold text-neutral-900">{delivery.value}%</span>
-            <span className={cn("text-xs font-semibold", deliveryTrendColor)}>
-              {deliveryTrendLabel}
-            </span>
-          </div>
-          <Progress
-            value={delivery.value}
-            className={cn("h-2 bg-neutral-200", deliveryColorClass)}
-            max={100}
-          />
-        </CardContent>
-      </Card>
-
-      <Card className="border-neutral-200 bg-white">
-        <CardHeader className="flex flex-row items-start justify-between pb-2">
-          <div>
-            <CardTitle className="text-sm font-medium text-neutral-600">Montant consommé</CardTitle>
-            <CardDescription className="text-xs text-neutral-500">
-              Total mensuel simulé
-            </CardDescription>
-          </div>
-          <span className="rounded-full bg-amber-100 p-2 text-amber-600">
-            <DollarSign className="h-5 w-5" />
-          </span>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="text-2xl font-semibold text-neutral-900">
-            {currencyFormatter.format(Math.round(amount.value))}
-          </div>
-          <svg viewBox="0 0 100 40" className="h-12 w-full text-blue-500" preserveAspectRatio="none">
-            <polyline
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              points={points}
-            />
-          </svg>
-        </CardContent>
-      </Card>
-
-      <Card className="border-neutral-200 bg-white">
-        <CardHeader className="flex flex-row items-start justify-between pb-2">
-          <div>
-            <CardTitle className="text-sm font-medium text-neutral-600">Délai moyen</CardTitle>
-            <CardDescription className="text-xs text-neutral-500">
-              Temps estimé de livraison
-            </CardDescription>
-          </div>
-          <span className="rounded-full bg-purple-100 p-2 text-purple-600">
-            <Clock className="h-5 w-5" />
-          </span>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="text-2xl font-semibold text-neutral-900">{delay.value.toFixed(1)} min</div>
-          <div className="flex items-center gap-1 text-xs font-semibold">
-            <DelayIcon className={cn("h-4 w-4", delayColor)} />
-            <span className={delayColor}>{delayLabel}</span>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
-
-type ActivityChartProps = {
-  activityData: ActivityPoint[];
-  monthlyStats: MonthlyStats;
-};
-
-const ActivityChart: FC<ActivityChartProps> = ({ activityData, monthlyStats }) => {
-  const successRate = monthlyStats.total
-    ? Math.round((monthlyStats.delivered / monthlyStats.total) * 100)
-    : 0;
-  const barData = [
-    { name: "Livrées", value: monthlyStats.delivered, fill: "#16a34a" },
-    { name: "En attente", value: monthlyStats.pending, fill: "#f97316" },
-  ];
-
-  return (
-    <Card className="flex h-full flex-col border-neutral-200 bg-white">
-      <CardHeader className="flex flex-col gap-2 pb-3 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <CardTitle className="text-lg font-semibold text-neutral-800">Activité mensuelle</CardTitle>
-          <CardDescription className="text-xs text-neutral-500">
-            Vue d'ensemble des commandes du mois
-          </CardDescription>
-        </div>
-        <Badge className="w-fit rounded-full bg-blue-100 px-3 py-1 text-[11px] font-medium text-blue-600">
-          Actualisé en temps réel
-        </Badge>
-      </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-4 pt-0">
-        <div className="grid flex-1 gap-4 lg:grid-cols-[2fr,1fr]">
-          <div className="flex flex-1 flex-col gap-4">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-neutral-500">
-                  Commandes totales ce mois
-                </p>
-                <p className="text-2xl font-semibold text-neutral-900">
-                  {monthlyStats.total.toLocaleString("fr-FR")}
-                </p>
-              </div>
-              <div className="text-sm text-neutral-600">
-                <span className="font-semibold text-blue-600">{successRate}%</span> de réussite
-              </div>
-            </div>
-            <div className="h-[180px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={activityData}
-                  margin={{ top: 10, left: -10, right: 10, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" />
-                  <XAxis dataKey="day" stroke="#9ca3af" tickLine={false} axisLine={false} />
-                  <YAxis stroke="#9ca3af" tickLine={false} axisLine={false} allowDecimals={false} />
-                  <Tooltip contentStyle={{ borderRadius: 12, borderColor: "#e5e7eb" }} />
-                  <Line
-                    type="monotone"
-                    dataKey="orders"
-                    stroke="#2563eb"
-                    strokeWidth={2}
-                    dot={false}
-                    isAnimationActive
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-          <div className="flex h-full flex-col justify-between gap-3 rounded-2xl bg-neutral-50 p-4">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-neutral-500">Montant total</p>
-              <p className="text-lg font-semibold text-neutral-900">
-                {currencyFormatter.format(Math.round(monthlyStats.totalAmount))}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wide text-neutral-500">Délai moyen</p>
-              <p className="text-lg font-semibold text-neutral-900">
-                {monthlyStats.avgDelay.toFixed(1)} min
-              </p>
-            </div>
-            <div className="h-[140px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={barData}>
-                  <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" vertical={false} />
-                  <XAxis dataKey="name" stroke="#9ca3af" tickLine={false} axisLine={false} />
-                  <YAxis stroke="#9ca3af" tickLine={false} axisLine={false} allowDecimals={false} />
-                  <Tooltip contentStyle={{ borderRadius: 12, borderColor: "#e5e7eb" }} />
-                  <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                    {barData.map((entry) => (
-                      <Cell key={entry.name} fill={entry.fill} />
+        <section className="flex-1 space-y-8 px-6 pb-10">
+          <div className="grid gap-6 xl:grid-cols-[2fr_1fr]">
+            <Card className="border-none bg-white shadow-sm">
+              <CardHeader className="flex flex-col gap-4 border-b border-slate-100 pb-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <CardTitle className="text-lg font-semibold text-slate-900">Activité mensuelle</CardTitle>
+                    <p className="text-sm text-slate-500">Visualisez les commandes et livraisons selon la période.</p>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-full bg-slate-100 p-1">
+                    {FILTERS.map((filter) => (
+                      <Button
+                        key={filter}
+                        size="sm"
+                        variant="ghost"
+                        className={cn(
+                          "rounded-full px-3 py-1 text-xs font-semibold capitalize transition",
+                          activeFilter === filter
+                            ? "bg-white text-[#2563eb] shadow"
+                            : "text-slate-500 hover:text-[#2563eb]"
+                        )}
+                        onClick={() => setActiveFilter(filter)}
+                      >
+                        {filter}
+                      </Button>
                     ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-type QuickActionsProps = {
-  onNavigate: (section: Section) => void;
-  className?: string;
-};
-
-const QuickActions: FC<QuickActionsProps> = ({ onNavigate, className }) => {
-  const actions: {
-    label: string;
-    icon: LucideIcon;
-    section: Section;
-    className: string;
-  }[] = [
-    {
-      label: "Suivi en direct",
-      icon: MapPin,
-      section: "suivi",
-      className: "bg-blue-600 hover:bg-blue-700",
-    },
-    {
-      label: "Mes factures",
-      icon: Receipt,
-      section: "factures",
-      className: "bg-green-600 hover:bg-green-700",
-    },
-    {
-      label: "Messagerie",
-      icon: MessageSquare,
-      section: "messages",
-      className: "bg-purple-600 hover:bg-purple-700",
-    },
-  ];
-
-  return (
-    <Card className={cn("border-neutral-200 bg-white", className)}>
-      <CardHeader className="space-y-1 pb-2">
-        <CardTitle className="text-lg font-semibold text-neutral-800">Actions rapides</CardTitle>
-        <CardDescription className="text-xs text-neutral-500">
-          Accédez immédiatement aux sections clés
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="pt-2">
-        <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:justify-between">
-          {actions.map(({ label, icon: Icon, section, className: actionClassName }) => (
-            <Button
-              key={section}
-              className={cn(
-                "h-auto min-w-[140px] flex-1 flex-col gap-2 rounded-2xl py-4 text-sm font-semibold text-white transition-transform duration-150 hover:scale-105",
-                actionClassName
-              )}
-              onClick={() => onNavigate(section)}
-            >
-              <Icon className="h-6 w-6" />
-              <span>{label}</span>
-            </Button>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-type ProfileAlertProps = {
-  onCompleteProfile: () => void;
-  className?: string;
-};
-
-const ProfileAlert: FC<ProfileAlertProps> = ({ onCompleteProfile, className }) => {
-  const completion = 60;
-
-  return (
-    <div
-      className={cn(
-        "w-full rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:p-5",
-        "flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between",
-        className
-      )}
-    >
-      <div className="flex-1">
-        <h3 className="text-base font-semibold text-amber-800">Profil incomplet</h3>
-        <p className="mt-1 text-sm text-amber-700">
-          Complétez votre adresse et vos préférences pour accéder au suivi en temps réel.
-        </p>
-        <Progress value={completion} className="mt-3 h-2 bg-amber-100 [&>div]:bg-amber-500" />
-      </div>
-      <Button
-        onClick={onCompleteProfile}
-        className="w-full rounded-full bg-amber-600 px-6 py-2 text-sm font-semibold text-white hover:bg-amber-700 sm:w-auto"
-      >
-        Compléter maintenant
-      </Button>
-    </div>
-  );
-};
-
-// 🔵 Commandes Section
-const CommandesSection = () => (
-  <div className="space-y-6">
-    <div className="flex items-center justify-between">
-      <div>
-        <h1 className="text-3xl font-bold text-neutral-800">Commandes</h1>
-        <p className="mt-1 text-sm text-neutral-600">Gérez vos livraisons</p>
-      </div>
-      <Button className="rounded-2xl bg-blue-600 hover:bg-blue-700">
-        <Plus className="mr-2 h-4 w-4" />
-        Créer une commande
-      </Button>
-    </div>
-
-    {/* Filtres */}
-    <Card className="border-neutral-200 bg-white">
-      <CardContent className="pt-6">
-        <div className="flex flex-wrap items-center gap-4">
-          <Tabs defaultValue="all" className="w-full">
-            <TabsList className="rounded-2xl bg-neutral-100">
-              <TabsTrigger value="all" className="rounded-xl">Toutes</TabsTrigger>
-              <TabsTrigger value="progress" className="rounded-xl">En cours</TabsTrigger>
-              <TabsTrigger value="delivered" className="rounded-xl">Livrées</TabsTrigger>
-              <TabsTrigger value="pending" className="rounded-xl">En attente</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-            <Input
-              placeholder="Rechercher par numéro, trajet..."
-              className="rounded-2xl border-neutral-300 pl-10"
-            />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-
-    {/* Tableau de commandes */}
-    <Card className="border-neutral-200 bg-white">
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-neutral-200">
-              <TableHead>N°</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Trajet</TableHead>
-              <TableHead>Chauffeur</TableHead>
-              <TableHead>Statut</TableHead>
-              <TableHead>Prix</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {[1, 2, 3, 4, 5].map((i) => (
-              <TableRow key={i} className="border-neutral-200">
-                <TableCell className="font-medium">#CMD{1000 + i}</TableCell>
-                <TableCell>
-                  <Skeleton className="h-4 w-20" />
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="rounded-full">Express</Badge>
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-4 w-32" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-4 w-24" />
-                </TableCell>
-                <TableCell>
-                  <Badge className="rounded-full bg-green-100 text-green-700">En cours</Badge>
-                </TableCell>
-                <TableCell className="font-semibold">
-                  <Skeleton className="h-4 w-12" />
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="sm" className="h-8 rounded-xl">
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-8 rounded-xl">
-                      <RefreshCw className="h-4 w-4" />
-                    </Button>
                   </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  </div>
-);
-
-// 🟢 Suivi Section
-const SuiviSection = () => (
-  <div className="space-y-6">
-    <div>
-      <h1 className="text-3xl font-bold text-neutral-800">Suivi en temps réel</h1>
-      <p className="mt-1 text-sm text-neutral-600">Suivez vos livraisons en direct</p>
-    </div>
-
-    {/* Carte GPS */}
-    <Card className="border-neutral-200 bg-white">
-      <CardHeader>
-        <CardTitle className="text-neutral-800">Position actuelle</CardTitle>
-        <CardDescription>Localisation GPS du chauffeur</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Skeleton className="h-96 w-full rounded-2xl" />
-      </CardContent>
-    </Card>
-
-    {/* Timeline */}
-    <Card className="border-neutral-200 bg-white">
-      <CardHeader>
-        <CardTitle className="text-neutral-800">Chronologie de livraison</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="flex items-start gap-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-                <ChevronRight className="h-5 w-5 text-blue-600" />
-              </div>
-              <div className="flex-1">
-                <Skeleton className="h-4 w-48" />
-                <Skeleton className="mt-2 h-3 w-32" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  </div>
-);
-
-// 🟠 Factures Section
-const FacturesSection = () => (
-  <div className="space-y-6">
-    <div>
-      <h1 className="text-3xl font-bold text-neutral-800">Factures</h1>
-      <p className="mt-1 text-sm text-neutral-600">Consultez et téléchargez vos factures</p>
-    </div>
-
-    <Card className="border-neutral-200 bg-white">
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-neutral-200">
-              <TableHead>N° Facture</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Montant</TableHead>
-              <TableHead>Statut</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {[1, 2, 3].map((i) => (
-              <TableRow key={i} className="border-neutral-200">
-                <TableCell className="font-medium">#FAC{2000 + i}</TableCell>
-                <TableCell>
-                  <Skeleton className="h-4 w-24" />
-                </TableCell>
-                <TableCell className="font-semibold">
-                  <Skeleton className="h-4 w-16" />
-                </TableCell>
-                <TableCell>
-                  <Badge className="rounded-full bg-green-100 text-green-700">Payée</Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="sm" className="rounded-xl">
-                      <Download className="mr-2 h-4 w-4" />
-                      PDF
-                    </Button>
-                    <Button variant="ghost" size="sm" className="rounded-xl">
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      Payer
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-
-    <Alert className="border-blue-300 bg-blue-50">
-      <AlertDescription className="text-blue-800">
-        Aucune facture en attente de paiement.
-      </AlertDescription>
-    </Alert>
-  </div>
-);
-
-// 🔴 Messages Section
-const MessagesSection = () => (
-  <div className="space-y-6">
-    <div>
-      <h1 className="text-3xl font-bold text-neutral-800">Messages</h1>
-      <p className="mt-1 text-sm text-neutral-600">Communiquez avec nos équipes</p>
-    </div>
-
-    <div className="grid gap-6 lg:grid-cols-3">
-      {/* Liste conversations */}
-      <Card className="border-neutral-200 bg-white lg:col-span-1">
-        <CardHeader>
-          <CardTitle className="text-neutral-800">Conversations</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="flex items-center gap-3 rounded-xl border border-neutral-200 p-3 hover:bg-neutral-50"
-              >
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-neutral-200">S{i}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="mt-1 h-3 w-32" />
                 </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="h-80 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={selectedActivity}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="label" stroke="#94a3b8" tickLine={false} axisLine={false} />
+                      <RechartsTooltip cursor={{ stroke: "#94a3b8", strokeDasharray: "4 4" }} />
+                      <Line type="monotone" dataKey="commandes" stroke="#2563eb" strokeWidth={3} dot={false} />
+                      <Line type="monotone" dataKey="livraisons" stroke="#16a34a" strokeWidth={3} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
 
-      {/* Zone de chat */}
-      <Card className="border-neutral-200 bg-white lg:col-span-2">
-        <CardHeader>
-          <CardTitle className="text-neutral-800">Chat</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex justify-start">
-              <div className="max-w-xs rounded-2xl bg-neutral-200 px-4 py-3">
-                <Skeleton className="h-4 w-48" />
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <div className="max-w-xs rounded-2xl bg-blue-600 px-4 py-3">
-                <Skeleton className="h-4 w-40" />
-              </div>
-            </div>
-            <div className="flex justify-start">
-              <div className="max-w-xs rounded-2xl bg-neutral-200 px-4 py-3">
-                <Skeleton className="h-4 w-56" />
-              </div>
-            </div>
+            <Card className="flex flex-col justify-between border-none bg-white shadow-sm">
+              <CardHeader className="border-b border-slate-100 pb-4">
+                <CardTitle className="text-lg font-semibold text-slate-900">Livrées vs En attente</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-1 flex-col justify-center gap-6 pt-6">
+                <div className="h-64">
+                  <ResponsiveContainer>
+                    <PieChart>
+                      <Pie
+                        dataKey="value"
+                        data={[
+                          { name: "Livrées", value: totalLivrees },
+                          { name: "En attente", value: totalEnAttente },
+                        ]}
+                        innerRadius={70}
+                        outerRadius={100}
+                        paddingAngle={4}
+                      >
+                        {["#16a34a", "#2563eb"].map((color) => (
+                          <Cell key={color} fill={color} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="h-3 w-3 rounded-full bg-[#16a34a]" />
+                      <span className="text-sm text-slate-500">Livrées</span>
+                    </div>
+                    <span className="text-sm font-semibold text-slate-900">{totalLivrees}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="h-3 w-3 rounded-full bg-[#2563eb]" />
+                      <span className="text-sm text-slate-500">En attente</span>
+                    </div>
+                    <span className="text-sm font-semibold text-slate-900">{totalEnAttente}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-          <div className="mt-6">
-            <Input
-              placeholder="Écrire un message..."
-              className="rounded-2xl border-neutral-300"
-              disabled
-            />
+
+          <div className="grid gap-6 lg:grid-cols-3">
+            <Card className="border-none bg-white shadow-sm lg:col-span-2">
+              <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 pb-4">
+                <div>
+                  <CardTitle className="text-lg font-semibold text-slate-900">Activités récentes</CardTitle>
+                  <p className="text-sm text-slate-500">Les dernières actions effectuées par vos équipes et clients.</p>
+                </div>
+                <Badge className="bg-[#2563eb]/10 text-[#2563eb]">Mis à jour en direct</Badge>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-6">
+                {RECENT_ACTIVITIES.map((activity) => (
+                  <div
+                    key={activity.id}
+                    className="flex items-start justify-between gap-4 rounded-2xl border border-slate-100 bg-slate-50/60 p-4 transition hover:border-[#2563eb]/40 hover:bg-white"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{activity.title}</p>
+                      <p className="mt-1 text-sm text-slate-500">{activity.description}</p>
+                    </div>
+                    <span className="text-xs text-slate-400">{activity.time}</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card className="border-none bg-white shadow-sm">
+              <CardHeader className="border-b border-slate-100 pb-4">
+                <CardTitle className="text-lg font-semibold text-slate-900">Actions rapides</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-4 pt-6">
+                <Button
+                  className="flex w-full items-center justify-between rounded-2xl bg-[#2563eb] px-4 py-5 text-left text-white shadow-lg transition hover:bg-[#1d4ed8]"
+                >
+                  <span>
+                    <p className="text-sm font-semibold">Suivi en direct</p>
+                    <p className="text-xs text-white/70">Visualiser les déplacements en temps réel</p>
+                  </span>
+                  <Radio className="h-5 w-5" />
+                </Button>
+                <Button
+                  className="flex w-full items-center justify-between rounded-2xl bg-[#16a34a] px-4 py-5 text-left text-white shadow-lg transition hover:bg-[#15803d]"
+                >
+                  <span>
+                    <p className="text-sm font-semibold">Mes factures</p>
+                    <p className="text-xs text-white/70">Consulter et télécharger vos documents</p>
+                  </span>
+                  <CreditCard className="h-5 w-5" />
+                </Button>
+                <Button
+                  className="flex w-full items-center justify-between rounded-2xl bg-[#8b5cf6] px-4 py-5 text-left text-white shadow-lg transition hover:bg-[#7c3aed]"
+                >
+                  <span>
+                    <p className="text-sm font-semibold">Messagerie</p>
+                    <p className="text-xs text-white/70">Accéder à vos conversations clients</p>
+                  </span>
+                  <MessageCircle className="h-5 w-5" />
+                </Button>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+        </section>
+      </main>
     </div>
-  </div>
-);
-
-// ⚙️ Paramètres Section
-const ParametresSection = () => (
-  <div className="space-y-6">
-    <div>
-      <h1 className="text-3xl font-bold text-neutral-800">Paramètres</h1>
-      <p className="mt-1 text-sm text-neutral-600">Gérez votre compte et vos préférences</p>
-    </div>
-
-    {/* Profil */}
-    <Card className="border-neutral-200 bg-white">
-      <CardHeader>
-        <CardTitle className="text-neutral-800">Informations personnelles</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="name">Nom complet</Label>
-            <Input id="name" placeholder="Jean Dupont" className="rounded-xl" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="jean@example.com" className="rounded-xl" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="phone">Téléphone</Label>
-            <Input id="phone" placeholder="+33 6 12 34 56 78" className="rounded-xl" />
-          </div>
-        </div>
-        <Button className="rounded-2xl bg-blue-600 hover:bg-blue-700">
-          Modifier le profil
-        </Button>
-      </CardContent>
-    </Card>
-
-    {/* Préférences */}
-    <Card className="border-neutral-200 bg-white">
-      <CardHeader>
-        <CardTitle className="text-neutral-800">Préférences</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-medium text-neutral-800">Notifications email</p>
-            <p className="text-sm text-neutral-500">Recevoir les mises à jour par email</p>
-          </div>
-          <Switch />
-        </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-medium text-neutral-800">Notifications SMS</p>
-            <p className="text-sm text-neutral-500">Recevoir les alertes par SMS</p>
-          </div>
-          <Switch />
-        </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-medium text-neutral-800">Mode sombre</p>
-            <p className="text-sm text-neutral-500">Activer le thème sombre</p>
-          </div>
-          <Switch />
-        </div>
-      </CardContent>
-    </Card>
-  </div>
-);
-
-// 🧰 Aide Section
-const AideSection = () => (
-  <div className="space-y-6">
-    <div>
-      <h1 className="text-3xl font-bold text-neutral-800">Aide & Support</h1>
-      <p className="mt-1 text-sm text-neutral-600">Besoin d'assistance ? Nous sommes là pour vous aider</p>
-    </div>
-
-    {/* Contact support */}
-    <Card className="border-neutral-200 bg-white">
-      <CardHeader>
-        <CardTitle className="text-neutral-800">Contacter le support</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-4 md:grid-cols-2">
-          <Button className="h-auto flex-col gap-3 rounded-2xl bg-blue-600 py-8 hover:bg-blue-700">
-            <Phone className="h-8 w-8" />
-            <div>
-              <p className="font-semibold">Par téléphone</p>
-              <p className="text-sm">01 23 45 67 89</p>
-            </div>
-          </Button>
-          <Button className="h-auto flex-col gap-3 rounded-2xl bg-green-600 py-8 hover:bg-green-700">
-            <Mail className="h-8 w-8" />
-            <div>
-              <p className="font-semibold">Par email</p>
-              <p className="text-sm">support@swift.com</p>
-            </div>
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-
-    {/* FAQ */}
-    <Card className="border-neutral-200 bg-white">
-      <CardHeader>
-        <CardTitle className="text-neutral-800">Questions fréquentes</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="rounded-xl border border-neutral-200 p-4">
-            <Skeleton className="h-5 w-64" />
-            <Skeleton className="mt-3 h-4 w-full" />
-            <Skeleton className="mt-2 h-4 w-3/4" />
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  </div>
-);
+  );
+};
 
 export default DashboardClient;

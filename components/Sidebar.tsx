@@ -1,39 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  FileText,
   HelpCircle,
   LayoutDashboard,
+  MapPin,
   Menu,
   MessageSquare,
   Package,
-  PackageSearch,
   Settings,
-  FileText,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
-const navigationItems = [
-  { label: "Tableau de bord", href: "/", icon: LayoutDashboard },
-  { label: "Commandes", href: "/commandes", icon: Package },
-  { label: "Suivi", href: "/suivi", icon: PackageSearch },
-  { label: "Factures", href: "/factures", icon: FileText },
-  { label: "Messages", href: "/messages", icon: MessageSquare },
-  { label: "Paramètres", href: "/parametres", icon: Settings },
-  { label: "Aide", href: "/aide", icon: HelpCircle },
+const navItems = [
+  { name: "Tableau de bord", href: "/", icon: LayoutDashboard },
+  { name: "Commandes", href: "/commandes", icon: Package },
+  { name: "Suivi", href: "/suivi", icon: MapPin },
+  { name: "Factures", href: "/factures", icon: FileText },
+  { name: "Messages", href: "/messages", icon: MessageSquare },
+  { name: "Paramètres", href: "/parametres", icon: Settings },
+  { name: "Aide", href: "/aide", icon: HelpCircle },
 ] as const;
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
-  const normalizedPathname =
-    pathname !== "/" && pathname.endsWith("/")
-      ? pathname.slice(0, -1)
-      : pathname;
+  const normalizedPathname = useMemo(() => {
+    if (!pathname) {
+      return "/";
+    }
+
+    if (pathname === "/") {
+      return pathname;
+    }
+
+    return pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+  }, [pathname]);
 
   return (
     <div className="flex h-full flex-col justify-between bg-[#0B1437] text-white">
@@ -50,28 +57,24 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           </div>
         </div>
         <nav className="flex flex-col gap-1 px-4" aria-label="Navigation principale">
-          {navigationItems.map((item) => {
-            const Icon = item.icon;
-            const isRootLink = item.href === "/";
-            const isActive = isRootLink
-              ? normalizedPathname === "/"
-              : normalizedPathname === item.href ||
-                normalizedPathname.startsWith(`${item.href}/`);
+          {navItems.map(({ name, href, icon: Icon }) => {
+            const active = normalizedPathname === href;
 
             return (
               <Link
-                key={item.href}
-                href={item.href}
+                key={name}
+                href={href}
                 onClick={onNavigate}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  "hover:bg-white/10 hover:text-white",
-                  isActive ? "bg-white/10 text-white" : "text-white/70",
+                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                  active
+                    ? "bg-white/10 text-white font-medium"
+                    : "text-gray-300 hover:bg-white/5 hover:text-white",
                 )}
-                aria-current={isActive ? "page" : undefined}
+                aria-current={active ? "page" : undefined}
               >
-                <Icon className="h-4 w-4" aria-hidden="true" />
-                <span>{item.label}</span>
+                <Icon className="w-4 h-4" aria-hidden="true" />
+                {name}
               </Link>
             );
           })}

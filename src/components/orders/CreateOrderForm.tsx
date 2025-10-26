@@ -252,7 +252,7 @@ const CreateOrderForm = ({ customer, defaultValues, onSubmit, isSubmitting }: Cr
                   </FormControl>
                   <div className="space-y-1">
                     <FormLabel className="text-sm font-medium leading-none">
-                      Livraison express (+30 %)
+                      Livraison express (+30 %)
                     </FormLabel>
                     <FormDescription className="text-xs text-muted-foreground">
                       Priorité immédiate et traitement accéléré de votre transport.
@@ -275,7 +275,7 @@ const CreateOrderForm = ({ customer, defaultValues, onSubmit, isSubmitting }: Cr
                   </FormControl>
                   <div className="space-y-1">
                     <FormLabel className="text-sm font-medium leading-none">
-                      Colis fragile (+15 %)
+                      Colis fragile (+15 %)
                     </FormLabel>
                     <FormDescription className="text-xs text-muted-foreground">
                       Manipulation renforcée et sécurisation du conditionnement.
@@ -302,7 +302,7 @@ const CreateOrderForm = ({ customer, defaultValues, onSubmit, isSubmitting }: Cr
                         Température contrôlée
                       </FormLabel>
                       <FormDescription className="text-xs text-muted-foreground">
-                        Maintien de la chaîne du froid (2–8 °C) pour les envois sensibles.
+                        Maintien de la chaîne du froid (2–8 °C) pour les envois sensibles.
                       </FormDescription>
                     </div>
                   </FormItem>

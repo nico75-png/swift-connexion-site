@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -9,7 +8,7 @@ export const fetchClientProfileByUserId = async (userId: string): Promise<Client
     .from("client_profiles")
     .select("*")
     .eq("user_id", userId)
-    .maybeSingle();
+    .maybeSingle<ClientProfile>();
 
   if (error) {
     throw error;

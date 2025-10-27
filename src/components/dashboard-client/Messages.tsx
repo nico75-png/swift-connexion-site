@@ -633,7 +633,7 @@ const Messages = () => {
                           >
                             <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
                               <span className="font-medium text-slate-600">
-                                {isClient ? "Vous" : "Support Swift Connexion"}
+                                {isClient ? "Vous" : "Support One connexion"}
                               </span>
                               <span>{formatDate(message.createdAt)}</span>
                             </div>
@@ -715,11 +715,11 @@ const Messages = () => {
                 <div className="flex flex-col gap-4">
                   <div className="flex items-start gap-4">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500 text-sm font-semibold">
-                      SC
+                      OC
                     </div>
                     <div className="space-y-1">
                       <p className="text-[11px] uppercase tracking-[0.32em] text-blue-200/70">Support dédié</p>
-                      <h3 className="text-lg font-semibold sm:text-xl">Swift Connexion</h3>
+                      <h3 className="text-lg font-semibold sm:text-xl">One connexion</h3>
                     </div>
                   </div>
                   <p className="text-sm leading-relaxed text-slate-100/80 sm:text-base">
@@ -729,7 +729,7 @@ const Messages = () => {
                   <div className="space-y-4 text-slate-100/90">
                     <div className="space-y-1">
                       <p className="text-[11px] uppercase tracking-[0.32em] text-blue-200/70">Email direct</p>
-                      <p className="text-base font-semibold leading-relaxed text-white">support@swift-connexion.com</p>
+                      <p className="text-base font-semibold leading-relaxed text-white">support@one-connexion.com</p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-[11px] uppercase tracking-[0.32em] text-blue-200/70">Téléphone</p>

@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +16,15 @@ const Login = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
   const navigate = useNavigate();
+  const router = useMemo(
+    () => ({
+      push: (path: string, options?: { replace?: boolean }) => {
+        const normalizedPath = path === "/dashboard/client" ? "/dashboard-client" : path;
+        navigate(normalizedPath, { replace: options?.replace ?? false });
+      },
+    }),
+    [navigate]
+  );
   const { session, isLoading, refreshProfile } = useAuthProfile();
 
   const redirectTarget = useMemo(() => {
@@ -181,21 +190,35 @@ const Login = () => {
     window.location.href = path;
   };
 
-  const handleTestClientLogin = () => {
-    const dashboardPath = "/dashboard-client";
-
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("dash:isLoggedIn", "true");
-      sessionStorage.setItem("dash:userRole", "client");
-      sessionStorage.setItem("dash:username", "clientTest");
-      sessionStorage.setItem("dash:lastLogin", new Date().toISOString());
+  const handleLoginAsTestClient = useCallback(() => {
+    if (typeof window === "undefined") {
+      console.error(
+        "[TestClientLogin] SessionStorage non disponible : impossible de connecter le client de test."
+      );
+      return;
     }
 
-    console.info(
-      "[TestClientLogin] Redirection vers le tableau de bord client en tant que clientTest"
-    );
-    navigate(dashboardPath, { replace: true });
-  };
+    const testUser = { id: "test-client", name: "Client Test", role: "client" };
+
+    try {
+      const serializedUser = JSON.stringify({
+        id: testUser.id,
+        name: testUser.name,
+        role: testUser.role,
+      });
+
+      sessionStorage.setItem("dash:user", serializedUser);
+      sessionStorage.setItem("dash:userRole", testUser.role);
+
+      console.info("[TestClientLogin] Connexion réussie pour le client de test.");
+      router.push("/dashboard/client", { replace: true });
+    } catch (error) {
+      console.error(
+        "[TestClientLogin] Impossible de connecter le client de test : stockage de session échoué.",
+        error
+      );
+    }
+  }, [router]);
 
   return (
     <div className="onecx-auth">
@@ -227,7 +250,7 @@ const Login = () => {
             <button
               type="button"
               className="onecx-auth__quick-button onecx-auth__quick-button--client"
-              onClick={handleTestClientLogin}
+              onClick={handleLoginAsTestClient}
             >
               Se connecter en tant que client (test)
             </button>
@@ -240,7 +263,7 @@ const Login = () => {
         <div className="mt-6 w-full">
           <button
             type="button"
-            onClick={handleTestClientLogin}
+            onClick={handleLoginAsTestClient}
             className="flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-500 px-5 py-4 text-base font-semibold text-white shadow-lg transition-all duration-300 hover:translate-y-[-2px] hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:ring-offset-2"
           >
             <span className="text-lg" aria-hidden="true">

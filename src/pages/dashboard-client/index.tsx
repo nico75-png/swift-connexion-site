@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { LogOut, Loader2 } from "lucide-react";
 
 import DashboardHome from "@/components/dashboard-client/DashboardHome";
@@ -12,6 +12,7 @@ import Parametres from "@/components/dashboard-client/Parametres";
 import Aide from "@/components/dashboard-client/Aide";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { session } from "@/utils/session";
 
 type SectionKey =
   | "dashboard"
@@ -42,6 +43,33 @@ const DashboardClient = () => {
   const [activeSection, setActiveSection] = useState<SectionKey>("dashboard");
   const [isSigningOut, setIsSigningOut] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const hasHydratedSection = useRef(false);
+
+  useEffect(() => {
+    const savedSection = session.get("activeSection");
+
+    if (
+      typeof savedSection === "string" &&
+      SIDEBAR_ITEMS.some((item) => item.id === savedSection)
+    ) {
+      setActiveSection(savedSection as SectionKey);
+    }
+
+    hasHydratedSection.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!hasHydratedSection.current) {
+      return;
+    }
+
+    session.set("activeSection", activeSection);
+  }, [activeSection]);
+
+  useEffect(() => {
+    session.set("lastRoute", location.pathname);
+  }, [location.pathname]);
 
   const handleLogout = useCallback(async () => {
     if (isSigningOut) {
@@ -62,6 +90,7 @@ const DashboardClient = () => {
         description: "Vous avez été déconnecté avec succès 👋",
       });
 
+      session.clearAll();
       navigate("/login");
     } catch (error) {
       console.error("Erreur lors de la déconnexion :", error);

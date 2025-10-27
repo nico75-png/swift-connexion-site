@@ -45,6 +45,7 @@ const DashboardClient = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const hasHydratedSection = useRef(false);
+  const sidebarRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const savedSection = session.get("activeSection");
@@ -70,6 +71,21 @@ const DashboardClient = () => {
   useEffect(() => {
     session.set("lastRoute", location.pathname);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    sessionStorage.setItem("dash:brandName", "One connexion");
+    sessionStorage.setItem("dash:lastScan", new Date().toISOString());
+    const lastScan = sessionStorage.getItem("dash:lastScan");
+
+    if (lastScan) {
+      // Garder une trace côté console pour les audits de marque
+      console.log("Dernier audit de marque effectué le :", lastScan);
+    }
+  }, []);
 
   const handleLogout = useCallback(async () => {
     if (isSigningOut) {
@@ -129,6 +145,18 @@ const DashboardClient = () => {
     };
   }, [handleLogout]);
 
+  const handleSectionChange = useCallback((section: SectionKey) => {
+    setActiveSection(section);
+
+    if (sidebarRef.current) {
+      const activeButton = sidebarRef.current.querySelector<HTMLButtonElement>(
+        `button[data-section="${section}"]`
+      );
+
+      activeButton?.focus({ preventScroll: true });
+    }
+  }, []);
+
   const renderSection = () => {
     switch (activeSection) {
       case "dashboard":
@@ -151,71 +179,142 @@ const DashboardClient = () => {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen bg-slate-100 text-slate-900">
       {/* Sidebar */}
-      <aside className="w-64 shrink-0 bg-[#2C3E50] flex flex-col">
+      <aside className="relative hidden w-72 shrink-0 bg-slate-950/95 text-slate-100 shadow-2xl lg:flex lg:flex-col">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.22),_transparent_55%)]" />
         {/* Logo et titre */}
-        <div className="p-6 border-b border-slate-700">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-sm">
-              SC
+        <div className="relative border-b border-white/10 px-6 py-7">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-500 to-blue-600 text-base font-semibold text-white shadow-lg shadow-blue-600/30">
+              OC
             </div>
-            <div>
-              <p className="text-xs text-slate-400">Connexion Swift</p>
-              <p className="text-sm font-semibold text-white">Tableau de bord</p>
+            <div className="space-y-1">
+              <p className="text-[11px] uppercase tracking-[0.28em] text-blue-200/80">One connexion</p>
+              <p className="text-sm font-semibold text-white/90">Espace client</p>
             </div>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1" aria-label="Navigation du tableau de bord">
-          {SIDEBAR_ITEMS.map((item) => {
-            const isActive = activeSection === item.id;
+        <nav
+          ref={sidebarRef}
+          className="relative flex-1 space-y-2 overflow-y-auto px-4 py-6"
+          aria-label="Navigation du tableau de bord"
+        >
+          <div className="space-y-1.5">
+            {SIDEBAR_ITEMS.map((item) => {
+              const isActive = activeSection === item.id;
 
-            return (
-              <motion.button
-                key={item.id}
-                type="button"
-                onClick={() => setActiveSection(item.id)}
-                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-all duration-300 ease-out ${
-                  isActive
-                    ? "bg-slate-700 font-medium text-white"
-                    : "text-slate-300 hover:bg-slate-700/50 hover:text-white"
-                }`}
-                whileHover={{ x: 4 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <span aria-hidden="true" className="text-base">
-                  {item.icon}
-                </span>
-                <span>{item.label}</span>
-              </motion.button>
-            );
-          })}
+              return (
+                <div key={item.id} className="relative">
+                  {isActive ? (
+                    <motion.span
+                      layoutId="activeSidebarItem"
+                      className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-600/90 via-indigo-500/90 to-blue-700/90 shadow-lg shadow-blue-600/25"
+                      transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                      aria-hidden="true"
+                    />
+                  ) : null}
+
+                  <motion.button
+                    type="button"
+                    data-section={item.id}
+                    onClick={() => handleSectionChange(item.id)}
+                    className={`group relative flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-medium transition-all duration-300 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60 ${
+                      isActive
+                        ? "text-white"
+                        : "text-slate-300 hover:text-white focus-visible:text-white"
+                    }`}
+                    whileHover={{ x: 4 }}
+                    whileTap={{ scale: 0.98 }}
+                    aria-current={isActive ? "page" : undefined}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`text-lg transition-transform duration-300 ${isActive ? "scale-110" : "scale-100"}`}
+                    >
+                      {item.icon}
+                    </span>
+                    <span className="flex-1">{item.label}</span>
+                    {!isActive ? (
+                      <span
+                        className="h-2 w-2 rounded-full bg-white/30 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                        aria-hidden="true"
+                      />
+                    ) : null}
+                  </motion.button>
+                </div>
+              );
+            })}
+          </div>
         </nav>
+
+        <div className="relative border-t border-white/10 px-6 py-6 text-xs text-slate-300">
+          <p className="font-medium uppercase tracking-[0.28em] text-blue-200/70">Assistance</p>
+          <p className="mt-2 text-sm text-slate-200/90">Support disponible 7j/7 via le centre d'aide One connexion.</p>
+        </div>
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Mobile brand + navigation */}
+        <div className="border-b border-slate-200/80 bg-white/90 px-4 py-4 backdrop-blur lg:hidden">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 via-indigo-500 to-blue-600 text-sm font-semibold text-white shadow-md shadow-blue-600/25">
+              OC
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-[11px] uppercase tracking-[0.28em] text-slate-500/80">One connexion</p>
+              <p className="text-sm font-semibold text-slate-900">Espace client</p>
+            </div>
+          </div>
+          <nav className="mt-4 flex gap-2 overflow-x-auto" aria-label="Navigation principale mobile">
+            {SIDEBAR_ITEMS.map((item) => {
+              const isActive = activeSection === item.id;
+
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleSectionChange(item.id)}
+                  className={`inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors duration-200 ${
+                    isActive
+                      ? "bg-slate-900 text-white shadow-sm"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                  aria-current={isActive ? "page" : undefined}
+                >
+                  <span aria-hidden="true">{item.icon}</span>
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
         {/* Top bar */}
-        <header className="flex flex-col gap-3 border-b border-slate-200 bg-white px-6 py-3 sm:flex-row sm:items-center sm:justify-end">
+        <header className="flex flex-col gap-3 border-b border-slate-200/80 bg-white/70 px-6 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-end">
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-end sm:gap-4">
             <div className="flex items-center gap-4">
-              <button type="button" className="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-600 transition-colors duration-200 ease-out hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
+              <button
+                type="button"
+                className="relative inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-900/5 text-xl text-slate-600 transition-all duration-200 ease-out hover:bg-slate-900/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+              >
                 <span aria-hidden="true">🔔</span>
-                <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-blue-600" />
+                <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500" />
                 <span className="sr-only">Voir les notifications</span>
               </button>
               <div className="flex items-center gap-3 border-l border-slate-200 pl-4">
                 <div className="text-right">
                   <p className="text-sm font-medium text-slate-900">Clara Dupont</p>
-                  <p className="text-xs text-slate-500">clara.dupont@swift.fr</p>
+                  <p className="text-xs text-slate-500">clara.dupont@one-connexion.com</p>
                 </div>
                 <div className="relative">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 via-indigo-500 to-blue-600 text-sm font-semibold text-white shadow-lg shadow-blue-600/20">
                     CD
                   </div>
-                  <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-green-500" />
+                  <div className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500" />
                 </div>
               </div>
             </div>
@@ -224,8 +323,8 @@ const DashboardClient = () => {
                 <div>
                   Profil <span className="font-semibold">72%</span>
                 </div>
-                <div className="mt-0.5 h-1.5 w-full min-w-[160px] rounded-full bg-slate-200 overflow-hidden">
-                  <div className="h-full w-[72%] rounded-full bg-blue-600" />
+                <div className="mt-1 h-1.5 w-full min-w-[160px] overflow-hidden rounded-full bg-slate-200">
+                  <div className="h-full w-[72%] rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-600" />
                 </div>
               </div>
               <button
@@ -238,7 +337,7 @@ const DashboardClient = () => {
                   void handleLogout();
                 }}
                 disabled={isSigningOut}
-                className="group flex w-full items-center justify-center gap-2 rounded-xl border border-transparent px-4 py-2 text-sm font-medium text-gray-700 transition-all duration-200 ease-out hover:bg-red-50 hover:text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+                className="group flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200/60 bg-white/70 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all duration-200 ease-out hover:border-red-100 hover:bg-red-50/80 hover:text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
               >
                 {isSigningOut ? (
                   <Loader2 className="h-4 w-4 animate-spin text-red-600" aria-hidden="true" />
@@ -252,7 +351,7 @@ const DashboardClient = () => {
         </header>
 
         {/* Content area */}
-        <main className="flex-1 overflow-y-auto p-6 bg-slate-50">
+        <main className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 p-6">
           <div className="mx-auto w-full max-w-7xl">
             {/* Transition fluide entre les sections du tableau de bord */}
             <AnimatePresence mode="wait">

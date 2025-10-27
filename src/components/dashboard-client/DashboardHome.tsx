@@ -1,5 +1,4 @@
-import { useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -14,6 +13,9 @@ import { FileText, MapPin, MessageCircle, Plus, PlusCircle } from "lucide-react"
 import AnimatedSection from "@/components/dashboard-client/AnimatedSection";
 import ClientActivityChart from "./ClientActivityChart";
 import AnimatedCounter from "./AnimatedCounter";
+import { toast } from "@/components/ui/use-toast";
+import CreateOrderDrawer from "./CreateOrderDrawer";
+import type { QuickOrderFormValues } from "./QuickOrderDialog";
 
 const indicatorContainerVariants = {
   hidden: { opacity: 0 },
@@ -37,11 +39,22 @@ const staggeredListVariants = {
 };
 
 const DashboardHome = () => {
-  const navigate = useNavigate();
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const handleCreateOrder = useCallback(() => {
-    navigate("/dashboard-client/commandes/nouvelle");
-  }, [navigate]);
+    setIsDrawerOpen(true);
+  }, []);
+
+  const handleDrawerSubmit = useCallback(
+    (values: QuickOrderFormValues) => {
+      setIsDrawerOpen(false);
+      toast({
+        title: "Commande prête à être confirmée",
+        description: `Course ${values.packageType === "document" ? "document" : "colis"} planifiée de ${values.pickupAddress || "votre adresse"} vers ${values.deliveryAddress || "destination"}.`,
+      });
+    },
+    [],
+  );
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
@@ -372,6 +385,11 @@ const DashboardHome = () => {
       >
         <Plus className="h-5 w-5" aria-hidden="true" />
       </button>
+      <CreateOrderDrawer
+        open={isDrawerOpen}
+        onOpenChange={setIsDrawerOpen}
+        onSubmit={handleDrawerSubmit}
+      />
     </TooltipProvider>
   );
 };

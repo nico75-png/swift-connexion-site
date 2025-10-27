@@ -181,6 +181,22 @@ const Login = () => {
     window.location.href = path;
   };
 
+  const handleTestClientLogin = () => {
+    const dashboardPath = "/dashboard-client";
+
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("dash:isLoggedIn", "true");
+      sessionStorage.setItem("dash:userRole", "client");
+      sessionStorage.setItem("dash:username", "clientTest");
+      sessionStorage.setItem("dash:lastLogin", new Date().toISOString());
+    }
+
+    console.info(
+      "[TestClientLogin] Redirection vers le tableau de bord client en tant que clientTest"
+    );
+    navigate(dashboardPath, { replace: true });
+  };
+
   return (
     <div className="onecx-auth">
       <div className="onecx-auth__ambient" aria-hidden="true" />
@@ -211,7 +227,7 @@ const Login = () => {
             <button
               type="button"
               className="onecx-auth__quick-button onecx-auth__quick-button--client"
-              onClick={() => handleQuickAccess("/dashboard-client")}
+              onClick={handleTestClientLogin}
             >
               Se connecter en tant que client (test)
             </button>
@@ -220,6 +236,19 @@ const Login = () => {
             Accès rapide de test — Aucun identifiant requis. Sera supprimé plus tard.
           </p>
         </section>
+
+        <div className="mt-6 w-full">
+          <button
+            type="button"
+            onClick={handleTestClientLogin}
+            className="flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-500 px-5 py-4 text-base font-semibold text-white shadow-lg transition-all duration-300 hover:translate-y-[-2px] hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:ring-offset-2"
+          >
+            <span className="text-lg" aria-hidden="true">
+              🚀
+            </span>
+            Se connecter en tant que client test
+          </button>
+        </div>
 
         <div
           className="onecx-auth__toggle"

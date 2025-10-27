@@ -179,32 +179,28 @@ const Login = () => {
   const handleQuickAccess = (path: string) => {
     window.location.href = path;
   };
-  const handleLoginAsTestClient = useCallback(() => {
-    if (typeof window === "undefined") {
-      console.error("[TestClientLogin] SessionStorage non disponible : impossible de connecter le client de test.");
-      return;
-    }
-    const testUser = {
-      id: "test-client",
-      name: "Client Test",
-      role: "client"
-    };
+  const handleLoginAsTestClient = useCallback(async () => {
+    setIsLoggingIn(true);
+    setLoginError(null);
+    
     try {
-      const serializedUser = JSON.stringify({
-        id: testUser.id,
-        name: testUser.name,
-        role: testUser.role
+      const { error } = await supabase.auth.signInWithPassword({
+        email: "test@rapideexpress.fr",
+        password: "TestUser2024!"
       });
-      sessionStorage.setItem("dash:user", serializedUser);
-      sessionStorage.setItem("dash:userRole", testUser.role);
-      console.info("[TestClientLogin] Connexion réussie pour le client de test.");
-      router.push("/dashboard/client", {
-        replace: true
-      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      navigate("/dashboard-client", { replace: true });
     } catch (error) {
-      console.error("[TestClientLogin] Impossible de connecter le client de test : stockage de session échoué.", error);
+      const message = error instanceof Error ? error.message : "La connexion du client test a échoué.";
+      setLoginError(message);
+    } finally {
+      setIsLoggingIn(false);
     }
-  }, [router]);
+  }, [navigate]);
   return <div className="onecx-auth">
       <div className="onecx-auth__ambient" aria-hidden="true" />
 

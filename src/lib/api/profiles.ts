@@ -24,6 +24,7 @@ export const upsertProfile = async (input: {
 }): Promise<Profile | null> => {
   const { error } = await supabase.from("profiles").upsert(
     {
+      id: input.userId,
       user_id: input.userId,
       first_name: input.firstName,
       last_name: input.lastName,

@@ -14,6 +14,170 @@ export type Database = {
   }
   public: {
     Tables: {
+      client_profiles: {
+        Row: {
+          company: string | null
+          contact_name: string | null
+          created_at: string
+          default_delivery_address: string | null
+          default_pickup_address: string | null
+          id: string
+          sector: string | null
+          siret: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company?: string | null
+          contact_name?: string | null
+          created_at?: string
+          default_delivery_address?: string | null
+          default_pickup_address?: string | null
+          id?: string
+          sector?: string | null
+          siret?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company?: string | null
+          contact_name?: string | null
+          created_at?: string
+          default_delivery_address?: string | null
+          default_pickup_address?: string | null
+          id?: string
+          sector?: string | null
+          siret?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      invoices: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          customer_id: string
+          due_at: string | null
+          id: string
+          invoice_number: string
+          issued_at: string
+          order_id: string | null
+          paid_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          customer_id: string
+          due_at?: string | null
+          id?: string
+          invoice_number: string
+          issued_at?: string
+          order_id?: string | null
+          paid_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          customer_id?: string
+          due_at?: string | null
+          id?: string
+          invoice_number?: string
+          issued_at?: string
+          order_id?: string | null
+          paid_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          customer_company: string
+          customer_id: string
+          delivery_address: string
+          driver_assigned_at: string | null
+          driver_id: string | null
+          driver_instructions: string | null
+          id: string
+          package_note: string | null
+          package_type: string | null
+          pickup_address: string
+          quote_id: string | null
+          schedule_end: string | null
+          schedule_start: string
+          sector: string | null
+          status: string
+          updated_at: string
+          volume_m3: number
+          weight_kg: number
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          customer_company: string
+          customer_id: string
+          delivery_address: string
+          driver_assigned_at?: string | null
+          driver_id?: string | null
+          driver_instructions?: string | null
+          id: string
+          package_note?: string | null
+          package_type?: string | null
+          pickup_address: string
+          quote_id?: string | null
+          schedule_end?: string | null
+          schedule_start: string
+          sector?: string | null
+          status?: string
+          updated_at?: string
+          volume_m3?: number
+          weight_kg?: number
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          customer_company?: string
+          customer_id?: string
+          delivery_address?: string
+          driver_assigned_at?: string | null
+          driver_id?: string | null
+          driver_instructions?: string | null
+          id?: string
+          package_note?: string | null
+          package_type?: string | null
+          pickup_address?: string
+          quote_id?: string | null
+          schedule_end?: string | null
+          schedule_start?: string
+          sector?: string | null
+          status?: string
+          updated_at?: string
+          volume_m3?: number
+          weight_kg?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null

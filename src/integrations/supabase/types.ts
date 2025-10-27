@@ -16,187 +16,55 @@ export type Database = {
     Tables: {
       profiles: {
         Row: {
-          created_at: string
+          created_at: string | null
           display_name: string | null
           first_name: string | null
           id: string
           last_name: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          display_name?: string | null
-          first_name?: string | null
-          id?: string
-          last_name?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          display_name?: string | null
-          first_name?: string | null
-          id?: string
-          last_name?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      client_profiles: {
-        Row: {
-          company: string | null
-          contact_name: string | null
-          created_at: string
-          default_delivery_address: string | null
-          default_pickup_address: string | null
-          id: string
-          sector: string | null
-          siret: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          company?: string | null
-          contact_name?: string | null
-          created_at?: string
-          default_delivery_address?: string | null
-          default_pickup_address?: string | null
-          id?: string
-          sector?: string | null
-          siret?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          company?: string | null
-          contact_name?: string | null
-          created_at?: string
-          default_delivery_address?: string | null
-          default_pickup_address?: string | null
-          id?: string
-          sector?: string | null
-          siret?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      orders: {
-        Row: {
-          amount: number | null
-          created_at: string
-          currency: string | null
-          customer_company: string | null
-          customer_id: string
-          delivery_address: string
-          driver_assigned_at: string | null
-          driver_id: string | null
-          driver_instructions: string | null
-          id: string
-          package_note: string | null
-          package_type: string | null
-          pickup_address: string
-          quote_id: string | null
-          schedule_end: string | null
-          schedule_start: string
-          sector: string | null
-          status: string
+          phone: string | null
           updated_at: string | null
-          volume_m3: number | null
-          weight_kg: number | null
+          user_id: string
         }
         Insert: {
-          amount?: number | null
-          created_at?: string
-          currency?: string | null
-          customer_company?: string | null
-          customer_id: string
-          delivery_address: string
-          driver_assigned_at?: string | null
-          driver_id?: string | null
-          driver_instructions?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          first_name?: string | null
           id: string
-          package_note?: string | null
-          package_type?: string | null
-          pickup_address: string
-          quote_id?: string | null
-          schedule_end?: string | null
-          schedule_start: string
-          sector?: string | null
-          status?: string
+          last_name?: string | null
+          phone?: string | null
           updated_at?: string | null
-          volume_m3?: number | null
-          weight_kg?: number | null
+          user_id: string
         }
         Update: {
-          amount?: number | null
-          created_at?: string
-          currency?: string | null
-          customer_company?: string | null
-          customer_id?: string
-          delivery_address?: string
-          driver_assigned_at?: string | null
-          driver_id?: string | null
-          driver_instructions?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          first_name?: string | null
           id?: string
-          package_note?: string | null
-          package_type?: string | null
-          pickup_address?: string
-          quote_id?: string | null
-          schedule_end?: string | null
-          schedule_start?: string
-          sector?: string | null
-          status?: string
+          last_name?: string | null
+          phone?: string | null
           updated_at?: string | null
-          volume_m3?: number | null
-          weight_kg?: number | null
+          user_id?: string
         }
         Relationships: []
       }
-      invoices: {
+      user_roles: {
         Row: {
-          amount: number
-          created_at: string
-          currency: string | null
-          customer_id: string
-          due_date: string | null
+          created_at: string | null
           id: string
-          invoice_number: string
-          notes: string | null
-          paid_at: string | null
-          payment_method: string | null
-          status: string
-          updated_at: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
         }
         Insert: {
-          amount: number
-          created_at?: string
-          currency?: string | null
-          customer_id: string
-          due_date?: string | null
+          created_at?: string | null
           id?: string
-          invoice_number: string
-          notes?: string | null
-          paid_at?: string | null
-          payment_method?: string | null
-          status?: string
-          updated_at?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
         }
         Update: {
-          amount?: number
-          created_at?: string
-          currency?: string | null
-          customer_id?: string
-          due_date?: string | null
+          created_at?: string | null
           id?: string
-          invoice_number?: string
-          notes?: string | null
-          paid_at?: string | null
-          payment_method?: string | null
-          status?: string
-          updated_at?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
         }
         Relationships: []
       }
@@ -205,10 +73,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "client" | "driver" | "dispatch"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -335,6 +209,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "client", "driver", "dispatch"],
+    },
   },
 } as const

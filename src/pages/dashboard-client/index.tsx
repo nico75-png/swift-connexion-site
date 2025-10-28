@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
-import { LogOut, Loader2 } from "lucide-react";
+import {
+  Bell,
+  BellRing,
+  CalendarCheck,
+  LogOut,
+  Loader2,
+  MessageCircle,
+} from "lucide-react";
 
 import DashboardHome from "@/components/dashboard-client/DashboardHome";
 import Commandes from "@/components/dashboard-client/Commandes";
@@ -42,10 +49,29 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
 const DashboardClient = () => {
   const [activeSection, setActiveSection] = useState<SectionKey>("dashboard");
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const hasHydratedSection = useRef(false);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
+  const notificationsRef = useRef<HTMLDivElement | null>(null);
+
+  const notifications = [
+    {
+      id: "notif-1",
+      icon: <MessageCircle className="h-4 w-4 text-blue-600" aria-hidden="true" />, 
+      title: "Nouveau message reçu",
+      description: "Alex Martin vous a écrit il y a 2 min",
+    },
+    {
+      id: "notif-2",
+      icon: <CalendarCheck className="h-4 w-4 text-indigo-600" aria-hidden="true" />, 
+      title: "Rappel de rendez-vous",
+      description: "Visio One connexion demain à 10:30",
+    },
+  ];
+
+  const unreadCount = notifications.length;
 
   useEffect(() => {
     const savedSection = session.get("activeSection");
@@ -135,6 +161,11 @@ const DashboardClient = () => {
       ) {
         event.preventDefault();
         void handleLogout();
+        return;
+      }
+
+      if (event.key === "Escape") {
+        setIsNotificationsOpen(false);
       }
     };
 
@@ -144,6 +175,39 @@ const DashboardClient = () => {
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [handleLogout]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!isNotificationsOpen) {
+        return;
+      }
+
+      const target = event.target as Node | null;
+      if (notificationsRef.current && target instanceof Node) {
+        if (!notificationsRef.current.contains(target)) {
+          setIsNotificationsOpen(false);
+        }
+      }
+    };
+
+    window.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      window.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isNotificationsOpen]);
+
+  useEffect(() => {
+    if (!isNotificationsOpen) {
+      return;
+    }
+
+    const firstNotificationButton = notificationsRef.current?.querySelector<HTMLButtonElement>(
+      "button[data-notification-item]"
+    );
+
+    firstNotificationButton?.focus({ preventScroll: true });
+  }, [isNotificationsOpen]);
 
   const handleSectionChange = useCallback((section: SectionKey) => {
     setActiveSection(section);
@@ -297,14 +361,96 @@ const DashboardClient = () => {
         <header className="flex flex-col gap-3 border-b border-slate-200/80 bg-white/70 px-6 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-end">
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-end sm:gap-4">
             <div className="flex items-center gap-4">
-              <button
-                type="button"
-                className="relative inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-900/5 text-xl text-slate-600 transition-all duration-200 ease-out hover:bg-slate-900/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
-              >
-                <span aria-hidden="true">🔔</span>
-                <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500" />
-                <span className="sr-only">Voir les notifications</span>
-              </button>
+              <div className="relative" ref={notificationsRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsNotificationsOpen((prev) => !prev)}
+                  className="relative inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-900/5 text-slate-600 transition-all duration-200 ease-out hover:bg-slate-900/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                  aria-haspopup="menu"
+                  aria-expanded={isNotificationsOpen}
+                  aria-controls="dashboard-notifications-menu"
+                >
+                  <Bell className="h-5 w-5" aria-hidden="true" />
+                  {unreadCount > 0 ? (
+                    <span className="absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 px-1 text-[10px] font-semibold text-white shadow-sm">
+                      {unreadCount}
+                    </span>
+                  ) : null}
+                  <span className="sr-only">Voir les notifications</span>
+                </button>
+
+                <AnimatePresence>
+                  {isNotificationsOpen ? (
+                    <motion.div
+                      id="dashboard-notifications-menu"
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.18, ease: "easeOut" }}
+                      className="absolute right-0 z-50 mt-3 w-80 origin-top-right rounded-2xl bg-white/95 shadow-xl ring-1 ring-slate-200/60 backdrop-blur-sm focus:outline-none"
+                      tabIndex={-1}
+                    >
+                      <div className="rounded-t-2xl bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500 p-4 text-white">
+                        <div className="flex items-center gap-3">
+                          <div className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-white">
+                            <BellRing className="h-5 w-5" aria-hidden="true" />
+                            {unreadCount > 0 ? (
+                              <span className="absolute -top-1 -right-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white">
+                                {unreadCount}
+                              </span>
+                            ) : null}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold">🔔 {unreadCount} Notifications</p>
+                            <p className="text-xs text-white/80">Voici les dernières actualités de votre compte</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="max-h-80 overflow-y-auto p-3" role="menu" aria-label="Notifications récentes">
+                        {notifications.length > 0 ? (
+                          notifications.map((notification) => (
+                            <button
+                              key={notification.id}
+                              type="button"
+                              className="group flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 hover:bg-slate-100/70"
+                              role="menuitem"
+                              data-notification-item
+                              onClick={() => setIsNotificationsOpen(false)}
+                            >
+                              <span className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">
+                                {notification.icon}
+                              </span>
+                              <span className="flex-1">
+                                <span className="block text-sm font-medium text-slate-900">
+                                  {notification.title}
+                                </span>
+                                <span className="mt-0.5 block text-xs text-slate-500">
+                                  {notification.description}
+                                </span>
+                              </span>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="flex items-center justify-center rounded-xl bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                            Aucune notification pour le moment 🎉
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="border-t border-slate-200/70 bg-slate-50/80 p-3 text-right">
+                        <button
+                          type="button"
+                          className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+                          onClick={() => setIsNotificationsOpen(false)}
+                        >
+                          Voir toutes les notifications
+                        </button>
+                      </div>
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+              </div>
               <div className="flex items-center gap-3 border-l border-slate-200 pl-4">
                 <div className="text-right">
                   <p className="text-sm font-medium text-slate-900">Clara Dupont</p>
@@ -319,14 +465,6 @@ const DashboardClient = () => {
               </div>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-              <div className="text-xs text-slate-600 sm:text-right">
-                <div>
-                  Profil <span className="font-semibold">72%</span>
-                </div>
-                <div className="mt-1 h-1.5 w-full min-w-[160px] overflow-hidden rounded-full bg-slate-200">
-                  <div className="h-full w-[72%] rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-600" />
-                </div>
-              </div>
               <button
                 type="button"
                 onClick={() => {

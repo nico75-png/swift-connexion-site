@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { useAuthProfile } from "@/providers/AuthProvider";
+import { useAuth } from "@/providers/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Tooltip,
@@ -36,7 +36,7 @@ const ClientSidebar = () => {
   const {
     resolvedDisplayName,
     fallbackEmail
-  } = useAuthProfile();
+  } = useAuth();
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);

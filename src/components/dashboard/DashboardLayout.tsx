@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import {
   ReactNode,
   createContext,
@@ -10,7 +11,7 @@ import {
 } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Info } from "lucide-react";
-import { useAuthProfile } from "@/providers/AuthProvider";
+import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
 
 interface DashboardLayoutProps {
@@ -68,7 +69,7 @@ const getFocusableElements = (container: HTMLElement | null) => {
  * Sidebar fixe à gauche + Topbar + contenu principal + tiroir contextuel
  */
 const DashboardLayout = ({ children, sidebar, topbar, showProfileReminder = false }: DashboardLayoutProps) => {
-  const { isProfileComplete, fallbackEmail } = useAuthProfile();
+  const { isProfileComplete, fallbackEmail } = useAuth();
   const shouldShowReminder = showProfileReminder && !isProfileComplete && fallbackEmail;
 
   const [drawerState, setDrawerState] = useState<DrawerState>({ isOpen: false, content: null });

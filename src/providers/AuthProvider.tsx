@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,9 +7,13 @@ import { fetchProfileByUserId } from "@/lib/api/profiles";
 import { resetAuthState, setAuthState } from "@/lib/stores/auth.store";
 import { syncClientParticipantIdentity } from "@/hooks/useMessagesStore";
 
+type AuthStatus = "loading" | "authenticated" | "unauthenticated";
+
 type AuthContextValue = {
   session: Session | null;
   profile: Profile | null;
+  status: AuthStatus;
+  isAuthenticated: boolean;
   isLoading: boolean;
   isRefreshingProfile: boolean;
   resolvedDisplayName: string | null;
@@ -138,10 +143,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const resolvedDisplayName = computeDisplayName(session, profile);
     const fallbackEmail = session?.user?.email ?? null;
     const isProfileComplete = Boolean(profile?.display_name?.trim());
+    const isAuthenticated = Boolean(session);
+    const status: AuthStatus = isLoading ? "loading" : isAuthenticated ? "authenticated" : "unauthenticated";
 
     return {
       session,
       profile,
+      status,
+      isAuthenticated,
       isLoading,
       isRefreshingProfile,
       resolvedDisplayName,
@@ -154,12 +163,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export const useAuthProfile = () => {
+export const useAuth = () => {
   const context = useContext(AuthContext);
 
   if (!context) {
-    throw new Error("useAuthProfile must be used within an AuthProvider");
+    throw new Error("useAuth must be used within an AuthProvider");
   }
 
   return context;
 };
+
+export const useAuthProfile = useAuth;

@@ -2,8 +2,8 @@ import { lazy, Suspense, type LazyExoticComponent, type ReactNode } from "react"
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { ErrorBoundary, type FallbackProps } from "./ErrorBoundary";
 
-import { useAuth, type UserRole } from "@/lib/stores/auth.store";
-import { useAuthProfile } from "@/providers/AuthProvider";
+import { useAuth as useAuthStore, type UserRole } from "@/lib/stores/auth.store";
+import { useAuth as useAuthContext } from "@/providers/AuthProvider";
 
 // Pages publiques
 const Home = lazy(() => import("@/pages"));
@@ -77,14 +77,14 @@ const withGuards = (Component: LazyRouteComponent, options?: GuardOptions) => {
 };
 
 const RequireAuth = ({ children, roles }: { children: ReactNode; roles?: UserRole[] }) => {
-  const { isLoading } = useAuthProfile();
-  const { currentUser } = useAuth();
+  const { status, isAuthenticated, isLoading } = useAuthContext();
+  const { currentUser } = useAuthStore();
 
-  if (isLoading) {
+  if (status === "loading" || isLoading) {
     return <Loader />;
   }
 
-  if (!currentUser) {
+  if (!isAuthenticated || !currentUser) {
     return <Navigate to="/login" replace />;
   }
 

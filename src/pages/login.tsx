@@ -1,9 +1,25 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { upsertProfile } from "@/lib/api/profiles";
-import { useAuthProfile } from "@/providers/AuthProvider";
+import { useAuth } from "@/providers/AuthProvider";
 import "./login.css";
+
+const AuthLoadingScreen = () => (
+  <div className="onecx-auth onecx-auth--loading">
+    <div className="onecx-auth__bg" aria-hidden="true" />
+    <div className="onecx-auth__loader-card" role="status" aria-live="polite">
+      <div className="onecx-auth__loader-icon" aria-hidden="true">
+        <span className="onecx-auth__loader-spinner" />
+      </div>
+      <p className="onecx-auth__loader-title">Vérification de votre session</p>
+      <p className="onecx-auth__loader-subtitle">
+        Préparation du tableau de bord client…
+      </p>
+    </div>
+  </div>
+);
+
 const Login = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isSignUp, setIsSignUp] = useState(false);
@@ -12,22 +28,7 @@ const Login = () => {
   const [signUpSuccess, setSignUpSuccess] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
-  const navigate = useNavigate();
-  const router = useMemo(() => ({
-    push: (path: string, options?: {
-      replace?: boolean;
-    }) => {
-      const normalizedPath = path === "/dashboard/client" ? "/dashboard-client" : path;
-      navigate(normalizedPath, {
-        replace: options?.replace ?? false
-      });
-    }
-  }), [navigate]);
-  const {
-    session,
-    isLoading,
-    refreshProfile
-  } = useAuthProfile();
+  const { session, status, refreshProfile } = useAuth();
   const redirectTarget = useMemo(() => {
     const redirectParam = searchParams.get("redirect");
     if (!redirectParam) {
@@ -49,13 +50,13 @@ const Login = () => {
       setIsSignUp(false);
     }
   }, [searchParams]);
-  useEffect(() => {
-    if (!isLoading && session) {
-      navigate(redirectTarget, {
-        replace: true
-      });
-    }
-  }, [isLoading, session, redirectTarget, navigate]);
+  if (status === "loading") {
+    return <AuthLoadingScreen />;
+  }
+
+  if (status === "authenticated" && session) {
+    return <Navigate to={redirectTarget} replace />;
+  }
   const handleToggle = (next: boolean) => {
     setIsSignUp(next);
     setLoginError(null);
@@ -87,18 +88,13 @@ const Login = () => {
     }
     setIsLoggingIn(true);
     try {
-      const {
-        error
-      } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
       if (error) {
         throw error;
       }
-      navigate(redirectTarget, {
-        replace: true
-      });
     } catch (error) {
       const message = error instanceof Error ? error.message : "La connexion a échoué.";
       setLoginError(message);
@@ -176,32 +172,6 @@ const Login = () => {
       setIsSigningUp(false);
     }
   };
-  const handleQuickAccess = (path: string) => {
-    window.location.href = path;
-  };
-  const handleLoginAsTestClient = useCallback(async () => {
-    setIsLoggingIn(true);
-    setLoginError(null);
-    try {
-      const {
-        error
-      } = await supabase.auth.signInWithPassword({
-        email: "test@rapideexpress.fr",
-        password: "TestUser2024!"
-      });
-      if (error) {
-        throw error;
-      }
-      navigate("/dashboard-client", {
-        replace: true
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "La connexion du client test a échoué.";
-      setLoginError(message);
-    } finally {
-      setIsLoggingIn(false);
-    }
-  }, [navigate]);
   return <div className="onecx-auth">
       <div className="onecx-auth__bg" aria-hidden="true" />
       <div className="onecx-auth__grid">

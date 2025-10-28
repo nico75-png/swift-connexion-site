@@ -14,7 +14,7 @@ import {
   Twitter,
 } from "lucide-react";
 
-import { useAuthProfile } from "@/providers/AuthProvider";
+import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -68,7 +68,7 @@ const ACCOUNT_PROGRESS = [
 ];
 
 const TableauDeBord = () => {
-  const { resolvedDisplayName, fallbackEmail } = useAuthProfile();
+  const { resolvedDisplayName, fallbackEmail } = useAuth();
 
   const displayName = resolvedDisplayName ?? fallbackEmail ?? "Client";
   const greeting = useMemo(() => {

@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { upsertProfile } from "@/lib/api/profiles";
-import { useAuthProfile } from "@/providers/AuthProvider";
+import { useAuth } from "@/providers/AuthProvider";
 import { toast } from "sonner";
 const heroImage = "{image_url}"; // Placez ici {image_url}
 
@@ -92,9 +92,7 @@ const normalizePhoneForSubmit = (country: (typeof COUNTRY_OPTIONS)[number], digi
 };
 const Inscription = () => {
   const navigate = useNavigate();
-  const {
-    refreshProfile
-  } = useAuthProfile();
+  const { refreshProfile } = useAuth();
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);

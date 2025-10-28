@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAuthProfile } from "@/providers/AuthProvider";
+import { useAuth } from "@/providers/AuthProvider";
 
 interface TopbarProps {
   userName?: string;
@@ -27,7 +27,7 @@ interface TopbarProps {
 const Topbar = ({ userName, title, notifications = [] }: TopbarProps) => {
   const [darkMode, setDarkMode] = useState(false);
   const unreadCount = notifications.filter(n => !n.read).length;
-  const { resolvedDisplayName, fallbackEmail } = useAuthProfile();
+  const { resolvedDisplayName, fallbackEmail } = useAuth();
   const finalName = userName ?? resolvedDisplayName ?? fallbackEmail ?? "Utilisateur";
 
   const toggleTheme = () => {

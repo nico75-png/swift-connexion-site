@@ -603,24 +603,26 @@ const CommandeSansCompte = () => {
 
     return (
       <Layout>
-        <section className="bg-[#f6f8fa] py-16">
-          <div className="container mx-auto px-4">
-            <div className="mx-auto max-w-3xl">
-              <Card className="rounded-3xl border-none bg-white/95 shadow-2xl">
+        <section className="relative overflow-hidden bg-slate-950">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),_transparent_55%)]" />
+          <div className="relative">
+            <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6 lg:px-8">
+              <Card className="rounded-2xl border border-white/10 bg-white/95 text-slate-900 shadow-xl shadow-slate-900/20 backdrop-blur">
                 <CardHeader className="space-y-4 text-center">
-                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
                     <CheckCircle2 className="h-9 w-9" aria-hidden="true" />
+                    <span className="sr-only">Commande validée</span>
                   </div>
-                  <CardTitle className="text-3xl font-semibold">Commande envoyée avec succès !</CardTitle>
+                  <CardTitle className="text-3xl font-semibold text-slate-900">Commande envoyée avec succès !</CardTitle>
                   <p className="text-base text-slate-600">
                     Nous finalisons la planification. Vous recevrez un message de confirmation avec l'heure estimée d'arrivée.
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="grid gap-4 rounded-3xl border border-emerald-100 bg-emerald-50/80 p-6 text-left">
+                  <div className="grid gap-4 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-6 text-left">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wider text-emerald-500">Référence</p>
-                      <p className="text-2xl font-bold text-emerald-600">{success.reference}</p>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600">Référence</p>
+                      <p className="text-2xl font-bold text-emerald-700">{success.reference}</p>
                     </div>
                     {success.eta ? (
                       <p className="text-sm text-emerald-700">
@@ -630,13 +632,11 @@ const CommandeSansCompte = () => {
                       <p className="text-sm text-emerald-700">Vous recevrez votre estimation d'arrivée par email.</p>
                     )}
                   </div>
-                  <div className="grid gap-4 rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
+                  <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
                     <div className="flex flex-col gap-1">
                       <span className="text-xs uppercase tracking-wider text-slate-500">Contact</span>
                       <span className="font-semibold text-slate-800">{submittedPayload.contact_name}</span>
-                      {submittedPayload.entreprise ? (
-                        <span>{submittedPayload.entreprise}</span>
-                      ) : null}
+                      {submittedPayload.entreprise ? <span>{submittedPayload.entreprise}</span> : null}
                     </div>
                     <div className="flex flex-col gap-1">
                       <span className="text-xs uppercase tracking-wider text-slate-500">Trajet</span>
@@ -685,25 +685,36 @@ const CommandeSansCompte = () => {
 
   return (
     <Layout>
-      <section className="bg-[#f6f8fa] py-16">
-        <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-6xl space-y-12">
-            <div className="text-center">
-              <span className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">Commande sans compte</span>
-              <h1 className="mt-4 text-3xl font-semibold text-slate-900 md:text-4xl">Commandez votre transport en toute simplicité</h1>
-              <p className="mt-4 text-base text-slate-600 md:text-lg">Saisissez vos informations, visualisez immédiatement le récapitulatif et validez votre demande.</p>
+      <section className="relative overflow-hidden bg-slate-950">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.22),_transparent_60%)]" />
+        <div className="relative">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-3xl text-center text-slate-100">
+              <span className="text-xs font-semibold uppercase tracking-[0.35em] text-blue-200/90">
+                Commande sans compte
+              </span>
+              <h1 className="mt-5 text-3xl font-semibold tracking-tight text-white md:text-4xl">
+                Commandez votre transport en toute fluidité
+              </h1>
+              <p className="mt-4 text-sm text-slate-200 md:text-base">
+                Saisissez vos informations, visualisez immédiatement le récapitulatif et validez votre demande.
+              </p>
             </div>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
-                <div className="grid gap-10 xl:grid-cols-[minmax(0,1fr)_380px]">
-                  <div className="space-y-10">
-                    <div className="rounded-3xl border border-white/40 bg-white p-8 shadow-[0_20px_50px_-25px_rgba(15,23,42,0.3)]">
-                      <div className="space-y-2">
-                        <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">🧍 Vos informations</p>
-                        <h2 className="text-3xl font-semibold text-slate-900">Coordonnées de contact</h2>
-                        <p className="text-sm text-slate-600">Remplissez vos informations pour une prise en charge rapide.</p>
-                      </div>
-                      <div className="mt-8 grid gap-6">
+              <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="mt-12">
+                <div className="grid gap-10 xl:grid-cols-[minmax(0,1fr)_360px]">
+                  <div className="space-y-8">
+                    <Card className="rounded-2xl border border-slate-200/70 bg-white/95 text-slate-900 shadow-xl shadow-slate-900/15 backdrop-blur">
+                      <CardHeader className="space-y-2">
+                        <p className="text-xs font-semibold uppercase tracking-[0.35em] text-blue-600">Vos informations</p>
+                        <CardTitle className="text-2xl font-semibold text-slate-900 md:text-3xl">
+                          Coordonnées de contact
+                        </CardTitle>
+                        <p className="text-sm text-slate-600">
+                          Remplissez vos informations pour une prise en charge rapide.
+                        </p>
+                      </CardHeader>
+                      <CardContent className="mt-4 grid gap-6">
                         <div className="grid gap-4 md:grid-cols-2">
                           <FormField
                             control={form.control}
@@ -771,16 +782,22 @@ const CommandeSansCompte = () => {
                             )}
                           />
                         </div>
-                      </div>
-                    </div>
+                      </CardContent>
+                    </Card>
 
-                    <div className="rounded-3xl border border-white/40 bg-white p-8 shadow-[0_20px_50px_-25px_rgba(15,23,42,0.3)]">
-                      <div className="space-y-2">
-                        <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">🚚 Détails du transport</p>
-                        <h2 className="text-2xl font-semibold text-slate-900">Planifiez votre course</h2>
-                        <p className="text-sm text-slate-600">Complétez les détails logistiques pour ajuster l'estimation en temps réel.</p>
-                      </div>
-                      <div className="mt-8 grid gap-6">
+                    <Card className="rounded-2xl border border-slate-200/70 bg-white/95 text-slate-900 shadow-xl shadow-slate-900/15 backdrop-blur">
+                      <CardHeader className="space-y-2">
+                        <p className="text-xs font-semibold uppercase tracking-[0.35em] text-blue-600">
+                          Détails du transport
+                        </p>
+                        <CardTitle className="text-2xl font-semibold text-slate-900">
+                          Planifiez votre course
+                        </CardTitle>
+                        <p className="text-sm text-slate-600">
+                          Complétez les détails logistiques pour ajuster l'estimation en temps réel.
+                        </p>
+                      </CardHeader>
+                      <CardContent className="mt-4 grid gap-6">
                         <div className="grid gap-4 md:grid-cols-2">
                           <FormField
                             control={form.control}
@@ -795,11 +812,11 @@ const CommandeSansCompte = () => {
                                   value={field.value}
                                 >
                                   <FormControl>
-                                    <SelectTrigger className="rounded-2xl border-slate-200 bg-white text-slate-700 shadow-sm">
+                                    <SelectTrigger className="rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500">
                                       <SelectValue placeholder="Sélectionnez un secteur" />
                                     </SelectTrigger>
                                   </FormControl>
-                                  <SelectContent className="rounded-2xl border border-slate-200 bg-white">
+                                  <SelectContent className="rounded-xl border border-slate-200 bg-white shadow-lg">
                                     {GUEST_SECTORS.map((sector) => (
                                       <SelectItem key={sector.id} value={sector.id}>
                                         {sector.label}
@@ -819,11 +836,11 @@ const CommandeSansCompte = () => {
                                 <FormLabel>Type de colis *</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value} disabled={!packageOptions.length}>
                                   <FormControl>
-                                    <SelectTrigger className="rounded-2xl border-slate-200 bg-white text-slate-700 shadow-sm">
+                                    <SelectTrigger className="rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500">
                                       <SelectValue placeholder="Sélectionnez un type" />
                                     </SelectTrigger>
                                   </FormControl>
-                                  <SelectContent className="rounded-2xl border border-slate-200 bg-white">
+                                  <SelectContent className="rounded-xl border border-slate-200 bg-white shadow-lg">
                                     {packageOptions.map((option) => (
                                       <SelectItem key={option.value} value={option.value}>
                                         {option.label}
@@ -961,16 +978,16 @@ const CommandeSansCompte = () => {
                             )}
                           />
                         </div>
-                        {timeDifferenceMinutes !== null && (
+                        {timeDifferenceMinutes !== null ? (
                           <p className="text-xs text-slate-600">
                             <span className="font-medium">Délai calculé : {timeDifferenceMinutes} minutes</span>
-                            {enforcedFormula && (
+                            {enforcedFormula ? (
                               <span className="ml-1">
                                 → La formule {enforcedFormula === "flash" ? "Flash Express" : "Express"} sera automatiquement appliquée.
                               </span>
-                            )}
+                            ) : null}
                           </p>
-                        )}
+                        ) : null}
                         <FormField
                           control={form.control}
                           name="deliveryDate"
@@ -983,7 +1000,7 @@ const CommandeSansCompte = () => {
                                     <Button
                                       variant="outline"
                                       className={cn(
-                                        "justify-start rounded-2xl border-slate-200 bg-white text-left font-normal text-slate-700",
+                                        "justify-start rounded-xl border border-slate-200 bg-white text-left font-normal text-slate-900 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500",
                                         !field.value && "text-slate-400",
                                       )}
                                     >
@@ -992,7 +1009,7 @@ const CommandeSansCompte = () => {
                                     </Button>
                                   </FormControl>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto rounded-2xl border border-slate-200 bg-white p-2" align="start">
+                                <PopoverContent className="w-auto rounded-xl border border-slate-200 bg-white p-3 shadow-lg" align="start">
                                   <Calendar
                                     mode="single"
                                     selected={field.value}
@@ -1026,12 +1043,12 @@ const CommandeSansCompte = () => {
                                       key={formulaOption.id}
                                       htmlFor={`formula-${formulaOption.id}`}
                                       className={cn(
-                                        "flex cursor-pointer flex-col gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm shadow-sm transition",
+                                        "flex cursor-pointer flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm shadow-sm transition",
                                         field.value === formulaOption.id
-                                          ? "border-yellow-400 bg-yellow-50 text-slate-900 shadow-md"
+                                          ? "border-blue-500 bg-blue-50 text-slate-900 shadow-md"
                                           : "hover:border-slate-300 hover:bg-white",
                                         isOptionLocked &&
-                                          "cursor-not-allowed opacity-60 hover:border-slate-200 hover:bg-slate-50",
+                                          "cursor-not-allowed opacity-60 hover:border-slate-200 hover:bg-slate-50/80",
                                       )}
                                     >
                                       <RadioGroupItem
@@ -1047,7 +1064,7 @@ const CommandeSansCompte = () => {
                                 })}
                               </RadioGroup>
                               {formulaLockMessage ? (
-                                <p className="mt-2 text-xs font-medium text-slate-500">{formulaLockMessage}</p>
+                                <p className="mt-2 text-xs font-medium text-slate-600">{formulaLockMessage}</p>
                               ) : (
                                 <p className="mt-2 text-xs text-slate-500">
                                   Choisissez librement la formule si aucun délai n'est imposé.
@@ -1057,17 +1074,19 @@ const CommandeSansCompte = () => {
                             </FormItem>
                           )}
                         />
-                      </div>
-                    </div>
+                      </CardContent>
+                    </Card>
                   </div>
 
-                  <aside className="xl:sticky xl:top-5 xl:self-start">
-                    <div className="w-full rounded-3xl border border-slate-200/80 bg-white/95 p-3.5 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.45)] transition-all duration-300 xl:max-w-[420px] xl:min-w-[360px]">
-                      <div className="space-y-0.5">
-                        <h2 className="text-base font-semibold text-slate-900">✅ Récapitulatif instantané</h2>
+                  <aside className="xl:sticky xl:top-6 xl:self-start">
+                    <Card className="w-full rounded-2xl border border-slate-200/70 bg-white/95 p-6 text-slate-900 shadow-xl shadow-slate-900/20 backdrop-blur xl:max-w-[420px] xl:min-w-[340px]">
+                      <CardHeader className="space-y-1 p-0">
+                        <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-900">
+                          <span aria-hidden="true">✅</span> Récapitulatif instantané
+                        </CardTitle>
                         <p className="text-xs text-slate-500">Visualisez vos informations avant validation.</p>
-                      </div>
-                      <div className="mt-3 space-y-2 text-sm text-slate-600">
+                      </CardHeader>
+                      <CardContent className="mt-4 space-y-4 p-0 text-sm text-slate-600">
                         <div className="space-y-1">
                           <div className="space-y-0.5">
                             <p className="text-[11px] uppercase tracking-wide text-slate-500">Nom complet</p>
@@ -1083,24 +1102,20 @@ const CommandeSansCompte = () => {
                           </div>
                         </div>
                         <div className="h-px bg-slate-200" />
-                        <div className="space-y-1">
-                          <div className="space-y-0.5">
-                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Lieu d'enlèvement</p>
-                            <p className="font-medium text-slate-900">{pickupAddressDisplay}</p>
-                          </div>
-                          <div className="space-y-0.5">
-                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Lieu de livraison</p>
-                            <p className="font-medium text-slate-900">{dropoffAddressDisplay}</p>
-                          </div>
+                        <div className="space-y-0.5">
+                          <p className="text-[11px] uppercase tracking-wide text-slate-500">Lieu d'enlèvement</p>
+                          <p className="font-medium text-slate-900">{pickupAddressDisplay}</p>
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-[11px] uppercase tracking-wide text-slate-500">Lieu de livraison</p>
+                          <p className="font-medium text-slate-900">{dropoffAddressDisplay}</p>
                         </div>
                         <div className="h-px bg-slate-200" />
                         <div className="grid gap-1">
                           <div className="space-y-0.5">
                             <p className="text-[11px] uppercase tracking-wide text-slate-500">Secteur choisi</p>
                             <p className="font-medium text-slate-900">{sectorLabel}</p>
-                            {sectorDescription ? (
-                              <p className="text-xs text-slate-500">{sectorDescription}</p>
-                            ) : null}
+                            {sectorDescription ? <p className="text-xs text-slate-500">{sectorDescription}</p> : null}
                           </div>
                           <div className="space-y-0.5">
                             <p className="text-[11px] uppercase tracking-wide text-slate-500">Type de colis</p>
@@ -1142,7 +1157,7 @@ const CommandeSansCompte = () => {
                             <p className="font-medium text-slate-900">{deliveryDateDisplay}</p>
                           </div>
                         </div>
-                        <div className="space-y-1.5 rounded-3xl border border-emerald-200 bg-emerald-50/80 p-2.5 text-slate-700">
+                        <div className="space-y-1.5 rounded-2xl border border-emerald-200/80 bg-emerald-50/80 p-3 text-slate-700">
                           <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-600">TOTAL ESTIMÉ</p>
                           <p className="text-2xl font-bold text-emerald-700">{totalDisplay}</p>
                           <p className="text-xs">Estimation indicative selon vos informations. Le tarif final sera confirmé par nos équipes.</p>
@@ -1158,7 +1173,7 @@ const CommandeSansCompte = () => {
                           type="submit"
                           variant="cta"
                           disabled={isSubmitting}
-                          className="w-full rounded-full px-6 py-4 text-sm font-semibold text-slate-900"
+                          className="w-full rounded-xl px-6 py-4 text-sm font-semibold"
                         >
                           {isSubmitting ? (
                             <span className="flex items-center justify-center gap-2">
@@ -1169,9 +1184,11 @@ const CommandeSansCompte = () => {
                             "Valider ma commande"
                           )}
                         </Button>
-                        <p className="text-center text-[11px] text-slate-500">Pas de mot de passe, pas d'inscription : vous serez recontacté(e) dès validation de la demande.</p>
-                      </div>
-                    </div>
+                        <p className="text-center text-[11px] text-slate-500">
+                          Pas de mot de passe, pas d'inscription : vous serez recontacté(e) dès validation de la demande.
+                        </p>
+                      </CardContent>
+                    </Card>
                   </aside>
                 </div>
               </form>

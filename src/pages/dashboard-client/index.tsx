@@ -358,7 +358,7 @@ const DashboardClient = () => {
         </div>
 
         {/* Top bar */}
-        <header className="flex flex-col gap-3 border-b border-slate-200/80 bg-white/70 px-6 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-end">
+        <header className="flex min-h-[48px] flex-col gap-2 border-b border-slate-200/80 bg-gradient-to-r from-indigo-500/12 via-blue-500/10 to-indigo-500/12 px-4 py-2 backdrop-blur sm:flex-row sm:items-center sm:justify-end">
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-end sm:gap-4">
             <div className="flex items-center gap-4">
               <div className="relative" ref={notificationsRef}>
@@ -372,7 +372,7 @@ const DashboardClient = () => {
                 >
                   <Bell className="h-5 w-5" aria-hidden="true" />
                   {unreadCount > 0 ? (
-                    <span className="absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 px-1 text-[10px] font-semibold text-white shadow-sm">
+                    <span className="absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 px-1 text-[10px] font-semibold text-white shadow-sm">
                       {unreadCount}
                     </span>
                   ) : null}
@@ -383,65 +383,73 @@ const DashboardClient = () => {
                   {isNotificationsOpen ? (
                     <motion.div
                       id="dashboard-notifications-menu"
-                      initial={{ opacity: 0, y: -8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
+                      initial={{ opacity: 0, scale: 0.92, y: -6 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.96, y: -6 }}
                       transition={{ duration: 0.18, ease: "easeOut" }}
-                      className="absolute right-0 z-50 mt-3 w-80 origin-top-right rounded-2xl bg-white/95 shadow-xl ring-1 ring-slate-200/60 backdrop-blur-sm focus:outline-none"
+                      className="absolute left-1/2 z-50 mt-3 w-[18rem] max-w-xs -translate-x-1/2 origin-top rounded-lg border border-slate-100 bg-white text-slate-900 shadow-lg ring-1 ring-slate-200/60 focus:outline-none"
                       tabIndex={-1}
                     >
-                      <div className="rounded-t-2xl bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500 p-4 text-white">
+                      <span
+                        className="pointer-events-none absolute left-1/2 top-0 h-3 w-3 -translate-y-1/2 -translate-x-1/2 rotate-45 rounded-[2px] border border-slate-100 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.08)]"
+                        aria-hidden="true"
+                      />
+                      <div className="rounded-t-lg px-4 pb-3 pt-4">
                         <div className="flex items-center gap-3">
-                          <div className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-white">
+                          <div className="relative inline-flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 text-indigo-500">
                             <BellRing className="h-5 w-5" aria-hidden="true" />
                             {unreadCount > 0 ? (
-                              <span className="absolute -top-1 -right-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white">
+                              <span className="absolute -top-1 -right-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white shadow-sm">
                                 {unreadCount}
                               </span>
                             ) : null}
                           </div>
-                          <div>
-                            <p className="text-sm font-semibold">🔔 {unreadCount} Notifications</p>
-                            <p className="text-xs text-white/80">Voici les dernières actualités de votre compte</p>
+                          <div className="flex flex-col">
+                            <p className="text-[14px] font-semibold text-slate-900">🔔 {unreadCount} notifications</p>
+                            <p className="text-[12px] text-slate-500">Dernières actualités de votre compte</p>
                           </div>
                         </div>
                       </div>
 
-                      <div className="max-h-80 overflow-y-auto p-3" role="menu" aria-label="Notifications récentes">
+                      <div
+                        className="max-h-72 space-y-2 overflow-y-auto px-2 pb-2 pt-1"
+                        role="menu"
+                        aria-label="Notifications récentes"
+                      >
                         {notifications.length > 0 ? (
                           notifications.map((notification) => (
                             <button
                               key={notification.id}
                               type="button"
-                              className="group flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 hover:bg-slate-100/70"
+                              className="group flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-colors duration-150 hover:bg-[#F7F9FC] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
                               role="menuitem"
                               data-notification-item
                               onClick={() => setIsNotificationsOpen(false)}
                             >
-                              <span className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">
+                              <span className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-100 text-slate-600">
                                 {notification.icon}
                               </span>
                               <span className="flex-1">
-                                <span className="block text-sm font-medium text-slate-900">
+                                <span className="block text-[14px] font-semibold text-slate-900">
                                   {notification.title}
                                 </span>
-                                <span className="mt-0.5 block text-xs text-slate-500">
+                                <span className="mt-0.5 block text-[12px] text-slate-500">
                                   {notification.description}
                                 </span>
                               </span>
                             </button>
                           ))
                         ) : (
-                          <div className="flex items-center justify-center rounded-xl bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                          <div className="flex items-center justify-center rounded-md bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
                             Aucune notification pour le moment 🎉
                           </div>
                         )}
                       </div>
 
-                      <div className="border-t border-slate-200/70 bg-slate-50/80 p-3 text-right">
+                      <div className="border-t border-slate-200/70 bg-slate-50/70 px-3 py-2 text-right">
                         <button
                           type="button"
-                          className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
+                          className="inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
                           onClick={() => setIsNotificationsOpen(false)}
                         >
                           Voir toutes les notifications

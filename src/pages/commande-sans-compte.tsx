@@ -1,13 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { AnimatePresence, motion } from "framer-motion";
+import { useForm, useWatch, type FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   CalendarIcon,
+  CheckCircle,
   CheckCircle2,
   Loader2,
+  Package,
+  Truck,
+  type LucideIcon,
 } from "lucide-react";
 
 import Layout from "@/components/layout/Layout";
@@ -48,6 +53,15 @@ declare global {
 type ShippingFormula = "standard" | "express" | "eco" | "flash";
 type ManualShippingFormula = Exclude<ShippingFormula, "flash">;
 
+type StepId = 1 | 2 | 3;
+
+type StepDefinition = {
+  id: StepId;
+  title: string;
+  description: string;
+  icon: LucideIcon;
+};
+
 type EstimateSurcharge = {
   label: string;
   amount: number;
@@ -85,7 +99,9 @@ type GuestOrderSuccess = {
   eta?: string | null;
 };
 
-const phoneRegex = /^(?:\+33|0)[1-9](?:[ .-]?\d{2}){4}$/;
+const phoneRegex = /^(?:(?:\+|00)33|0)\s*[1-9](?:[\s.-]*\d{2}){4}$/;
+const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+const siretRegex = /^\d{14}$/;
 
 const guestOrderSchema = z
   .object({
@@ -97,14 +113,21 @@ const guestOrderSchema = z
     company: z
       .string()
       .trim()
-      .max(120, "Nom de la société trop long")
+      .max(200, "Nom de la société trop longue")
       .optional()
-      .or(z.literal("")),
+      .or(z.literal(""))
+      .refine((value) => {
+        if (!value) {
+          return true;
+        }
+        return value.length >= 2;
+      }, "Nom de la société trop court (2 caractères minimum)"),
     email: z
       .string()
       .trim()
       .toLowerCase()
-      .email("Email invalide"),
+      .email("Email invalide")
+      .max(255, "Email trop long"),
     phone: z
       .string()
       .trim()
@@ -117,7 +140,7 @@ const guestOrderSchema = z
       .refine((value) => {
         if (!value) return true;
         const sanitized = value.replace(/\s+/g, "");
-        return /^[0-9A-Za-z]{9,20}$/.test(sanitized);
+        return siretRegex.test(sanitized);
       }, "Numéro de SIRET invalide"),
     sector: z.custom<GuestSectorKey>(),
     packageType: z.string().min(1, "Type de colis requis"),
@@ -129,11 +152,13 @@ const guestOrderSchema = z
     pickupAddress: z
       .string()
       .trim()
-      .min(5, "Adresse de départ requise"),
+      .min(5, "Adresse de départ requise")
+      .max(300, "Adresse trop longue"),
     dropoffAddress: z
       .string()
       .trim()
-      .min(5, "Adresse d'arrivée requise"),
+      .min(5, "Adresse d'arrivée requise")
+      .max(300, "Adresse trop longue"),
     weightKg: z.coerce
       .number({ invalid_type_error: "Poids requis" })
       .min(0.1, "Poids minimum 0,1 kg"),
@@ -150,12 +175,20 @@ const guestOrderSchema = z
       .string()
       .trim()
       .optional()
-      .or(z.literal("")),
+      .or(z.literal(""))
+      .refine((value) => {
+        if (!value) return true;
+        return timeRegex.test(value);
+      }, "Heure invalide (format HH:MM)"),
     deliveryTime: z
       .string()
       .trim()
       .optional()
-      .or(z.literal("")),
+      .or(z.literal(""))
+      .refine((value) => {
+        if (!value) return true;
+        return timeRegex.test(value);
+      }, "Heure invalide (format HH:MM)"),
     deliveryDate: z.date({ required_error: "Date de livraison requise" }),
     formula: z.enum(["standard", "express", "eco", "flash"]),
   })
@@ -215,6 +248,27 @@ const shippingFormulas: Array<{ id: ShippingFormula; title: string; description:
   },
 ];
 
+const stepsConfig: StepDefinition[] = [
+  {
+    id: 1,
+    title: "Informations entreprise",
+    description: "Coordonnées de facturation et de contact.",
+    icon: Package,
+  },
+  {
+    id: 2,
+    title: "Détails de livraison",
+    description: "Logistique, colis et planification.",
+    icon: Truck,
+  },
+  {
+    id: 3,
+    title: "Formule & confirmation",
+    description: "Choisissez la formule puis validez.",
+    icon: CheckCircle,
+  },
+];
+
 const sanitizeValue = (value: string) => value.replace(/[<>"'`]/g, "").trim();
 
 const buildPayload = (values: GuestOrderFormValues): GuestOrderPayload => {
@@ -261,12 +315,49 @@ const CommandeSansCompte = () => {
   const [success, setSuccess] = useState<GuestOrderSuccess | null>(null);
   const [submittedPayload, setSubmittedPayload] = useState<GuestOrderPayload | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentStep, setCurrentStep] = useState<StepId>(1);
 
   const form = useForm<GuestOrderFormValues>({
     resolver: zodResolver(guestOrderSchema),
     defaultValues,
-    mode: "onBlur",
+    mode: "onChange",
+    reValidateMode: "onChange",
   });
+
+  const stepFieldMap = useMemo(
+    () => ({
+      1: ["fullName", "company", "siret", "email", "phone"] as FieldPath<GuestOrderFormValues>[],
+      2: [
+        "sector",
+        "packageType",
+        "otherPackage",
+        "pickupAddress",
+        "dropoffAddress",
+        "weightKg",
+        "lengthCm",
+        "widthCm",
+        "heightCm",
+        "pickupTime",
+        "deliveryTime",
+        "deliveryDate",
+      ] as FieldPath<GuestOrderFormValues>[],
+      3: ["formula"] as FieldPath<GuestOrderFormValues>[],
+    }),
+    [],
+  );
+
+  const handleNextStep = useCallback(async () => {
+    const fields = stepFieldMap[currentStep];
+    const isValid = await form.trigger(fields, { shouldFocus: true });
+
+    if (isValid) {
+      setCurrentStep((previous) => (previous >= 3 ? previous : ((previous + 1) as StepId)));
+    }
+  }, [currentStep, form, stepFieldMap]);
+
+  const handlePreviousStep = useCallback(() => {
+    setCurrentStep((previous) => (previous <= 1 ? previous : ((previous - 1) as StepId)));
+  }, []);
 
   const formWatchValues = useWatch({ control: form.control }) as Partial<GuestOrderFormValues> | undefined;
 
@@ -567,7 +658,9 @@ const CommandeSansCompte = () => {
         const reference = data.reference ?? generateLocalReference();
         setSubmittedPayload(payload);
         setSuccess({ reference, eta: data.eta ?? null });
-        toast.success("Votre commande a été créée.");
+        toast.success("Commande confirmée !", {
+          description: "Vous recevrez un e-mail de confirmation sous peu.",
+        });
       } catch (error) {
         console.error(error);
         toast.error("Impossible de valider la commande pour le moment.");
@@ -672,8 +765,7 @@ const CommandeSansCompte = () => {
     ? `${estimate.total.toFixed(2)} €`
     : estimateLoading
       ? "Calcul en cours…"
-      : "100 €";
-
+      : "—";
   const sectorLabel = summarySectorLabel;
   const sectorDescription = summarySectorDescription;
   const packageLabel = summaryPackageLabel;
@@ -682,14 +774,50 @@ const CommandeSansCompte = () => {
   const siretDisplay = watchedValues.siret?.trim() || "—";
   const pickupAddressDisplay = watchedValues.pickupAddress?.trim() || "—";
   const dropoffAddressDisplay = watchedValues.dropoffAddress?.trim() || "—";
+  const emailDisplay = watchedValues.email?.trim() || "—";
+  const phoneDisplay = watchedValues.phone?.trim() || "—";
+  const currentStepDefinition =
+    stepsConfig.find((step) => step.id === currentStep) ?? stepsConfig[0];
+  const progressPercentage = Math.min(
+    100,
+    Math.max(0, (currentStep / stepsConfig.length) * 100),
+  );
+  const otherPackageDisplay =
+    watchedValues.packageType === "autre"
+      ? watchedValues.otherPackage?.trim() || "—"
+      : null;
+  const packageSummaryDisplay =
+    otherPackageDisplay && otherPackageDisplay !== "—"
+      ? (packageLabel !== "—" ? `${packageLabel} · ${otherPackageDisplay}` : otherPackageDisplay)
+      : packageLabel;
+
+  const getStepBadgeLabel = (stepId: StepId): string => {
+    if (currentStep > stepId) {
+      return "Terminé";
+    }
+    if (currentStep === stepId) {
+      return "En cours";
+    }
+    return "À compléter";
+  };
+
+  const getStepBadgeClasses = (stepId: StepId): string => {
+    if (currentStep > stepId) {
+      return "bg-emerald-100 text-emerald-700";
+    }
+    if (currentStep === stepId) {
+      return "bg-blue-100 text-blue-700";
+    }
+    return "bg-slate-100 text-slate-500";
+  };
 
   return (
     <Layout>
       <section className="relative overflow-hidden bg-slate-950">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.22),_transparent_60%)]" />
         <div className="relative">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-3xl text-center text-slate-100">
+          <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-3xl text-center text-slate-100 animate-slide-up">
               <span className="text-xs font-semibold uppercase tracking-[0.35em] text-blue-200/90">
                 Commande sans compte
               </span>
@@ -697,496 +825,676 @@ const CommandeSansCompte = () => {
                 Commandez votre transport en toute fluidité
               </h1>
               <p className="mt-4 text-sm text-slate-200 md:text-base">
-                Saisissez vos informations, visualisez immédiatement le récapitulatif et validez votre demande.
+                Saisissez vos informations, visualisez le récapitulatif et validez votre demande en trois étapes.
               </p>
             </div>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="mt-12">
-                <div className="grid gap-10 xl:grid-cols-[minmax(0,1fr)_360px]">
-                  <div className="space-y-8">
-                    <Card className="rounded-2xl border border-slate-200/70 bg-white/95 text-slate-900 shadow-xl shadow-slate-900/15 backdrop-blur">
-                      <CardHeader className="space-y-2">
-                        <p className="text-xs font-semibold uppercase tracking-[0.35em] text-blue-600">Vos informations</p>
-                        <CardTitle className="text-2xl font-semibold text-slate-900 md:text-3xl">
-                          Coordonnées de contact
-                        </CardTitle>
-                        <p className="text-sm text-slate-600">
-                          Remplissez vos informations pour une prise en charge rapide.
-                        </p>
-                      </CardHeader>
-                      <CardContent className="mt-4 grid gap-6">
-                        <div className="grid gap-4 md:grid-cols-2">
-                          <FormField
-                            control={form.control}
-                            name="fullName"
-                            render={({ field }) => (
-                              <FormItem className="md:col-span-2">
-                                <FormLabel>Nom complet *</FormLabel>
-                                <FormControl>
-                                  <Input {...field} autoComplete="name" placeholder="Jean Dupont" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="company"
-                            render={({ field }) => (
-                              <FormItem className="md:col-span-2">
-                                <FormLabel>Nom de la société (facultatif)</FormLabel>
-                                <FormControl>
-                                  <Input {...field} autoComplete="organization" placeholder="Swift Connexion" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="email"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Email *</FormLabel>
-                                <FormControl>
-                                  <Input {...field} type="email" autoComplete="email" placeholder="vous@exemple.com" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="phone"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Téléphone *</FormLabel>
-                                <FormControl>
-                                  <Input {...field} type="tel" autoComplete="tel" placeholder="06 12 34 56 78" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="siret"
-                            render={({ field }) => (
-                              <FormItem className="md:col-span-2">
-                                <FormLabel>Numéro de SIRET</FormLabel>
-                                <FormControl>
-                                  <Input {...field} inputMode="numeric" placeholder="123 456 789 00010" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="rounded-2xl border border-slate-200/70 bg-white/95 text-slate-900 shadow-xl shadow-slate-900/15 backdrop-blur">
-                      <CardHeader className="space-y-2">
-                        <p className="text-xs font-semibold uppercase tracking-[0.35em] text-blue-600">
-                          Détails du transport
-                        </p>
-                        <CardTitle className="text-2xl font-semibold text-slate-900">
-                          Planifiez votre course
-                        </CardTitle>
-                        <p className="text-sm text-slate-600">
-                          Complétez les détails logistiques pour ajuster l'estimation en temps réel.
-                        </p>
-                      </CardHeader>
-                      <CardContent className="mt-4 grid gap-6">
-                        <div className="grid gap-4 md:grid-cols-2">
-                          <FormField
-                            control={form.control}
-                            name="sector"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Secteur *</FormLabel>
-                                <Select
-                                  onValueChange={(value) => {
-                                    field.onChange(value as GuestSectorKey);
-                                  }}
-                                  value={field.value}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger className="rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500">
-                                      <SelectValue placeholder="Sélectionnez un secteur" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent className="rounded-xl border border-slate-200 bg-white shadow-lg">
-                                    {GUEST_SECTORS.map((sector) => (
-                                      <SelectItem key={sector.id} value={sector.id}>
-                                        {sector.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="packageType"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Type de colis *</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value} disabled={!packageOptions.length}>
-                                  <FormControl>
-                                    <SelectTrigger className="rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500">
-                                      <SelectValue placeholder="Sélectionnez un type" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent className="rounded-xl border border-slate-200 bg-white shadow-lg">
-                                    {packageOptions.map((option) => (
-                                      <SelectItem key={option.value} value={option.value}>
-                                        {option.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        {watchedValues.packageType === "autre" ? (
-                          <FormField
-                            control={form.control}
-                            name="otherPackage"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Précision sur le colis *</FormLabel>
-                                <FormControl>
-                                  <Input {...field} placeholder="Décrivez le contenu" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        ) : null}
-                        <FormField
-                          control={form.control}
-                          name="pickupAddress"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Adresse complète du lieu d'enlèvement *</FormLabel>
-                              <FormControl>
-                                <Input {...field} autoComplete="street-address" placeholder="123 Rue de Paris, 75001 Paris" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="dropoffAddress"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Adresse complète du lieu de livraison *</FormLabel>
-                              <FormControl>
-                                <Input {...field} autoComplete="street-address" placeholder="45 Avenue Victor Hugo, 92100 Boulogne" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <div className="grid gap-4 md:grid-cols-[1fr_1fr]">
-                          <FormField
-                            control={form.control}
-                            name="weightKg"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Poids du colis (kg) *</FormLabel>
-                                <FormControl>
-                                  <Input {...field} type="number" step="0.1" min={0.1} inputMode="decimal" placeholder="0.5" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <div className="grid gap-4 md:grid-cols-3">
-                            <FormField
-                              control={form.control}
-                              name="lengthCm"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Longueur (cm) *</FormLabel>
-                                  <FormControl>
-                                    <Input {...field} type="number" min={1} inputMode="numeric" placeholder="30" />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name="widthCm"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Largeur (cm) *</FormLabel>
-                                  <FormControl>
-                                    <Input {...field} type="number" min={1} inputMode="numeric" placeholder="20" />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name="heightCm"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Hauteur (cm) *</FormLabel>
-                                  <FormControl>
-                                    <Input {...field} type="number" min={1} inputMode="numeric" placeholder="15" />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                        </div>
-                        <div className="grid gap-4 md:grid-cols-2">
-                          <FormField
-                            control={form.control}
-                            name="pickupTime"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Heure d'enlèvement prévue</FormLabel>
-                                <FormControl>
-                                  <Input {...field} type="time" placeholder="08:30" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="deliveryTime"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Heure de livraison prévue</FormLabel>
-                                <FormControl>
-                                  <Input {...field} type="time" placeholder="12:00" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        {timeDifferenceMinutes !== null ? (
-                          <p className="text-xs text-slate-600">
-                            <span className="font-medium">Délai calculé : {timeDifferenceMinutes} minutes</span>
-                            {enforcedFormula ? (
-                              <span className="ml-1">
-                                → La formule {enforcedFormula === "flash" ? "Flash Express" : "Express"} sera automatiquement appliquée.
-                              </span>
-                            ) : null}
-                          </p>
-                        ) : null}
-                        <FormField
-                          control={form.control}
-                          name="deliveryDate"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                              <FormLabel>Date souhaitée *</FormLabel>
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <FormControl>
-                                    <Button
-                                      variant="outline"
-                                      className={cn(
-                                        "justify-start rounded-xl border border-slate-200 bg-white text-left font-normal text-slate-900 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500",
-                                        !field.value && "text-slate-400",
-                                      )}
-                                    >
-                                      <CalendarIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-                                      {field.value ? format(field.value, "PPP", { locale: fr }) : "Choisir une date"}
-                                    </Button>
-                                  </FormControl>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto rounded-xl border border-slate-200 bg-white p-3 shadow-lg" align="start">
-                                  <Calendar
-                                    mode="single"
-                                    selected={field.value}
-                                    onSelect={field.onChange}
-                                    initialFocus
-                                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                                  />
-                                </PopoverContent>
-                              </Popover>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="formula"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Formule souhaitée *</FormLabel>
-                              <RadioGroup
-                                onValueChange={field.onChange}
-                                value={field.value}
-                                className="grid gap-3 md:grid-cols-3"
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                noValidate
+                className="mt-12"
+                onKeyDown={(event) => {
+                  if (
+                    event.key === "Enter" &&
+                    !event.shiftKey &&
+                    currentStep < stepsConfig.length
+                  ) {
+                    event.preventDefault();
+                    void handleNextStep();
+                  }
+                }}
+              >
+                <div className="grid gap-8 md:grid-cols-3">
+                  <div className="space-y-6 md:col-span-2">
+                    <div className="rounded-3xl border border-white/10 bg-white/10 p-6 text-white shadow-[0_40px_120px_-60px_rgba(59,130,246,0.65)] backdrop-blur">
+                      <ol className="grid gap-4 md:grid-cols-3 md:gap-6">
+                        {stepsConfig.map((step) => {
+                          const Icon = step.icon;
+                          const isActive = currentStep === step.id;
+                          return (
+                            <li key={step.id} className="space-y-2">
+                              <div
+                                className={cn(
+                                  "flex items-start gap-3 rounded-2xl border border-white/10 bg-white/10 p-4 transition-smooth",
+                                  isActive ? "border-white/30 bg-white/20" : "opacity-80 hover:opacity-100",
+                                )}
                               >
-                                {formulasToDisplay.map((formulaOption) => {
-                                  const isOptionLocked =
-                                    isFormulaLocked && enforcedFormula && formulaOption.id !== enforcedFormula;
-
-                                  return (
-                                    <Label
-                                      key={formulaOption.id}
-                                      htmlFor={`formula-${formulaOption.id}`}
-                                      className={cn(
-                                        "flex cursor-pointer flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm shadow-sm transition",
-                                        field.value === formulaOption.id
-                                          ? "border-blue-500 bg-blue-50 text-slate-900 shadow-md"
-                                          : "hover:border-slate-300 hover:bg-white",
-                                        isOptionLocked &&
-                                          "cursor-not-allowed opacity-60 hover:border-slate-200 hover:bg-slate-50/80",
-                                      )}
-                                    >
-                                      <RadioGroupItem
-                                        value={formulaOption.id}
-                                        id={`formula-${formulaOption.id}`}
-                                        className="sr-only"
-                                        disabled={isOptionLocked}
-                                      />
-                                      <span className="font-semibold">{formulaOption.title}</span>
-                                      <span className="text-xs text-slate-500">{formulaOption.description}</span>
-                                    </Label>
-                                  );
-                                })}
-                              </RadioGroup>
-                              {formulaLockMessage ? (
-                                <p className="mt-2 text-xs font-medium text-slate-600">{formulaLockMessage}</p>
-                              ) : (
-                                <p className="mt-2 text-xs text-slate-500">
-                                  Choisissez librement la formule si aucun délai n'est imposé.
-                                </p>
-                              )}
-                              <FormMessage />
-                            </FormItem>
-                          )}
+                                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white">
+                                  <Icon className="h-5 w-5" aria-hidden="true" />
+                                </span>
+                                <div className="flex-1 space-y-1">
+                                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/70">
+                                    Étape {step.id}
+                                  </p>
+                                  <p className="text-sm font-semibold text-white">{step.title}</p>
+                                  <p className="text-xs text-white/70">{step.description}</p>
+                                </div>
+                              </div>
+                              <span
+                                className={cn(
+                                  "inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold transition-smooth",
+                                  getStepBadgeClasses(step.id),
+                                )}
+                              >
+                                {getStepBadgeLabel(step.id)}
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ol>
+                      <div className="mt-6 h-1.5 w-full overflow-hidden rounded-full bg-white/15">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-blue-400 via-indigo-400 to-sky-400 transition-all duration-500 ease-out"
+                          style={{ width: `${progressPercentage}%` }}
+                          aria-hidden="true"
                         />
-                      </CardContent>
-                    </Card>
-                  </div>
+                      </div>
+                    </div>
 
-                  <aside className="xl:sticky xl:top-6 xl:self-start">
-                    <Card className="w-full rounded-2xl border border-slate-200/70 bg-white/95 p-6 text-slate-900 shadow-xl shadow-slate-900/20 backdrop-blur xl:max-w-[420px] xl:min-w-[340px]">
-                      <CardHeader className="space-y-1 p-0">
-                        <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-900">
-                          <span aria-hidden="true">✅</span> Récapitulatif instantané
-                        </CardTitle>
-                        <p className="text-xs text-slate-500">Visualisez vos informations avant validation.</p>
-                      </CardHeader>
-                      <CardContent className="mt-4 space-y-4 p-0 text-sm text-slate-600">
-                        <div className="space-y-1">
-                          <div className="space-y-0.5">
-                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Nom complet</p>
-                            <p className="font-medium text-slate-900">{fullNameDisplay}</p>
-                          </div>
-                          <div className="space-y-0.5">
-                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Nom de la société</p>
-                            <p className="font-medium text-slate-900">{companyDisplay}</p>
-                          </div>
-                          <div className="space-y-0.5">
-                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Numéro de SIRET</p>
-                            <p className="font-medium text-slate-900">{siretDisplay}</p>
-                          </div>
-                        </div>
-                        <div className="h-px bg-slate-200" />
-                        <div className="space-y-0.5">
-                          <p className="text-[11px] uppercase tracking-wide text-slate-500">Lieu d'enlèvement</p>
-                          <p className="font-medium text-slate-900">{pickupAddressDisplay}</p>
-                        </div>
-                        <div className="space-y-0.5">
-                          <p className="text-[11px] uppercase tracking-wide text-slate-500">Lieu de livraison</p>
-                          <p className="font-medium text-slate-900">{dropoffAddressDisplay}</p>
-                        </div>
-                        <div className="h-px bg-slate-200" />
-                        <div className="grid gap-1">
-                          <div className="space-y-0.5">
-                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Secteur choisi</p>
-                            <p className="font-medium text-slate-900">{sectorLabel}</p>
-                            {sectorDescription ? <p className="text-xs text-slate-500">{sectorDescription}</p> : null}
-                          </div>
-                          <div className="space-y-0.5">
-                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Type de colis</p>
-                            <p className="font-medium text-slate-900">{packageLabel}</p>
-                          </div>
-                          <div className="space-y-0.5">
-                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Poids du colis</p>
-                            <p className="font-medium text-slate-900">{weightDisplay}</p>
-                          </div>
-                          <div className="space-y-0.5">
-                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Dimensions</p>
-                            <p className="font-medium text-slate-900">{dimensionsDisplay}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Formule appliquée</p>
-                            <div
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={currentStep}
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -16 }}
+                        transition={{ duration: 0.3, ease: "easeOut" }}
+                        className="animate-slide-up"
+                      >
+                        <Card className="rounded-3xl border border-slate-200/80 bg-white/95 text-slate-900 shadow-xl shadow-slate-900/15">
+                          <CardHeader className="space-y-2">
+                            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-blue-600">
+                              {`Étape ${currentStep}`}
+                            </p>
+                            <CardTitle className="text-2xl font-semibold text-slate-900 md:text-3xl">
+                              {currentStepDefinition.title}
+                            </CardTitle>
+                            <p className="text-sm text-slate-600">{currentStepDefinition.description}</p>
+                          </CardHeader>
+                          <CardContent className="mt-4 space-y-6">
+                            {currentStep === 1 ? (
+                              <div className="grid gap-4 md:grid-cols-2">
+                                <FormField
+                                  control={form.control}
+                                  name="fullName"
+                                  render={({ field }) => (
+                                    <FormItem className="md:col-span-2">
+                                      <FormLabel>Nom complet *</FormLabel>
+                                      <FormControl>
+                                        <Input {...field} autoComplete="name" placeholder="Jean Dupont" />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={form.control}
+                                  name="company"
+                                  render={({ field }) => (
+                                    <FormItem className="md:col-span-2">
+                                      <FormLabel>Nom de la société</FormLabel>
+                                      <FormControl>
+                                        <Input {...field} autoComplete="organization" placeholder="One Connexion" />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={form.control}
+                                  name="siret"
+                                  render={({ field }) => (
+                                    <FormItem className="md:col-span-2">
+                                      <FormLabel>Numéro de SIRET</FormLabel>
+                                      <FormControl>
+                                        <Input {...field} inputMode="numeric" placeholder="12345678900010" />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={form.control}
+                                  name="email"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Adresse e-mail *</FormLabel>
+                                      <FormControl>
+                                        <Input {...field} type="email" autoComplete="email" placeholder="vous@exemple.com" />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={form.control}
+                                  name="phone"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Numéro de téléphone *</FormLabel>
+                                      <FormControl>
+                                        <Input {...field} type="tel" autoComplete="tel" placeholder="06 12 34 56 78" />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+                            ) : null}
+
+                            {currentStep === 2 ? (
+                              <div className="space-y-6">
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <FormField
+                                    control={form.control}
+                                    name="sector"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Secteur *</FormLabel>
+                                        <Select
+                                          onValueChange={(value) => {
+                                            field.onChange(value as GuestSectorKey);
+                                          }}
+                                          value={field.value}
+                                        >
+                                          <FormControl>
+                                            <SelectTrigger className="rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500">
+                                              <SelectValue placeholder="Sélectionnez un secteur" />
+                                            </SelectTrigger>
+                                          </FormControl>
+                                          <SelectContent className="rounded-xl border border-slate-200 bg-white shadow-lg">
+                                            {GUEST_SECTORS.map((sector) => (
+                                              <SelectItem key={sector.id} value={sector.id}>
+                                                {sector.label}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={form.control}
+                                    name="packageType"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Type de colis *</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value} disabled={!packageOptions.length}>
+                                          <FormControl>
+                                            <SelectTrigger className="rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500">
+                                              <SelectValue placeholder="Sélectionnez un type" />
+                                            </SelectTrigger>
+                                          </FormControl>
+                                          <SelectContent className="rounded-xl border border-slate-200 bg-white shadow-lg">
+                                            {packageOptions.map((option) => (
+                                              <SelectItem key={option.value} value={option.value}>
+                                                {option.label}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
+                                {watchedValues.packageType === "autre" ? (
+                                  <FormField
+                                    control={form.control}
+                                    name="otherPackage"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Précision sur le colis *</FormLabel>
+                                        <FormControl>
+                                          <Input {...field} placeholder="Décrivez le contenu" />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                ) : null}
+                                <div className="grid gap-4">
+                                  <FormField
+                                    control={form.control}
+                                    name="pickupAddress"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Adresse d'enlèvement *</FormLabel>
+                                        <FormControl>
+                                          <Input {...field} autoComplete="street-address" placeholder="123 Rue de Paris, 75001 Paris" />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={form.control}
+                                    name="dropoffAddress"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Adresse de livraison *</FormLabel>
+                                        <FormControl>
+                                          <Input {...field} autoComplete="street-address" placeholder="45 Avenue Victor Hugo, 92100 Boulogne" />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-4">
+                                  <FormField
+                                    control={form.control}
+                                    name="weightKg"
+                                    render={({ field }) => (
+                                      <FormItem className="md:col-span-1">
+                                        <FormLabel>Poids (kg) *</FormLabel>
+                                        <FormControl>
+                                          <Input {...field} type="number" step="0.1" min={0.1} inputMode="decimal" placeholder="0.5" />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={form.control}
+                                    name="lengthCm"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Longueur (cm) *</FormLabel>
+                                        <FormControl>
+                                          <Input {...field} type="number" min={1} inputMode="numeric" placeholder="30" />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={form.control}
+                                    name="widthCm"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Largeur (cm) *</FormLabel>
+                                        <FormControl>
+                                          <Input {...field} type="number" min={1} inputMode="numeric" placeholder="20" />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={form.control}
+                                    name="heightCm"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Hauteur (cm) *</FormLabel>
+                                        <FormControl>
+                                          <Input {...field} type="number" min={1} inputMode="numeric" placeholder="15" />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <FormField
+                                    control={form.control}
+                                    name="pickupTime"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Heure d'enlèvement</FormLabel>
+                                        <FormControl>
+                                          <Input {...field} type="time" placeholder="08:30" />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={form.control}
+                                    name="deliveryTime"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Heure de livraison</FormLabel>
+                                        <FormControl>
+                                          <Input {...field} type="time" placeholder="10:15" />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
+                                <FormField
+                                  control={form.control}
+                                  name="deliveryDate"
+                                  render={({ field }) => (
+                                    <FormItem className="flex flex-col">
+                                      <FormLabel>Date de livraison *</FormLabel>
+                                      <Popover>
+                                        <PopoverTrigger asChild>
+                                          <FormControl>
+                                            <Button
+                                              variant="outline"
+                                              className={cn(
+                                                "w-full justify-between rounded-xl border border-slate-200 bg-white text-left font-normal text-slate-900 shadow-sm transition-smooth hover:bg-white",
+                                                !field.value && "text-slate-500",
+                                              )}
+                                            >
+                                              {field.value ? format(field.value, "PPP", { locale: fr }) : "Choisir une date"}
+                                              <CalendarIcon className="h-4 w-4 opacity-70" />
+                                            </Button>
+                                          </FormControl>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto rounded-xl border border-slate-200 bg-white p-0 shadow-lg">
+                                          <Calendar
+                                            mode="single"
+                                            selected={field.value}
+                                            onSelect={(date) => field.onChange(date)}
+                                            disabled={(date) => date < new Date()}
+                                            initialFocus
+                                          />
+                                        </PopoverContent>
+                                      </Popover>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+                            ) : null}
+
+                            {currentStep === 3 ? (
+                              <div className="space-y-6">
+                                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-4 text-sm text-slate-600">
+                                  Vérifiez votre récapitulatif à droite avant de confirmer votre commande. Vous pouvez revenir aux étapes précédentes à tout moment.
+                                </div>
+                                <FormField
+                                  control={form.control}
+                                  name="formula"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Formule souhaitée *</FormLabel>
+                                      <RadioGroup
+                                        onValueChange={field.onChange}
+                                        value={field.value}
+                                        className="grid gap-3 md:grid-cols-3"
+                                      >
+                                        {formulasToDisplay.map((formulaOption) => {
+                                          const isOptionLocked =
+                                            isFormulaLocked && enforcedFormula && formulaOption.id !== enforcedFormula;
+
+                                          return (
+                                            <Label
+                                              key={formulaOption.id}
+                                              htmlFor={`formula-${formulaOption.id}`}
+                                              className={cn(
+                                                "group flex cursor-pointer flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-4 text-sm shadow-sm transition-smooth focus-within:ring-2 focus-within:ring-blue-500",
+                                                field.value === formulaOption.id
+                                                  ? "border-blue-500 bg-blue-50 text-slate-900 shadow-md"
+                                                  : "hover:border-blue-200 hover:bg-blue-50/40",
+                                                isOptionLocked && "cursor-not-allowed opacity-60 hover:border-slate-200 hover:bg-white",
+                                              )}
+                                            >
+                                              <RadioGroupItem
+                                                value={formulaOption.id}
+                                                id={`formula-${formulaOption.id}`}
+                                                className="sr-only"
+                                                disabled={isOptionLocked}
+                                              />
+                                              <span className="text-sm font-semibold">{formulaOption.title}</span>
+                                              <span className="text-xs text-slate-500">{formulaOption.description}</span>
+                                            </Label>
+                                          );
+                                        })}
+                                      </RadioGroup>
+                                      {formulaLockMessage ? (
+                                        <p className="mt-2 text-xs font-medium text-slate-600">{formulaLockMessage}</p>
+                                      ) : (
+                                        <p className="mt-2 text-xs text-slate-500">
+                                          Choisissez la formule adaptée à votre délai et à votre budget.
+                                        </p>
+                                      )}
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-4 text-sm text-slate-600">
+                                  Une fois confirmée, notre équipe finalise la planification et vous envoie un e-mail récapitulatif.
+                                </div>
+                              </div>
+                            ) : null}
+                          </CardContent>
+                        </Card>
+
+                        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          {currentStep > 1 ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={handlePreviousStep}
+                              className="w-full justify-center rounded-xl border border-slate-200/80 bg-white/80 text-slate-700 transition-smooth hover:bg-white sm:w-auto"
+                            >
+                              Précédent
+                            </Button>
+                          ) : (
+                            <span className="hidden sm:block" />
+                          )}
+
+                          {currentStep < stepsConfig.length ? (
+                            <Button
+                              type="button"
+                              onClick={() => void handleNextStep()}
+                              className="w-full justify-center rounded-xl bg-slate-900 text-white transition-smooth hover:bg-slate-800 sm:w-auto"
+                            >
+                              Suivant
+                            </Button>
+                          ) : (
+                            <Button
+                              type="submit"
+                              variant="ghost"
+                              disabled={isSubmitting}
                               className={cn(
-                                "inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold",
-                                formulaBadge.className,
+                                "w-full justify-center rounded-xl bg-gradient-to-r from-secondary to-accent text-white transition-smooth hover:shadow-glow hover:scale-105 hover:from-secondary/95 hover:to-accent/95 focus-visible:ring-secondary/50 sm:w-auto",
+                                "disabled:cursor-not-allowed disabled:opacity-70",
                               )}
                             >
-                              <span>{formulaBadge.label}</span>
-                              {formulaBadge.detail ? (
-                                <span className="text-xs font-medium text-current/80">{formulaBadge.detail}</span>
-                              ) : null}
-                            </div>
-                            <p className="text-xs text-slate-500">{formulaSummaryText}</p>
-                          </div>
-                          <div className="space-y-0.5">
-                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Heure d'enlèvement prévue</p>
-                            <p className="font-medium text-slate-900">{pickupTimeDisplay}</p>
-                          </div>
-                          <div className="space-y-0.5">
-                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Heure de livraison prévue</p>
-                            <p className="font-medium text-slate-900">{deliveryTimeDisplay}</p>
-                          </div>
-                          <div className="space-y-0.5">
-                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Date souhaitée</p>
-                            <p className="font-medium text-slate-900">{deliveryDateDisplay}</p>
-                          </div>
-                        </div>
-                        <div className="space-y-1.5 rounded-2xl border border-emerald-200/80 bg-emerald-50/80 p-3 text-slate-700">
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-600">TOTAL ESTIMÉ</p>
-                          <p className="text-2xl font-bold text-emerald-700">{totalDisplay}</p>
-                          <p className="text-xs">Estimation indicative selon vos informations. Le tarif final sera confirmé par nos équipes.</p>
-                          {estimateError ? <p className="text-sm text-red-500">{estimateError}</p> : null}
-                          {estimateLoading ? (
-                            <div className="space-y-2">
-                              <Skeleton className="h-3 w-3/4" />
-                              <Skeleton className="h-3 w-1/2" />
-                            </div>
-                          ) : null}
-                        </div>
-                        <Button
-                          type="submit"
-                          variant="cta"
-                          disabled={isSubmitting}
-                          className="w-full rounded-xl px-6 py-4 text-sm font-semibold"
-                        >
-                          {isSubmitting ? (
-                            <span className="flex items-center justify-center gap-2">
-                              <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-                              Validation en cours…
-                            </span>
-                          ) : (
-                            "Valider ma commande"
+                              {isSubmitting ? (
+                                <span className="flex items-center justify-center gap-2">
+                                  <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                                  Envoi en cours…
+                                </span>
+                              ) : (
+                                "Confirmer la commande"
+                              )}
+                            </Button>
                           )}
-                        </Button>
-                        <p className="text-center text-[11px] text-slate-500">
-                          Pas de mot de passe, pas d'inscription : vous serez recontacté(e) dès validation de la demande.
+                        </div>
+                      </motion.div>
+                    </AnimatePresence>
+                  </div>
+
+                  <aside className="md:col-span-1 xl:sticky xl:top-6">
+                    <Card className="rounded-3xl border border-white/10 bg-white/95 p-6 text-slate-900 shadow-2xl shadow-slate-900/20 backdrop-blur animate-slide-up">
+                      <CardHeader className="space-y-1 p-0">
+                        <CardTitle className="text-base font-semibold text-slate-900">Récapitulatif en direct</CardTitle>
+                        <p className="text-xs text-slate-500">
+                          Les informations se mettent à jour automatiquement.
                         </p>
+                      </CardHeader>
+                      <CardContent className="mt-6 space-y-6 p-0 text-sm">
+                        <div className="space-y-3">
+                          <div className="flex items-start gap-3">
+                            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                              <Package className="h-5 w-5" aria-hidden="true" />
+                            </span>
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                  Étape 1 — Informations entreprise
+                                </p>
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold",
+                                    getStepBadgeClasses(1),
+                                  )}
+                                >
+                                  {getStepBadgeLabel(1)}
+                                </span>
+                              </div>
+                              <dl className="space-y-1.5 text-slate-600">
+                                <div>
+                                  <dt className="text-[11px] uppercase tracking-wide text-slate-500">Nom complet</dt>
+                                  <dd className="font-medium text-slate-900">{fullNameDisplay}</dd>
+                                </div>
+                                <div>
+                                  <dt className="text-[11px] uppercase tracking-wide text-slate-500">Nom de la société</dt>
+                                  <dd className="font-medium text-slate-900">{companyDisplay}</dd>
+                                </div>
+                                <div>
+                                  <dt className="text-[11px] uppercase tracking-wide text-slate-500">SIRET</dt>
+                                  <dd className="font-medium text-slate-900">{siretDisplay}</dd>
+                                </div>
+                                <div className="grid gap-1 sm:grid-cols-2 sm:gap-4">
+                                  <div>
+                                    <dt className="text-[11px] uppercase tracking-wide text-slate-500">E-mail</dt>
+                                    <dd className="font-medium text-slate-900 break-words">{emailDisplay}</dd>
+                                  </div>
+                                  <div>
+                                    <dt className="text-[11px] uppercase tracking-wide text-slate-500">Téléphone</dt>
+                                    <dd className="font-medium text-slate-900 break-words">{phoneDisplay}</dd>
+                                  </div>
+                                </div>
+                              </dl>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="h-px bg-slate-200" />
+
+                        <div className="space-y-3">
+                          <div className="flex items-start gap-3">
+                            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+                              <Truck className="h-5 w-5" aria-hidden="true" />
+                            </span>
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                  Étape 2 — Détails de livraison
+                                </p>
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold",
+                                    getStepBadgeClasses(2),
+                                  )}
+                                >
+                                  {getStepBadgeLabel(2)}
+                                </span>
+                              </div>
+                              <dl className="space-y-1.5 text-slate-600">
+                                <div>
+                                  <dt className="text-[11px] uppercase tracking-wide text-slate-500">Enlèvement</dt>
+                                  <dd className="font-medium text-slate-900">{pickupAddressDisplay}</dd>
+                                </div>
+                                <div>
+                                  <dt className="text-[11px] uppercase tracking-wide text-slate-500">Livraison</dt>
+                                  <dd className="font-medium text-slate-900">{dropoffAddressDisplay}</dd>
+                                </div>
+                                <div>
+                                  <dt className="text-[11px] uppercase tracking-wide text-slate-500">Secteur</dt>
+                                  <dd className="font-medium text-slate-900">{sectorLabel}</dd>
+                                  {sectorDescription ? (
+                                    <dd className="text-xs text-slate-500">{sectorDescription}</dd>
+                                  ) : null}
+                                </div>
+                                <div>
+                                  <dt className="text-[11px] uppercase tracking-wide text-slate-500">Type de colis</dt>
+                                  <dd className="font-medium text-slate-900">{packageSummaryDisplay}</dd>
+                                </div>
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                  <div>
+                                    <dt className="text-[11px] uppercase tracking-wide text-slate-500">Poids</dt>
+                                    <dd className="font-medium text-slate-900">{weightDisplay}</dd>
+                                  </div>
+                                  <div>
+                                    <dt className="text-[11px] uppercase tracking-wide text-slate-500">Dimensions</dt>
+                                    <dd className="font-medium text-slate-900">{dimensionsDisplay}</dd>
+                                  </div>
+                                </div>
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                  <div>
+                                    <dt className="text-[11px] uppercase tracking-wide text-slate-500">Heure d'enlèvement</dt>
+                                    <dd className="font-medium text-slate-900">{pickupTimeDisplay}</dd>
+                                  </div>
+                                  <div>
+                                    <dt className="text-[11px] uppercase tracking-wide text-slate-500">Heure de livraison</dt>
+                                    <dd className="font-medium text-slate-900">{deliveryTimeDisplay}</dd>
+                                  </div>
+                                </div>
+                                <div>
+                                  <dt className="text-[11px] uppercase tracking-wide text-slate-500">Date souhaitée</dt>
+                                  <dd className="font-medium text-slate-900">{deliveryDateDisplay}</dd>
+                                </div>
+                              </dl>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="h-px bg-slate-200" />
+
+                        <div className="space-y-3">
+                          <div className="flex items-start gap-3">
+                            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-purple-50 text-purple-600">
+                              <CheckCircle className="h-5 w-5" aria-hidden="true" />
+                            </span>
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                  Étape 3 — Formule & confirmation
+                                </p>
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold",
+                                    getStepBadgeClasses(3),
+                                  )}
+                                >
+                                  {getStepBadgeLabel(3)}
+                                </span>
+                              </div>
+                              <div className="space-y-2 text-slate-600">
+                                <div className="space-y-1.5">
+                                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Formule sélectionnée</p>
+                                  <div
+                                    className={cn(
+                                      "inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold",
+                                      formulaBadge.className,
+                                    )}
+                                  >
+                                    <span>{formulaBadge.label}</span>
+                                    {formulaBadge.detail ? (
+                                      <span className="text-xs font-medium text-current/80">{formulaBadge.detail}</span>
+                                    ) : null}
+                                  </div>
+                                  <p className="text-xs text-slate-500">{formulaSummaryText}</p>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Total estimé</p>
+                                  <p className="text-2xl font-bold text-slate-900">{totalDisplay}</p>
+                                  {estimateLoading ? (
+                                    <div className="space-y-2">
+                                      <Skeleton className="h-3 w-3/4" />
+                                      <Skeleton className="h-3 w-1/2" />
+                                    </div>
+                                  ) : null}
+                                  {estimateError ? (
+                                    <p className="text-xs text-red-500">{estimateError}</p>
+                                  ) : (
+                                    <p className="text-xs text-slate-500">
+                                      Estimation indicative selon vos informations. Le tarif final sera confirmé par nos équipes.
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </CardContent>
                     </Card>
                   </aside>

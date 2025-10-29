@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useForm, useWatch, type FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,6 +22,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
   Select,
   SelectContent,
@@ -60,6 +61,55 @@ type StepDefinition = {
   title: string;
   description: string;
   icon: LucideIcon;
+};
+
+type SummaryStepValue = "step1" | "step2" | "step3";
+
+type StepCompletion = {
+  completed: number;
+  total: number;
+};
+
+type SummaryFieldProps = {
+  label: string;
+  value: ReactNode;
+  hint?: ReactNode;
+  isEmpty?: boolean;
+  className?: string;
+  valueClassName?: string;
+};
+
+const SummaryField = ({
+  label,
+  value,
+  hint,
+  isEmpty = false,
+  className,
+  valueClassName,
+}: SummaryFieldProps) => (
+  <div className={cn("space-y-1", className)}>
+    <dt className="text-[11px] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+      {label}
+    </dt>
+    <dd
+      className={cn(
+        "text-sm font-medium text-foreground",
+        isEmpty ? "text-muted-foreground/70" : undefined,
+        valueClassName,
+      )}
+    >
+      {value}
+    </dd>
+    {hint ? (
+      <dd className="text-xs text-muted-foreground/80">{hint}</dd>
+    ) : null}
+  </div>
+);
+
+const SUMMARY_STEP_VALUES: Record<StepId, SummaryStepValue> = {
+  1: "step1",
+  2: "step2",
+  3: "step3",
 };
 
 type EstimateSurcharge = {
@@ -225,6 +275,13 @@ const defaultValues: Partial<GuestOrderFormValues> = {
   formula: "standard",
 };
 
+const OPTIONAL_STEP_FIELDS: FieldPath<GuestOrderFormValues>[] = [
+  "company",
+  "siret",
+  "pickupTime",
+  "deliveryTime",
+];
+
 const shippingFormulas: Array<{ id: ShippingFormula; title: string; description: string }> = [
   {
     id: "flash",
@@ -316,6 +373,7 @@ const CommandeSansCompte = () => {
   const [submittedPayload, setSubmittedPayload] = useState<GuestOrderPayload | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState<StepId>(1);
+  const [summaryOpenStep, setSummaryOpenStep] = useState<SummaryStepValue | "">(SUMMARY_STEP_VALUES[1]);
 
   const form = useForm<GuestOrderFormValues>({
     resolver: zodResolver(guestOrderSchema),
@@ -324,9 +382,9 @@ const CommandeSansCompte = () => {
     reValidateMode: "onChange",
   });
 
-  const stepFieldMap = useMemo(
+  const stepFieldMap = useMemo<Record<StepId, FieldPath<GuestOrderFormValues>[]>>(
     () => ({
-      1: ["fullName", "company", "siret", "email", "phone"] as FieldPath<GuestOrderFormValues>[],
+      1: ["fullName", "company", "siret", "email", "phone"],
       2: [
         "sector",
         "packageType",
@@ -340,8 +398,8 @@ const CommandeSansCompte = () => {
         "pickupTime",
         "deliveryTime",
         "deliveryDate",
-      ] as FieldPath<GuestOrderFormValues>[],
-      3: ["formula"] as FieldPath<GuestOrderFormValues>[],
+      ],
+      3: ["formula"],
     }),
     [],
   );
@@ -365,6 +423,105 @@ const CommandeSansCompte = () => {
     () => ({ ...defaultValues, ...(formWatchValues ?? {}) }),
     [formWatchValues],
   );
+
+  const stepCompletionMap = useMemo<Record<StepId, StepCompletion>>(() => {
+    const result: Record<StepId, StepCompletion> = {
+      1: { completed: 0, total: stepFieldMap[1].length },
+      2: { completed: 0, total: stepFieldMap[2].length },
+      3: { completed: 0, total: stepFieldMap[3].length },
+    };
+    const watchedRecord = watchedValues as Record<string, unknown>;
+
+    (Object.entries(stepFieldMap) as Array<[StepId, FieldPath<GuestOrderFormValues>[]]>).forEach(
+      ([stepId, fields]) => {
+        let completed = 0;
+
+        fields.forEach((field) => {
+          if (field === "otherPackage" && watchedValues.packageType !== "autre") {
+            completed += 1;
+            return;
+          }
+
+          if (OPTIONAL_STEP_FIELDS.includes(field)) {
+            completed += 1;
+            return;
+          }
+
+          const rawValue = watchedRecord[field];
+
+          if (rawValue instanceof Date) {
+            completed += 1;
+            return;
+          }
+
+          if (typeof rawValue === "number") {
+            if (!Number.isNaN(rawValue) && rawValue > 0) {
+              completed += 1;
+            }
+            return;
+          }
+
+          if (typeof rawValue === "string") {
+            if (rawValue.trim().length > 0) {
+              completed += 1;
+            }
+            return;
+          }
+
+          if (rawValue !== undefined && rawValue !== null) {
+            completed += 1;
+          }
+        });
+
+        result[stepId] = {
+          completed,
+          total: fields.length,
+        };
+      },
+    );
+
+    return result;
+  }, [stepFieldMap, watchedValues]);
+
+  useEffect(() => {
+    const nextValue = SUMMARY_STEP_VALUES[currentStep];
+    setSummaryOpenStep((previous) => (previous === nextValue ? previous : nextValue));
+  }, [currentStep]);
+
+  const isStepCompleted = useCallback(
+    (stepId: StepId) => {
+      const completion = stepCompletionMap[stepId];
+      return completion.completed >= completion.total && completion.total > 0;
+    },
+    [stepCompletionMap],
+  );
+
+  const completedSteps = useMemo(() => {
+    return stepsConfig.reduce((count, step) => {
+      if (step.id < currentStep) {
+        return isStepCompleted(step.id) ? count + 1 : count;
+      }
+
+      if (step.id === currentStep && step.id === stepsConfig.length) {
+        return isStepCompleted(step.id) ? count + 1 : count;
+      }
+
+      return count;
+    }, 0);
+  }, [currentStep, isStepCompleted]);
+
+  const getSummaryValue = useCallback((value: string) => {
+    const normalized = value?.toString().trim();
+    if (!normalized || normalized === "—") {
+      return { text: "À compléter", isEmpty: true } as const;
+    }
+
+    return { text: value, isEmpty: false } as const;
+  }, []);
+
+  const handleSummaryAccordionChange = useCallback((value: string) => {
+    setSummaryOpenStep(value ? (value as SummaryStepValue) : "");
+  }, []);
 
   const selectedSectorConfig = useMemo(
     () => getGuestSectorConfig(watchedValues.sector),
@@ -791,23 +948,45 @@ const CommandeSansCompte = () => {
       ? (packageLabel !== "—" ? `${packageLabel} · ${otherPackageDisplay}` : otherPackageDisplay)
       : packageLabel;
 
+  const fullNameSummary = getSummaryValue(fullNameDisplay);
+  const companySummary = getSummaryValue(companyDisplay);
+  const siretSummary = getSummaryValue(siretDisplay);
+  const emailSummary = getSummaryValue(emailDisplay);
+  const phoneSummary = getSummaryValue(phoneDisplay);
+  const pickupAddressSummary = getSummaryValue(pickupAddressDisplay);
+  const dropoffAddressSummary = getSummaryValue(dropoffAddressDisplay);
+  const sectorSummary = getSummaryValue(sectorLabel);
+  const packageSummary = getSummaryValue(packageSummaryDisplay);
+  const weightSummary = getSummaryValue(weightDisplay);
+  const dimensionsSummary = getSummaryValue(dimensionsDisplay);
+  const pickupTimeSummary = getSummaryValue(pickupTimeDisplay);
+  const deliveryTimeSummary = getSummaryValue(deliveryTimeDisplay);
+  const deliveryDateSummary = getSummaryValue(deliveryDateDisplay);
+  const formulaSummary = getSummaryValue(formulaSummaryText);
+  const totalAmountSummary = getSummaryValue(totalDisplay);
+  const totalDisplayValue = totalAmountSummary.isEmpty ? totalAmountSummary.text : totalDisplay;
+
   const getStepBadgeLabel = (stepId: StepId): string => {
-    if (currentStep > stepId) {
-      return "Terminé";
-    }
-    if (currentStep === stepId) {
+    if (stepId === currentStep) {
       return "En cours";
     }
+
+    if (isStepCompleted(stepId)) {
+      return "Terminé";
+    }
+
     return "À compléter";
   };
 
   const getStepBadgeClasses = (stepId: StepId): string => {
-    if (currentStep > stepId) {
-      return "bg-emerald-100 text-emerald-700";
-    }
-    if (currentStep === stepId) {
+    if (stepId === currentStep) {
       return "bg-blue-100 text-blue-700";
     }
+
+    if (isStepCompleted(stepId)) {
+      return "bg-emerald-100 text-emerald-700";
+    }
+
     return "bg-slate-100 text-slate-500";
   };
 
@@ -1311,192 +1490,308 @@ const CommandeSansCompte = () => {
                     </AnimatePresence>
                   </div>
 
-                  <aside className="md:col-span-1 xl:sticky xl:top-6">
-                    <Card className="rounded-3xl border border-white/10 bg-white/95 p-6 text-slate-900 shadow-2xl shadow-slate-900/20 backdrop-blur animate-slide-up">
-                      <CardHeader className="space-y-1 p-0">
-                        <CardTitle className="text-base font-semibold text-slate-900">Récapitulatif en direct</CardTitle>
-                        <p className="text-xs text-slate-500">
-                          Les informations se mettent à jour automatiquement.
-                        </p>
-                      </CardHeader>
-                      <CardContent className="mt-6 space-y-6 p-0 text-sm">
-                        <div className="space-y-3">
-                          <div className="flex items-start gap-3">
-                            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-                              <Package className="h-5 w-5" aria-hidden="true" />
-                            </span>
-                            <div className="flex-1 space-y-2">
-                              <div className="flex items-center justify-between">
-                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                  Étape 1 — Informations entreprise
-                                </p>
-                                <span
-                                  className={cn(
-                                    "inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold",
-                                    getStepBadgeClasses(1),
-                                  )}
-                                >
-                                  {getStepBadgeLabel(1)}
-                                </span>
-                              </div>
-                              <dl className="space-y-1.5 text-slate-600">
-                                <div>
-                                  <dt className="text-[11px] uppercase tracking-wide text-slate-500">Nom complet</dt>
-                                  <dd className="font-medium text-slate-900">{fullNameDisplay}</dd>
-                                </div>
-                                <div>
-                                  <dt className="text-[11px] uppercase tracking-wide text-slate-500">Nom de la société</dt>
-                                  <dd className="font-medium text-slate-900">{companyDisplay}</dd>
-                                </div>
-                                <div>
-                                  <dt className="text-[11px] uppercase tracking-wide text-slate-500">SIRET</dt>
-                                  <dd className="font-medium text-slate-900">{siretDisplay}</dd>
-                                </div>
-                                <div className="grid gap-1 sm:grid-cols-2 sm:gap-4">
-                                  <div>
-                                    <dt className="text-[11px] uppercase tracking-wide text-slate-500">E-mail</dt>
-                                    <dd className="font-medium text-slate-900 break-words">{emailDisplay}</dd>
-                                  </div>
-                                  <div>
-                                    <dt className="text-[11px] uppercase tracking-wide text-slate-500">Téléphone</dt>
-                                    <dd className="font-medium text-slate-900 break-words">{phoneDisplay}</dd>
-                                  </div>
-                                </div>
-                              </dl>
+                  <aside className="md:col-span-1">
+                    <div className="mt-12 md:mt-0">
+                      <div className="md:sticky md:top-6 md:max-h-[80vh] md:overflow-y-auto scrollbar-thin scrollbar-thumb-muted/40">
+                        <Card className="animate-slide-up rounded-3xl border border-white/15 bg-white/95 p-0 text-slate-900 shadow-2xl shadow-slate-900/20 backdrop-blur">
+                          <div className="space-y-4 p-4 sm:p-5">
+                            <div className="space-y-1">
+                              <h2 className="text-base font-semibold text-slate-900">Récapitulatif en direct</h2>
+                              <p className="text-xs text-muted-foreground">
+                                Les informations se mettent à jour automatiquement.
+                              </p>
                             </div>
-                          </div>
-                        </div>
-
-                        <div className="h-px bg-slate-200" />
-
-                        <div className="space-y-3">
-                          <div className="flex items-start gap-3">
-                            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
-                              <Truck className="h-5 w-5" aria-hidden="true" />
-                            </span>
-                            <div className="flex-1 space-y-2">
-                              <div className="flex items-center justify-between">
-                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                  Étape 2 — Détails de livraison
-                                </p>
-                                <span
-                                  className={cn(
-                                    "inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold",
-                                    getStepBadgeClasses(2),
-                                  )}
-                                >
-                                  {getStepBadgeLabel(2)}
-                                </span>
-                              </div>
-                              <dl className="space-y-1.5 text-slate-600">
-                                <div>
-                                  <dt className="text-[11px] uppercase tracking-wide text-slate-500">Enlèvement</dt>
-                                  <dd className="font-medium text-slate-900">{pickupAddressDisplay}</dd>
-                                </div>
-                                <div>
-                                  <dt className="text-[11px] uppercase tracking-wide text-slate-500">Livraison</dt>
-                                  <dd className="font-medium text-slate-900">{dropoffAddressDisplay}</dd>
-                                </div>
-                                <div>
-                                  <dt className="text-[11px] uppercase tracking-wide text-slate-500">Secteur</dt>
-                                  <dd className="font-medium text-slate-900">{sectorLabel}</dd>
-                                  {sectorDescription ? (
-                                    <dd className="text-xs text-slate-500">{sectorDescription}</dd>
-                                  ) : null}
-                                </div>
-                                <div>
-                                  <dt className="text-[11px] uppercase tracking-wide text-slate-500">Type de colis</dt>
-                                  <dd className="font-medium text-slate-900">{packageSummaryDisplay}</dd>
-                                </div>
-                                <div className="grid gap-2 sm:grid-cols-2">
-                                  <div>
-                                    <dt className="text-[11px] uppercase tracking-wide text-slate-500">Poids</dt>
-                                    <dd className="font-medium text-slate-900">{weightDisplay}</dd>
-                                  </div>
-                                  <div>
-                                    <dt className="text-[11px] uppercase tracking-wide text-slate-500">Dimensions</dt>
-                                    <dd className="font-medium text-slate-900">{dimensionsDisplay}</dd>
-                                  </div>
-                                </div>
-                                <div className="grid gap-2 sm:grid-cols-2">
-                                  <div>
-                                    <dt className="text-[11px] uppercase tracking-wide text-slate-500">Heure d'enlèvement</dt>
-                                    <dd className="font-medium text-slate-900">{pickupTimeDisplay}</dd>
-                                  </div>
-                                  <div>
-                                    <dt className="text-[11px] uppercase tracking-wide text-slate-500">Heure de livraison</dt>
-                                    <dd className="font-medium text-slate-900">{deliveryTimeDisplay}</dd>
-                                  </div>
-                                </div>
-                                <div>
-                                  <dt className="text-[11px] uppercase tracking-wide text-slate-500">Date souhaitée</dt>
-                                  <dd className="font-medium text-slate-900">{deliveryDateDisplay}</dd>
-                                </div>
-                              </dl>
+                            <div className="flex items-center justify-between rounded-lg bg-muted/30 p-3">
+                              <span className="text-sm text-muted-foreground">Progression</span>
+                              <span className="text-sm font-medium text-foreground">
+                                {completedSteps}/{stepsConfig.length} étapes complétées
+                              </span>
                             </div>
-                          </div>
-                        </div>
-
-                        <div className="h-px bg-slate-200" />
-
-                        <div className="space-y-3">
-                          <div className="flex items-start gap-3">
-                            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-purple-50 text-purple-600">
-                              <CheckCircle className="h-5 w-5" aria-hidden="true" />
-                            </span>
-                            <div className="flex-1 space-y-2">
-                              <div className="flex items-center justify-between">
-                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                  Étape 3 — Formule & confirmation
-                                </p>
+                            <Accordion
+                              type="single"
+                              collapsible
+                              value={summaryOpenStep}
+                              onValueChange={handleSummaryAccordionChange}
+                              className="space-y-3"
+                            >
+                              <AccordionItem
+                                value={SUMMARY_STEP_VALUES[1]}
+                                className="group relative overflow-hidden rounded-2xl border border-b-0 border-slate-200/80 bg-white/80 px-0 shadow-sm shadow-slate-900/5 transition-all duration-200 data-[state=open]:border-slate-200 data-[state=open]:shadow-md data-[state=open]:bg-gradient-to-br data-[state=open]:from-primary/5 data-[state=open]:via-secondary/5 data-[state=open]:to-transparent"
+                              >
                                 <span
                                   className={cn(
-                                    "inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold",
-                                    getStepBadgeClasses(3),
+                                    "absolute inset-y-0 left-0 w-1 rounded-r-full bg-slate-200/70 transition-colors duration-200",
+                                    currentStep === 1
+                                      ? "bg-primary"
+                                      : isStepCompleted(1)
+                                        ? "bg-emerald-500/80"
+                                        : "bg-slate-200/70",
                                   )}
-                                >
-                                  {getStepBadgeLabel(3)}
-                                </span>
-                              </div>
-                              <div className="space-y-2 text-slate-600">
-                                <div className="space-y-1.5">
-                                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Formule sélectionnée</p>
-                                  <div
-                                    className={cn(
-                                      "inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold",
-                                      formulaBadge.className,
-                                    )}
-                                  >
-                                    <span>{formulaBadge.label}</span>
-                                    {formulaBadge.detail ? (
-                                      <span className="text-xs font-medium text-current/80">{formulaBadge.detail}</span>
-                                    ) : null}
-                                  </div>
-                                  <p className="text-xs text-slate-500">{formulaSummaryText}</p>
-                                </div>
-                                <div className="space-y-1.5">
-                                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Total estimé</p>
-                                  <p className="text-2xl font-bold text-slate-900">{totalDisplay}</p>
-                                  {estimateLoading ? (
-                                    <div className="space-y-2">
-                                      <Skeleton className="h-3 w-3/4" />
-                                      <Skeleton className="h-3 w-1/2" />
+                                  aria-hidden="true"
+                                />
+                                <AccordionTrigger className="items-start px-3 py-3 text-left text-sm font-medium hover:no-underline">
+                                  <div className="flex w-full items-start gap-3">
+                                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600">
+                                      <Package className="h-4 w-4" aria-hidden="true" />
+                                    </span>
+                                    <div className="flex flex-1 flex-col gap-0.5 text-left">
+                                      <span className="text-[11px] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+                                        Étape 1
+                                      </span>
+                                      <span className="text-sm font-semibold text-foreground">
+                                        Informations entreprise
+                                      </span>
                                     </div>
-                                  ) : null}
-                                  {estimateError ? (
-                                    <p className="text-xs text-red-500">{estimateError}</p>
-                                  ) : (
-                                    <p className="text-xs text-slate-500">
-                                      Estimation indicative selon vos informations. Le tarif final sera confirmé par nos équipes.
-                                    </p>
+                                    <div className="flex flex-col items-end gap-1">
+                                      <span className="text-[11px] font-medium text-muted-foreground">
+                                        {stepCompletionMap[1].completed} champs complétés / {stepCompletionMap[1].total}
+                                      </span>
+                                      <span
+                                        className={cn(
+                                          "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
+                                          getStepBadgeClasses(1),
+                                        )}
+                                      >
+                                        {getStepBadgeLabel(1)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent className="px-3 pb-3 pt-0 text-sm text-slate-600">
+                                  <dl className="grid gap-3 sm:grid-cols-2">
+                                    <SummaryField
+                                      label="Nom complet"
+                                      value={fullNameSummary.text}
+                                      isEmpty={fullNameSummary.isEmpty}
+                                      className="sm:col-span-2"
+                                    />
+                                    <SummaryField
+                                      label="Nom de la société"
+                                      value={companySummary.text}
+                                      isEmpty={companySummary.isEmpty}
+                                      className="sm:col-span-2"
+                                    />
+                                    <SummaryField
+                                      label="Numéro de SIRET"
+                                      value={siretSummary.text}
+                                      isEmpty={siretSummary.isEmpty}
+                                      className="sm:col-span-2"
+                                    />
+                                    <SummaryField
+                                      label="Adresse e-mail"
+                                      value={emailSummary.text}
+                                      isEmpty={emailSummary.isEmpty}
+                                      valueClassName="break-words"
+                                    />
+                                    <SummaryField
+                                      label="Téléphone"
+                                      value={phoneSummary.text}
+                                      isEmpty={phoneSummary.isEmpty}
+                                      valueClassName="break-words"
+                                    />
+                                  </dl>
+                                </AccordionContent>
+                              </AccordionItem>
+
+                              <AccordionItem
+                                value={SUMMARY_STEP_VALUES[2]}
+                                className="group relative overflow-hidden rounded-2xl border border-b-0 border-slate-200/80 bg-white/80 px-0 shadow-sm shadow-slate-900/5 transition-all duration-200 data-[state=open]:border-slate-200 data-[state=open]:shadow-md data-[state=open]:bg-gradient-to-br data-[state=open]:from-primary/5 data-[state=open]:via-secondary/5 data-[state=open]:to-transparent"
+                              >
+                                <span
+                                  className={cn(
+                                    "absolute inset-y-0 left-0 w-1 rounded-r-full bg-slate-200/70 transition-colors duration-200",
+                                    currentStep === 2
+                                      ? "bg-primary"
+                                      : isStepCompleted(2)
+                                        ? "bg-emerald-500/80"
+                                        : "bg-slate-200/70",
                                   )}
-                                </div>
-                              </div>
-                            </div>
+                                  aria-hidden="true"
+                                />
+                                <AccordionTrigger className="items-start px-3 py-3 text-left text-sm font-medium hover:no-underline">
+                                  <div className="flex w-full items-start gap-3">
+                                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
+                                      <Truck className="h-4 w-4" aria-hidden="true" />
+                                    </span>
+                                    <div className="flex flex-1 flex-col gap-0.5 text-left">
+                                      <span className="text-[11px] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+                                        Étape 2
+                                      </span>
+                                      <span className="text-sm font-semibold text-foreground">
+                                        Détails de livraison
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-1">
+                                      <span className="text-[11px] font-medium text-muted-foreground">
+                                        {stepCompletionMap[2].completed} champs complétés / {stepCompletionMap[2].total}
+                                      </span>
+                                      <span
+                                        className={cn(
+                                          "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
+                                          getStepBadgeClasses(2),
+                                        )}
+                                      >
+                                        {getStepBadgeLabel(2)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent className="px-3 pb-3 pt-0 text-sm text-slate-600">
+                                  <dl className="grid gap-3 sm:grid-cols-2">
+                                    <SummaryField
+                                      label="Adresse d'enlèvement"
+                                      value={pickupAddressSummary.text}
+                                      isEmpty={pickupAddressSummary.isEmpty}
+                                      className="sm:col-span-2"
+                                    />
+                                    <SummaryField
+                                      label="Adresse de livraison"
+                                      value={dropoffAddressSummary.text}
+                                      isEmpty={dropoffAddressSummary.isEmpty}
+                                      className="sm:col-span-2"
+                                    />
+                                    <SummaryField
+                                      label="Secteur"
+                                      value={sectorSummary.text}
+                                      isEmpty={sectorSummary.isEmpty}
+                                      hint={!sectorSummary.isEmpty && sectorDescription ? sectorDescription : undefined}
+                                      className="sm:col-span-2"
+                                    />
+                                    <SummaryField
+                                      label="Type de colis"
+                                      value={packageSummary.text}
+                                      isEmpty={packageSummary.isEmpty}
+                                      className="sm:col-span-2"
+                                    />
+                                    <SummaryField
+                                      label="Poids"
+                                      value={weightSummary.text}
+                                      isEmpty={weightSummary.isEmpty}
+                                    />
+                                    <SummaryField
+                                      label="Dimensions"
+                                      value={dimensionsSummary.text}
+                                      isEmpty={dimensionsSummary.isEmpty}
+                                    />
+                                    <SummaryField
+                                      label="Heure d'enlèvement"
+                                      value={pickupTimeSummary.text}
+                                      isEmpty={pickupTimeSummary.isEmpty}
+                                    />
+                                    <SummaryField
+                                      label="Heure de livraison"
+                                      value={deliveryTimeSummary.text}
+                                      isEmpty={deliveryTimeSummary.isEmpty}
+                                    />
+                                    <SummaryField
+                                      label="Date souhaitée"
+                                      value={deliveryDateSummary.text}
+                                      isEmpty={deliveryDateSummary.isEmpty}
+                                      className="sm:col-span-2"
+                                    />
+                                  </dl>
+                                </AccordionContent>
+                              </AccordionItem>
+
+                              <AccordionItem
+                                value={SUMMARY_STEP_VALUES[3]}
+                                className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white/80 px-0 shadow-sm shadow-slate-900/5 transition-all duration-200 data-[state=open]:border-slate-200 data-[state=open]:shadow-md data-[state=open]:bg-gradient-to-br data-[state=open]:from-primary/5 data-[state=open]:via-secondary/5 data-[state=open]:to-transparent"
+                              >
+                                <span
+                                  className={cn(
+                                    "absolute inset-y-0 left-0 w-1 rounded-r-full bg-slate-200/70 transition-colors duration-200",
+                                    currentStep === 3
+                                      ? "bg-primary"
+                                      : isStepCompleted(3)
+                                        ? "bg-emerald-500/80"
+                                        : "bg-slate-200/70",
+                                  )}
+                                  aria-hidden="true"
+                                />
+                                <AccordionTrigger className="items-start px-3 py-3 text-left text-sm font-medium hover:no-underline">
+                                  <div className="flex w-full items-start gap-3">
+                                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600">
+                                      <CheckCircle className="h-4 w-4" aria-hidden="true" />
+                                    </span>
+                                    <div className="flex flex-1 flex-col gap-0.5 text-left">
+                                      <span className="text-[11px] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+                                        Étape 3
+                                      </span>
+                                      <span className="text-sm font-semibold text-foreground">
+                                        Formule & confirmation
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-1">
+                                      <span className="text-[11px] font-medium text-muted-foreground">
+                                        {stepCompletionMap[3].completed} champs complétés / {stepCompletionMap[3].total}
+                                      </span>
+                                      <span
+                                        className={cn(
+                                          "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
+                                          getStepBadgeClasses(3),
+                                        )}
+                                      >
+                                        {getStepBadgeLabel(3)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent className="px-3 pb-3 pt-0 text-sm text-slate-600">
+                                  <div className="space-y-3">
+                                    <SummaryField
+                                      label="Formule sélectionnée"
+                                      value={selectedFormula ? (
+                                        <div
+                                          className={cn(
+                                            "inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold",
+                                            formulaBadge.className,
+                                          )}
+                                        >
+                                          <span>{formulaBadge.label}</span>
+                                          {formulaBadge.detail ? (
+                                            <span className="text-[11px] font-medium text-current/80">{formulaBadge.detail}</span>
+                                          ) : null}
+                                        </div>
+                                      ) : (
+                                        formulaSummary.text
+                                      )}
+                                      isEmpty={!selectedFormula}
+                                      hint={!formulaSummary.isEmpty ? formulaSummary.text : undefined}
+                                    />
+                                    <div className="rounded-2xl border border-dashed border-muted/40 p-3">
+                                      <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+                                        Total estimé
+                                      </p>
+                                      <p
+                                        className={cn(
+                                          "mt-1 text-lg font-semibold text-foreground",
+                                          totalAmountSummary.isEmpty ? "text-muted-foreground/70" : undefined,
+                                        )}
+                                      >
+                                        {totalDisplayValue}
+                                      </p>
+                                      {estimateLoading ? (
+                                        <div className="mt-2 space-y-2">
+                                          <Skeleton className="h-3 w-3/4" />
+                                          <Skeleton className="h-3 w-1/2" />
+                                        </div>
+                                      ) : null}
+                                      {estimateError ? (
+                                        <p className="mt-2 text-xs text-red-500">{estimateError}</p>
+                                      ) : (
+                                        <p className="mt-2 text-xs text-muted-foreground">
+                                          Estimation indicative selon vos informations. Le tarif final sera confirmé par nos équipes.
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </AccordionContent>
+                              </AccordionItem>
+                            </Accordion>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </Card>
+                      </div>
+                    </div>
                   </aside>
                 </div>
               </form>

@@ -432,8 +432,8 @@ const CommandeSansCompte = () => {
     };
     const watchedRecord = watchedValues as Record<string, unknown>;
 
-    (Object.entries(stepFieldMap) as Array<[StepId, FieldPath<GuestOrderFormValues>[]]>).forEach(
-      ([stepId, fields]) => {
+    (Object.keys(stepFieldMap) as unknown as StepId[]).forEach((stepId) => {
+        const fields = stepFieldMap[stepId];
         let completed = 0;
 
         fields.forEach((field) => {
@@ -471,14 +471,13 @@ const CommandeSansCompte = () => {
           if (rawValue !== undefined && rawValue !== null) {
             completed += 1;
           }
-        });
+      });
 
-        result[stepId] = {
-          completed,
-          total: fields.length,
-        };
-      },
-    );
+      result[stepId] = {
+        completed,
+        total: fields.length,
+      };
+    });
 
     return result;
   }, [stepFieldMap, watchedValues]);

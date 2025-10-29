@@ -515,7 +515,7 @@ const DashboardClient = () => {
       </aside>
 
       {/* Main content */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-visible">
         {/* Mobile brand + navigation */}
         <div className="border-b border-slate-200/80 bg-white/90 px-4 py-4 backdrop-blur lg:hidden">
           <div className="flex items-center gap-3">
@@ -587,11 +587,11 @@ const DashboardClient = () => {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.2, ease: "easeOut" }}
-                      className="absolute right-0 z-50 mt-3 w-[22.5rem] max-w-[90vw] origin-top-right focus:outline-none"
+                      className="absolute right-0 mt-3 w-96 max-w-[90vw] origin-top-right focus:outline-none z-[9999]"
                       tabIndex={-1}
                     >
                       <motion.div
-                        className="overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 shadow-[0_24px_60px_-25px_rgba(15,23,42,0.45)] backdrop-blur-md"
+                        className="overflow-hidden rounded-2xl border border-border/40 bg-white/90 shadow-xl shadow-primary/10 backdrop-blur-md"
                         initial={{ opacity: 0.9, y: -6 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0.9, y: -6 }}

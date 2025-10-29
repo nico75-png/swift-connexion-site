@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Bell,
   BellRing,
-  CalendarCheck,
+  CalendarClock,
+  CheckCircle,
   LogOut,
   Loader2,
-  MessageCircle,
+  MessageSquare,
+  type LucideIcon,
 } from "lucide-react";
 
 import DashboardHome from "@/components/dashboard-client/DashboardHome";
@@ -20,6 +22,10 @@ import Aide from "@/components/dashboard-client/Aide";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { session } from "@/utils/session";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 type SectionKey =
   | "dashboard"
@@ -36,6 +42,23 @@ type SidebarItem = {
   icon: string;
 };
 
+type NotificationCategory = "messages" | "reminders" | "system";
+type NotificationPriority = "high" | "medium" | "low";
+type NotificationBadgeTone = "info" | "success" | "alert";
+
+type NotificationItem = {
+  id: string;
+  category: NotificationCategory;
+  title: string;
+  description: string;
+  timeLabel: string;
+  occurredAt: Date;
+  isRead: boolean;
+  priority: NotificationPriority;
+  badgeLabel?: string;
+  badgeTone?: NotificationBadgeTone;
+};
+
 const SIDEBAR_ITEMS: SidebarItem[] = [
   { id: "dashboard", label: "Tableau de bord", icon: "🏠" },
   { id: "commandes", label: "Commandes", icon: "📦" },
@@ -46,32 +69,203 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   { id: "aide", label: "Centre d'aide", icon: "❓" },
 ];
 
+const NOTIFICATION_SECTIONS: Array<{
+  id: NotificationCategory;
+  title: string;
+  subtitle: string;
+  defaultOrder: number;
+}> = [
+  {
+    id: "messages",
+    title: "Messages récents",
+    subtitle: "Suivez les conversations directes et réponses rapides",
+    defaultOrder: 0,
+  },
+  {
+    id: "reminders",
+    title: "Rappels & événements",
+    subtitle: "Ne manquez aucun rendez-vous ou suivi important",
+    defaultOrder: 1,
+  },
+  {
+    id: "system",
+    title: "Activité système",
+    subtitle: "Historique des opérations et confirmations",
+    defaultOrder: 2,
+  },
+];
+
+const NOTIFICATION_VISUALS: Record<
+  NotificationCategory,
+  { icon: LucideIcon; iconClassName: string; backgroundClassName: string }
+> = {
+  messages: {
+    icon: MessageSquare,
+    iconClassName: "text-sky-600",
+    backgroundClassName: "bg-sky-500/10",
+  },
+  reminders: {
+    icon: CalendarClock,
+    iconClassName: "text-violet-600",
+    backgroundClassName: "bg-violet-500/10",
+  },
+  system: {
+    icon: CheckCircle,
+    iconClassName: "text-emerald-600",
+    backgroundClassName: "bg-emerald-500/10",
+  },
+};
+
+const BADGE_TONE_CLASSNAME: Record<NotificationBadgeTone, string> = {
+  info: "border-sky-200 bg-sky-100 text-sky-700",
+  success: "border-emerald-200 bg-emerald-100 text-emerald-700",
+  alert: "border-rose-200 bg-rose-100 text-rose-700",
+};
+
+const PRIORITY_VALUE: Record<NotificationPriority, number> = {
+  high: 3,
+  medium: 2,
+  low: 1,
+};
+
 const DashboardClient = () => {
   const [activeSection, setActiveSection] = useState<SectionKey>("dashboard");
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notificationItems, setNotificationItems] = useState<NotificationItem[]>([
+    {
+      id: "notif-1",
+      category: "messages",
+      title: "Nouveau message reçu",
+      description: "Alex Martin vous a écrit il y a 2 min",
+      timeLabel: "Il y a 2 min",
+      occurredAt: new Date(Date.now() - 2 * 60 * 1000),
+      isRead: false,
+      priority: "high",
+      badgeLabel: "Nouveau",
+      badgeTone: "info",
+    },
+    {
+      id: "notif-2",
+      category: "reminders",
+      title: "Rappel de rendez-vous",
+      description: "Visio One connexion demain à 10:30",
+      timeLabel: "Demain à 10:30",
+      occurredAt: new Date(Date.now() - 60 * 60 * 1000),
+      isRead: false,
+      priority: "high",
+      badgeLabel: "Prioritaire",
+      badgeTone: "alert",
+    },
+    {
+      id: "notif-3",
+      category: "system",
+      title: "Livraison confirmée",
+      description: "Commande #45879 livrée avec succès",
+      timeLabel: "Il y a 1 heure",
+      occurredAt: new Date(Date.now() - 60 * 60 * 1000),
+      isRead: false,
+      priority: "medium",
+      badgeLabel: "Commande",
+      badgeTone: "success",
+    },
+    {
+      id: "notif-4",
+      category: "messages",
+      title: "Retour client traité",
+      description: "Votre réponse à Sarah Lopez a été envoyée",
+      timeLabel: "Il y a 3 heures",
+      occurredAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
+      isRead: true,
+      priority: "medium",
+    },
+    {
+      id: "notif-5",
+      category: "reminders",
+      title: "Suivi de commande",
+      description: "Planifiez l'appel de suivi pour la commande #45874",
+      timeLabel: "Dans 2 jours",
+      occurredAt: new Date(Date.now() - 6 * 60 * 60 * 1000),
+      isRead: true,
+      priority: "low",
+    },
+  ]);
   const navigate = useNavigate();
   const location = useLocation();
   const hasHydratedSection = useRef(false);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
   const notificationsRef = useRef<HTMLDivElement | null>(null);
+  const unreadCount = useMemo(
+    () => notificationItems.filter((notification) => !notification.isRead).length,
+    [notificationItems],
+  );
 
-  const notifications = [
-    {
-      id: "notif-1",
-      icon: <MessageCircle className="h-4 w-4 text-blue-600" aria-hidden="true" />, 
-      title: "Nouveau message reçu",
-      description: "Alex Martin vous a écrit il y a 2 min",
-    },
-    {
-      id: "notif-2",
-      icon: <CalendarCheck className="h-4 w-4 text-indigo-600" aria-hidden="true" />, 
-      title: "Rappel de rendez-vous",
-      description: "Visio One connexion demain à 10:30",
-    },
-  ];
+  const sortedSections = useMemo(() => {
+    const sectionsWithNotifications = NOTIFICATION_SECTIONS.map((section) => {
+      const notifications = notificationItems
+        .filter((notification) => notification.category === section.id)
+        .sort((a, b) => {
+          if (a.isRead !== b.isRead) {
+            return a.isRead ? 1 : -1;
+          }
 
-  const unreadCount = notifications.length;
+          if (PRIORITY_VALUE[a.priority] !== PRIORITY_VALUE[b.priority]) {
+            return PRIORITY_VALUE[b.priority] - PRIORITY_VALUE[a.priority];
+          }
+
+          return b.occurredAt.getTime() - a.occurredAt.getTime();
+        });
+
+      const hasUnread = notifications.some((notification) => !notification.isRead);
+      const highestPriority = notifications.reduce<number>((max, notification) => {
+        return Math.max(max, PRIORITY_VALUE[notification.priority]);
+      }, 0);
+
+      return {
+        ...section,
+        notifications,
+        hasUnread,
+        highestPriority,
+      };
+    });
+
+    return sectionsWithNotifications
+      .filter((section) => section.notifications.length > 0)
+      .sort((a, b) => {
+        if (a.hasUnread !== b.hasUnread) {
+          return a.hasUnread ? -1 : 1;
+        }
+
+        if (a.highestPriority !== b.highestPriority) {
+          return b.highestPriority - a.highestPriority;
+        }
+
+        return a.defaultOrder - b.defaultOrder;
+      });
+  }, [notificationItems]);
+
+  const handleNotificationClick = useCallback((notificationId: string) => {
+    setNotificationItems((previous) =>
+      previous.map((notification) =>
+        notification.id === notificationId
+          ? {
+              ...notification,
+              isRead: true,
+            }
+          : notification,
+      ),
+    );
+    setIsNotificationsOpen(false);
+  }, []);
+
+  const handleMarkAllAsRead = useCallback(() => {
+    setNotificationItems((previous) =>
+      previous.map((notification) => ({
+        ...notification,
+        isRead: true,
+      })),
+    );
+  }, []);
 
   useEffect(() => {
     const savedSection = session.get("activeSection");
@@ -365,14 +559,20 @@ const DashboardClient = () => {
                 <button
                   type="button"
                   onClick={() => setIsNotificationsOpen((prev) => !prev)}
-                  className="relative inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-900/5 text-slate-600 transition-all duration-200 ease-out hover:bg-slate-900/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                  className={cn(
+                    "relative inline-flex h-12 w-12 items-center justify-center rounded-full bg-slate-900/5 text-slate-600 transition-all duration-200 ease-out",
+                    "hover:scale-105 hover:bg-slate-900/10 hover:shadow-lg hover:shadow-slate-400/20",
+                    "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40",
+                    isNotificationsOpen ? "shadow-md shadow-slate-400/20" : "",
+                    unreadCount > 0 ? "animate-pulse [animation-duration:2.4s]" : "",
+                  )}
                   aria-haspopup="menu"
                   aria-expanded={isNotificationsOpen}
                   aria-controls="dashboard-notifications-menu"
                 >
                   <Bell className="h-5 w-5" aria-hidden="true" />
                   {unreadCount > 0 ? (
-                    <span className="absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 px-1 text-[10px] font-semibold text-white shadow-sm">
+                    <span className="absolute -top-0.5 -right-0.5 inline-flex h-5 min-w-[1.1rem] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-[0_4px_12px_rgba(244,63,94,0.45)]">
                       {unreadCount}
                     </span>
                   ) : null}
@@ -383,70 +583,158 @@ const DashboardClient = () => {
                   {isNotificationsOpen ? (
                     <motion.div
                       id="dashboard-notifications-menu"
-                      initial={{ opacity: 0, y: -8 }}
+                      initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      transition={{ duration: 0.18, ease: "easeOut" }}
-                      className="absolute right-0 z-50 mt-3 w-80 origin-top-right rounded-2xl bg-white/95 shadow-xl ring-1 ring-slate-200/60 backdrop-blur-sm focus:outline-none"
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
+                      className="absolute right-0 z-50 mt-3 w-[22.5rem] max-w-[90vw] origin-top-right focus:outline-none"
                       tabIndex={-1}
                     >
-                      <div className="rounded-t-2xl bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500 p-4 text-white">
-                        <div className="flex items-center gap-3">
-                          <div className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-white">
-                            <BellRing className="h-5 w-5" aria-hidden="true" />
-                            {unreadCount > 0 ? (
-                              <span className="absolute -top-1 -right-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white">
-                                {unreadCount}
-                              </span>
-                            ) : null}
+                      <motion.div
+                        className="overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 shadow-[0_24px_60px_-25px_rgba(15,23,42,0.45)] backdrop-blur-md"
+                        initial={{ opacity: 0.9, y: -6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0.9, y: -6 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                      >
+                        <div className="flex items-start justify-between gap-4 border-b border-slate-200/60 bg-gradient-to-r from-slate-50 via-white to-slate-50 px-5 py-4">
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold text-slate-900">Vos notifications</p>
+                            <p className="text-xs text-slate-500">Priorisez vos actions en un coup d'œil</p>
                           </div>
-                          <div>
-                            <p className="text-sm font-semibold">🔔 {unreadCount} Notifications</p>
-                            <p className="text-xs text-white/80">Voici les dernières actualités de votre compte</p>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={handleMarkAllAsRead}
+                            disabled={unreadCount === 0}
+                            className={cn(
+                              "inline-flex items-center justify-center rounded-full border border-slate-200/70 px-3 py-1 text-xs font-semibold text-slate-600 transition-colors duration-200",
+                              "hover:border-slate-300 hover:bg-slate-100/80 hover:text-slate-900",
+                              "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40",
+                              unreadCount === 0 ? "opacity-60" : "",
+                            )}
+                          >
+                            Tout marquer comme lu
+                          </button>
                         </div>
-                      </div>
 
-                      <div className="max-h-80 overflow-y-auto p-3" role="menu" aria-label="Notifications récentes">
-                        {notifications.length > 0 ? (
-                          notifications.map((notification) => (
-                            <button
-                              key={notification.id}
-                              type="button"
-                              className="group flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 hover:bg-slate-100/70"
-                              role="menuitem"
-                              data-notification-item
-                              onClick={() => setIsNotificationsOpen(false)}
-                            >
-                              <span className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">
-                                {notification.icon}
-                              </span>
-                              <span className="flex-1">
-                                <span className="block text-sm font-medium text-slate-900">
-                                  {notification.title}
-                                </span>
-                                <span className="mt-0.5 block text-xs text-slate-500">
-                                  {notification.description}
-                                </span>
-                              </span>
-                            </button>
-                          ))
-                        ) : (
-                          <div className="flex items-center justify-center rounded-xl bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-                            Aucune notification pour le moment 🎉
+                        <ScrollArea className="max-h-[500px]" role="menu" aria-label="Notifications récentes">
+                          <div className="space-y-6 px-5 py-5">
+                            {sortedSections.length > 0 ? (
+                              sortedSections.map((section) => (
+                                <div key={section.id} className="space-y-3">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500/80">
+                                        {section.title}
+                                      </p>
+                                      <p className="mt-1 text-xs text-slate-500">{section.subtitle}</p>
+                                    </div>
+                                    {section.hasUnread ? (
+                                      <Badge
+                                        variant="secondary"
+                                        className="border border-blue-200 bg-blue-100 text-[11px] font-medium uppercase tracking-wide text-blue-600"
+                                      >
+                                        {section.notifications.filter((notification) => !notification.isRead).length} non lues
+                                      </Badge>
+                                    ) : null}
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    {section.notifications.map((notification) => {
+                                      const visuals = NOTIFICATION_VISUALS[notification.category];
+                                      const Icon = visuals.icon;
+
+                                      return (
+                                        <Card
+                                          key={notification.id}
+                                          className="group overflow-hidden rounded-2xl border border-slate-200/70 bg-white/80 p-0 shadow-none transition-all duration-200 hover:border-slate-200 hover:bg-slate-50/80 hover:shadow-[0_12px_30px_-18px_rgba(15,23,42,0.4)]"
+                                        >
+                                          <button
+                                            type="button"
+                                            className="flex w-full items-start gap-3 px-4 py-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                                            data-notification-item
+                                            role="menuitem"
+                                            onClick={() => handleNotificationClick(notification.id)}
+                                          >
+                                            <span
+                                              className={cn(
+                                                "flex h-10 w-10 items-center justify-center rounded-xl",
+                                                visuals.backgroundClassName,
+                                              )}
+                                            >
+                                              <Icon
+                                                className={cn(
+                                                  "h-5 w-5 transition-transform duration-200",
+                                                  visuals.iconClassName,
+                                                  !notification.isRead ? "scale-[1.02]" : "scale-100",
+                                                )}
+                                                aria-hidden="true"
+                                              />
+                                            </span>
+                                            <span className="flex flex-1 flex-col gap-1">
+                                              <span className="flex flex-wrap items-center gap-2">
+                                                <span
+                                                  className={cn(
+                                                    "text-sm font-semibold text-slate-900",
+                                                    notification.isRead ? "text-slate-700" : "text-slate-900",
+                                                  )}
+                                                >
+                                                  {notification.title}
+                                                </span>
+                                                {notification.badgeLabel ? (
+                                                  <span
+                                                    className={cn(
+                                                      "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide",
+                                                      notification.badgeTone
+                                                        ? BADGE_TONE_CLASSNAME[notification.badgeTone]
+                                                        : "border-slate-200 bg-slate-100 text-slate-600",
+                                                    )}
+                                                  >
+                                                    {notification.badgeLabel}
+                                                  </span>
+                                                ) : null}
+                                              </span>
+                                              <span className="text-xs text-slate-500">{notification.description}</span>
+                                              <span className="text-[11px] font-medium uppercase tracking-[0.22em] text-slate-400">
+                                                {notification.timeLabel}
+                                              </span>
+                                            </span>
+                                            <span
+                                              aria-hidden="true"
+                                              className={cn(
+                                                "mt-1 h-2 w-2 rounded-full transition-all duration-200",
+                                                notification.isRead
+                                                  ? "bg-slate-200"
+                                                  : "bg-blue-500 shadow-[0_0_0_4px_rgba(59,130,246,0.18)]",
+                                              )}
+                                            />
+                                          </button>
+                                        </Card>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/60 px-6 py-12 text-center text-sm text-slate-500">
+                                <BellRing className="mb-3 h-6 w-6 text-slate-400" aria-hidden="true" />
+                                <p className="font-medium text-slate-600">Aucune nouvelle notification</p>
+                                <p className="mt-1 text-xs text-slate-400">Tout est à jour, revenez plus tard pour de nouvelles alertes.</p>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
+                        </ScrollArea>
 
-                      <div className="border-t border-slate-200/70 bg-slate-50/80 p-3 text-right">
-                        <button
-                          type="button"
-                          className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40"
-                          onClick={() => setIsNotificationsOpen(false)}
-                        >
-                          Voir toutes les notifications
-                        </button>
-                      </div>
+                        <div className="flex items-center justify-end gap-2 border-t border-slate-200/70 bg-gradient-to-r from-white via-slate-50 to-white px-5 py-3">
+                          <button
+                            type="button"
+                            className="text-sm font-semibold text-blue-600 transition-colors duration-200 hover:text-blue-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                            onClick={() => setIsNotificationsOpen(false)}
+                          >
+                            Voir toutes les notifications
+                          </button>
+                        </div>
+                      </motion.div>
                     </motion.div>
                   ) : null}
                 </AnimatePresence>

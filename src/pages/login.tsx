@@ -102,6 +102,44 @@ const Login = () => {
       setIsLoggingIn(false);
     }
   };
+  const handleLoginAsTestClient = async () => {
+    setLoginError(null);
+    setIsLoggingIn(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: 'test@rapideexpress.fr',
+        password: 'TestUser2024!'
+      });
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "La connexion a échoué.";
+      setLoginError(message);
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleLoginAsTestAdmin = async () => {
+    setLoginError(null);
+    setIsLoggingIn(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: 'admin@rapideexpress.fr',
+        password: 'AdminTest2024!'
+      });
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "La connexion a échoué.";
+      setLoginError(message);
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
   const handleSignUpSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isSigningUp) {
@@ -204,7 +242,24 @@ const Login = () => {
             </li>
           </ul>
           <div className="onecx-auth__test-drive">
-            
+            <button
+              type="button"
+              className="onecx-auth__test-button"
+              onClick={handleLoginAsTestClient}
+              disabled={isLoggingIn}
+            >
+              <span aria-hidden="true">👤</span>
+              Se connecter en tant que client test
+            </button>
+            <button
+              type="button"
+              className="onecx-auth__test-button"
+              onClick={handleLoginAsTestAdmin}
+              disabled={isLoggingIn}
+            >
+              <span aria-hidden="true">🔐</span>
+              Se connecter en tant qu'admin test
+            </button>
             <p className="onecx-auth__test-drive-note">
               Accès complet au dashboard pour découvrir l'expérience.
             </p>

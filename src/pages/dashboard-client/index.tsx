@@ -16,6 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { isAdmin, isUser } from "@/lib/roles";
 type SectionKey = "dashboard" | "commandes" | "suivi" | "factures" | "messages" | "parametres" | "aide";
 type SidebarItem = {
   id: SectionKey;
@@ -174,6 +175,7 @@ const DashboardClient = () => {
     isRead: true,
     priority: "low"
   }]);
+  const [role, setRole] = useState<"admin" | "user">("user");
   const navigate = useNavigate();
   const location = useLocation();
   const hasHydratedSection = useRef(false);
@@ -327,6 +329,34 @@ const DashboardClient = () => {
       preventScroll: true
     });
   }, [isNotificationsOpen]);
+  useEffect(() => {
+    let isMounted = true;
+    async function resolveRole() {
+      try {
+        const adminStatus = await isAdmin();
+        if (!isMounted) {
+          return;
+        }
+        if (adminStatus) {
+          setRole("admin");
+          return;
+        }
+        const userStatus = await isUser();
+        if (!isMounted) {
+          return;
+        }
+        if (userStatus) {
+          setRole("user");
+        }
+      } catch (error) {
+        console.error("Failed to resolve user role", error);
+      }
+    }
+    void resolveRole();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
   const handleSectionChange = useCallback((section: SectionKey) => {
     setActiveSection(section);
     if (sidebarRef.current) {
@@ -356,6 +386,13 @@ const DashboardClient = () => {
         return <DashboardHome />;
     }
   };
+  const roleTitle = role === "admin" ? "👑 Espace Administrateur" : "👤 Espace Utilisateur";
+  const roleDescription = role === "admin"
+    ? "Gérez l'ensemble de la plateforme, des utilisateurs et des opérations clés."
+    : "Retrouvez vos commandes, messages et outils personnalisés en un clin d'œil.";
+  const roleBadgeClassName = role === "admin"
+    ? "bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white shadow-[0_12px_28px_-18px_rgba(217,119,6,0.55)]"
+    : "bg-slate-900 text-white shadow-[0_12px_28px_-18px_rgba(15,23,42,0.55)]";
   return <div className="flex h-screen bg-slate-100 text-slate-900">
       {/* Sidebar */}
       <aside className="relative hidden w-72 shrink-0 bg-slate-950/95 text-slate-100 shadow-2xl lg:flex lg:flex-col">
@@ -368,7 +405,7 @@ const DashboardClient = () => {
             </div>
             <div className="space-y-1">
               <p className="text-[11px] uppercase tracking-[0.28em] text-blue-200/80">One connexion</p>
-              <p className="text-sm font-semibold text-white/90">Espace client</p>
+              <p className="text-sm font-semibold text-white/90">{roleTitle}</p>
             </div>
           </div>
         </div>
@@ -417,7 +454,7 @@ const DashboardClient = () => {
             </div>
             <div className="space-y-0.5">
               <p className="text-[11px] uppercase tracking-[0.28em] text-slate-500/80">One connexion</p>
-              <p className="text-sm font-semibold text-slate-900">Espace client</p>
+              <p className="text-sm font-semibold text-slate-900">{roleTitle}</p>
             </div>
           </div>
           <nav className="mt-4 flex gap-2 overflow-x-auto" aria-label="Navigation principale mobile">
@@ -565,6 +602,18 @@ const DashboardClient = () => {
         {/* Content area */}
         <main className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 p-6">
           <div className="mx-auto w-full max-w-7xl">
+            <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-slate-200/70 bg-white/80 p-6 shadow-lg shadow-blue-900/5 backdrop-blur">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-400">Votre espace</p>
+                  <h1 className="text-2xl font-semibold text-slate-900">{roleTitle}</h1>
+                  <p className="text-sm text-slate-500">{roleDescription}</p>
+                </div>
+                <Badge className={cn("rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-wide", roleBadgeClassName)}>
+                  {role === "admin" ? "Administrateur" : "Utilisateur"}
+                </Badge>
+              </div>
+            </div>
             {/* Transition fluide entre les sections du tableau de bord */}
             <AnimatePresence mode="wait">
               <motion.div key={activeSection} initial={{
@@ -589,3 +638,4 @@ const DashboardClient = () => {
     </div>;
 };
 export default DashboardClient;
+

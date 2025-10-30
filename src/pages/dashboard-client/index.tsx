@@ -25,7 +25,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { isAdmin, isUser } from "@/lib/roles";
+import { isAdmin, isClient } from "@/lib/roles";
 type SectionKey =
   | "dashboard"
   | "commandes"
@@ -214,7 +214,7 @@ const DashboardClient = () => {
       priority: "low",
     },
   ]);
-  const [role, setRole] = useState<"admin" | "user">("user");
+  const [role, setRole] = useState<"admin" | "client">("client");
   const navigate = useNavigate();
   const location = useLocation();
   const hasHydratedSection = useRef(false);
@@ -411,12 +411,12 @@ const DashboardClient = () => {
           setRole("admin");
           return;
         }
-        const userStatus = await isUser();
+        const clientStatus = await isClient();
         if (!isMounted) {
           return;
         }
-        if (userStatus) {
-          setRole("user");
+        if (clientStatus) {
+          setRole("client");
         }
       } catch (error) {
         console.error("Failed to resolve user role", error);

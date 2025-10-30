@@ -28,20 +28,21 @@ const Login = () => {
   const [signUpSuccess, setSignUpSuccess] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
-  const { session, status, refreshProfile } = useAuth();
+  const { session, status, refreshProfile, userRole } = useAuth();
   const redirectTarget = useMemo(() => {
     const redirectParam = searchParams.get("redirect");
     if (!redirectParam) {
-      return "/dashboard-client";
+      // Redirection automatique selon le rôle
+      return userRole === "admin" ? "/dashboard-admin" : "/dashboard-client";
     }
     try {
       const decoded = decodeURIComponent(redirectParam);
-      return decoded.startsWith("/") ? decoded : "/dashboard-client";
+      return decoded.startsWith("/") ? decoded : (userRole === "admin" ? "/dashboard-admin" : "/dashboard-client");
     } catch (error) {
       console.warn("Failed to decode redirect parameter", error);
-      return "/dashboard-client";
+      return userRole === "admin" ? "/dashboard-admin" : "/dashboard-client";
     }
-  }, [searchParams]);
+  }, [searchParams, userRole]);
   useEffect(() => {
     const mode = searchParams.get("mode");
     if (mode === "signup") {

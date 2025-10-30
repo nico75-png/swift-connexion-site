@@ -31,8 +31,8 @@ export async function isAdmin() {
   return role === "admin";
 }
 
-export async function isUser() {
+export async function isClient() {
   const role = await fetchCurrentUserRole();
-  return role === "user";
+  return role === "client";
 }
 

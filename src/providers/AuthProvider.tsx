@@ -4,8 +4,9 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { Profile } from "@/lib/api/profiles";
 import { fetchProfileByUserId } from "@/lib/api/profiles";
-import { resetAuthState, setAuthState } from "@/lib/stores/auth.store";
+import { resetAuthState, setAuthState, type UserRole } from "@/lib/stores/auth.store";
 import { syncClientParticipantIdentity } from "@/hooks/useMessagesStore";
+import { fetchUserRoles, getPrimaryRole } from "@/lib/api/user-roles";
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
@@ -19,6 +20,7 @@ type AuthContextValue = {
   resolvedDisplayName: string | null;
   fallbackEmail: string | null;
   isProfileComplete: boolean;
+  userRole: UserRole;
   refreshProfile: () => Promise<void>;
 };
 
@@ -45,7 +47,7 @@ const computeDisplayName = (session: Session | null, profile: Profile | null): s
   return session?.user?.id ?? null;
 };
 
-const applyAuthState = (session: Session | null, profile: Profile | null) => {
+const applyAuthState = (session: Session | null, profile: Profile | null, userRole: UserRole = "client") => {
   if (!session) {
     resetAuthState();
     return;
@@ -58,7 +60,7 @@ const applyAuthState = (session: Session | null, profile: Profile | null) => {
     currentUser: {
       id: session.user.id,
       name: resolvedName ?? session.user.id,
-      role: "client",
+      role: userRole,
       email: session.user.email ?? undefined,
     },
     currentClient: {
@@ -74,24 +76,34 @@ const applyAuthState = (session: Session | null, profile: Profile | null) => {
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [userRole, setUserRole] = useState<UserRole>("client");
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshingProfile, setIsRefreshingProfile] = useState(false);
 
   const loadProfileForSession = useCallback(async (nextSession: Session | null) => {
     if (!nextSession) {
       setProfile(null);
+      setUserRole("client");
       applyAuthState(null, null);
       return;
     }
 
     try {
-      const data = await fetchProfileByUserId(nextSession.user.id);
-      setProfile(data ?? null);
-      applyAuthState(nextSession, data ?? null);
+      const [profileData, roles] = await Promise.all([
+        fetchProfileByUserId(nextSession.user.id),
+        fetchUserRoles(nextSession.user.id),
+      ]);
+      
+      const primaryRole = getPrimaryRole(roles.length > 0 ? roles : ["client"]);
+      
+      setProfile(profileData ?? null);
+      setUserRole(primaryRole);
+      applyAuthState(nextSession, profileData ?? null, primaryRole);
     } catch (error) {
       console.error("Failed to load profile", error);
       setProfile(null);
-      applyAuthState(nextSession, null);
+      setUserRole("client");
+      applyAuthState(nextSession, null, "client");
     }
   }, []);
 
@@ -156,9 +168,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       resolvedDisplayName,
       fallbackEmail,
       isProfileComplete,
+      userRole,
       refreshProfile,
     };
-  }, [isLoading, isRefreshingProfile, profile, refreshProfile, session]);
+  }, [isLoading, isRefreshingProfile, profile, refreshProfile, session, userRole]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

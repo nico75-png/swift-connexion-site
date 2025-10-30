@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Bell, BellRing, CalendarClock, CheckCircle, LogOut, Loader2, MessageSquare, type LucideIcon } from "lucide-react";
+import { BellRing, CalendarClock, CheckCircle, LogOut, Loader2, MessageSquare, type LucideIcon } from "lucide-react";
 import DashboardHome from "@/components/dashboard-client/DashboardHome";
 import Commandes from "@/components/dashboard-client/Commandes";
 import Suivi from "@/components/dashboard-client/Suivi";
@@ -16,7 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { isAdmin, isUser } from "@/lib/roles";
+import { useUserRole } from "@/hooks/useUserRole";
 type SectionKey = "dashboard" | "commandes" | "suivi" | "factures" | "messages" | "parametres" | "aide";
 type SidebarItem = {
   id: SectionKey;
@@ -175,7 +175,7 @@ const DashboardClient = () => {
     isRead: true,
     priority: "low"
   }]);
-  const [role, setRole] = useState<"admin" | "user">("user");
+  const { role, loading: isRoleLoading } = useUserRole();
   const navigate = useNavigate();
   const location = useLocation();
   const hasHydratedSection = useRef(false);
@@ -329,34 +329,6 @@ const DashboardClient = () => {
       preventScroll: true
     });
   }, [isNotificationsOpen]);
-  useEffect(() => {
-    let isMounted = true;
-    async function resolveRole() {
-      try {
-        const adminStatus = await isAdmin();
-        if (!isMounted) {
-          return;
-        }
-        if (adminStatus) {
-          setRole("admin");
-          return;
-        }
-        const userStatus = await isUser();
-        if (!isMounted) {
-          return;
-        }
-        if (userStatus) {
-          setRole("user");
-        }
-      } catch (error) {
-        console.error("Failed to resolve user role", error);
-      }
-    }
-    void resolveRole();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
   const handleSectionChange = useCallback((section: SectionKey) => {
     setActiveSection(section);
     if (sidebarRef.current) {
@@ -386,13 +358,20 @@ const DashboardClient = () => {
         return <DashboardHome />;
     }
   };
-  const roleTitle = role === "admin" ? "👑 Espace Administrateur" : "👤 Espace Utilisateur";
-  const roleDescription = role === "admin"
-    ? "Gérez l'ensemble de la plateforme, des utilisateurs et des opérations clés."
-    : "Retrouvez vos commandes, messages et outils personnalisés en un clin d'œil.";
+  const roleTitle = isRoleLoading
+    ? "Chargement de votre espace"
+    : role === "admin"
+      ? "👑 Espace Administrateur"
+      : "👤 Espace Utilisateur";
+  const roleDescription = isRoleLoading
+    ? "Nous personnalisons votre expérience en fonction de votre profil."
+    : role === "admin"
+      ? "Gérez l'ensemble de la plateforme, des utilisateurs et des opérations clés."
+      : "Retrouvez vos commandes, messages et outils personnalisés en un clin d'œil.";
   const roleBadgeClassName = role === "admin"
     ? "bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white shadow-[0_12px_28px_-18px_rgba(217,119,6,0.55)]"
     : "bg-slate-900 text-white shadow-[0_12px_28px_-18px_rgba(15,23,42,0.55)]";
+  const roleBadgeLabel = isRoleLoading ? "Chargement..." : role === "admin" ? "Administrateur" : "Utilisateur";
   return <div className="flex h-screen bg-slate-100 text-slate-900">
       {/* Sidebar */}
       <aside className="relative hidden w-72 shrink-0 bg-slate-950/95 text-slate-100 shadow-2xl lg:flex lg:flex-col">
@@ -609,8 +588,12 @@ const DashboardClient = () => {
                   <h1 className="text-2xl font-semibold text-slate-900">{roleTitle}</h1>
                   <p className="text-sm text-slate-500">{roleDescription}</p>
                 </div>
-                <Badge className={cn("rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-wide", roleBadgeClassName)}>
-                  {role === "admin" ? "Administrateur" : "Utilisateur"}
+                <Badge className={cn(
+                  "rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-wide",
+                  roleBadgeClassName,
+                  isRoleLoading ? "animate-pulse" : ""
+                )}>
+                  {roleBadgeLabel}
                 </Badge>
               </div>
             </div>

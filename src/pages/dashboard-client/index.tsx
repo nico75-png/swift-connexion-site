@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Bell, BellRing, CalendarClock, CheckCircle, LogOut, Loader2, MessageSquare, type LucideIcon } from "lucide-react";
@@ -16,8 +16,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { isAdmin, isUser } from "@/lib/roles";
+import { useAuth } from "@/providers/AuthProvider";
+const DashboardAdminLazy = lazy(() => import("@/pages/dashboard-admin"));
+
 type SectionKey = "dashboard" | "commandes" | "suivi" | "factures" | "messages" | "parametres" | "aide";
+type DashboardExperienceRole = "admin" | "user";
 type SidebarItem = {
   id: SectionKey;
   label: string;
@@ -119,7 +122,19 @@ const PRIORITY_VALUE: Record<NotificationPriority, number> = {
   medium: 2,
   low: 1
 };
-const DashboardClient = () => {
+
+const DashboardAccessLoader = ({ label }: { label: string }) => (
+  <div
+    className="flex h-screen flex-col items-center justify-center gap-4 bg-slate-100 text-slate-900"
+    role="status"
+    aria-live="polite"
+  >
+    <Loader2 className="h-10 w-10 animate-spin text-slate-400" aria-hidden="true" />
+    <p className="text-sm font-medium text-slate-600">{label}</p>
+  </div>
+);
+
+const ClientDashboardView = ({ role }: { role: DashboardExperienceRole }) => {
   const [activeSection, setActiveSection] = useState<SectionKey>("dashboard");
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -175,7 +190,6 @@ const DashboardClient = () => {
     isRead: true,
     priority: "low"
   }]);
-  const [role, setRole] = useState<"admin" | "user">("user");
   const navigate = useNavigate();
   const location = useLocation();
   const hasHydratedSection = useRef(false);
@@ -329,34 +343,6 @@ const DashboardClient = () => {
       preventScroll: true
     });
   }, [isNotificationsOpen]);
-  useEffect(() => {
-    let isMounted = true;
-    async function resolveRole() {
-      try {
-        const adminStatus = await isAdmin();
-        if (!isMounted) {
-          return;
-        }
-        if (adminStatus) {
-          setRole("admin");
-          return;
-        }
-        const userStatus = await isUser();
-        if (!isMounted) {
-          return;
-        }
-        if (userStatus) {
-          setRole("user");
-        }
-      } catch (error) {
-        console.error("Failed to resolve user role", error);
-      }
-    }
-    void resolveRole();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
   const handleSectionChange = useCallback((section: SectionKey) => {
     setActiveSection(section);
     if (sidebarRef.current) {
@@ -637,5 +623,25 @@ const DashboardClient = () => {
       </div>
     </div>;
 };
+
+const DashboardClient = () => {
+  const { status, userRole } = useAuth();
+  const resolvedRole: DashboardExperienceRole = userRole === "admin" ? "admin" : "user";
+
+  if (status === "loading") {
+    return <DashboardAccessLoader label="Chargement de votre espace sécurisé…" />;
+  }
+
+  if (resolvedRole === "admin") {
+    return (
+      <Suspense fallback={<DashboardAccessLoader label="Chargement de l'espace administrateur…" />}>
+        <DashboardAdminLazy />
+      </Suspense>
+    );
+  }
+
+  return <ClientDashboardView role={resolvedRole} />;
+};
+
 export default DashboardClient;
 

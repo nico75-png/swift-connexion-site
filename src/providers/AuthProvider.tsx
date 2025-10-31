@@ -78,16 +78,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [userRole, setUserRole] = useState<UserRole>("client");
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [isRefreshingProfile, setIsRefreshingProfile] = useState(false);
 
   const loadProfileForSession = useCallback(async (nextSession: Session | null) => {
     if (!nextSession) {
       setProfile(null);
       setUserRole("client");
+      setIsLoadingProfile(false);
       applyAuthState(null, null);
       return;
     }
 
+    setIsLoadingProfile(true);
     try {
       const [profileData, roles] = await Promise.all([
         fetchProfileByUserId(nextSession.user.id),
@@ -104,6 +107,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setProfile(null);
       setUserRole("client");
       applyAuthState(nextSession, null, "client");
+    } finally {
+      setIsLoadingProfile(false);
     }
   }, []);
 
@@ -127,9 +132,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     initialise();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_, nextSession) => {
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_, nextSession) => {
       setSession(nextSession);
-      loadProfileForSession(nextSession ?? null);
+      await loadProfileForSession(nextSession ?? null);
     });
 
     return () => {
@@ -156,14 +161,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const fallbackEmail = session?.user?.email ?? null;
     const isProfileComplete = Boolean(profile?.display_name?.trim());
     const isAuthenticated = Boolean(session);
-    const status: AuthStatus = isLoading ? "loading" : isAuthenticated ? "authenticated" : "unauthenticated";
+    // Inclure isLoadingProfile dans le calcul du status pour éviter les redirections prématurées
+    const status: AuthStatus = (isLoading || isLoadingProfile) ? "loading" : isAuthenticated ? "authenticated" : "unauthenticated";
 
     return {
       session,
       profile,
       status,
       isAuthenticated,
-      isLoading,
+      isLoading: isLoading || isLoadingProfile,
       isRefreshingProfile,
       resolvedDisplayName,
       fallbackEmail,
@@ -171,7 +177,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       userRole,
       refreshProfile,
     };
-  }, [isLoading, isRefreshingProfile, profile, refreshProfile, session, userRole]);
+  }, [isLoading, isLoadingProfile, isRefreshingProfile, profile, refreshProfile, session, userRole]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

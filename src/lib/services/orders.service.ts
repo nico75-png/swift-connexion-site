@@ -125,7 +125,7 @@ export const createOrder = async (
       schedule_end: newOrder.schedule.end,
       amount: payload.quoteAmount,
       currency: storedQuote?.currency ?? "EUR",
-      status: "EN_ATTENTE_AFFECTATION",
+      status: "pending" as const,
       driver_instructions: payload.driverInstructions?.trim() ? payload.driverInstructions.trim() : null,
       volume_m3: payload.volume,
       weight_kg: payload.weight,

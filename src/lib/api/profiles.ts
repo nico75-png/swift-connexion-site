@@ -7,7 +7,7 @@ export const fetchProfileByUserId = async (userId: string) => {
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
-    .eq("user_id", userId)
+    .eq("id", userId)
     .maybeSingle<Profile>();
 
   if (error) {
@@ -25,11 +25,10 @@ export const upsertProfile = async (input: {
   const { error } = await supabase.from("profiles").upsert(
     {
       id: input.userId,
-      user_id: input.userId,
       first_name: input.firstName,
       last_name: input.lastName,
     },
-    { onConflict: "user_id" },
+    { onConflict: "id" },
   );
 
   if (error) {

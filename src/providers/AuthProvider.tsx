@@ -32,8 +32,11 @@ const computeDisplayName = (session: Session | null, profile: Profile | null): s
     return fromProfile;
   }
 
-  if (profile?.first_name || profile?.last_name) {
-    const composed = `${profile?.first_name ?? ""} ${profile?.last_name ?? ""}`.trim();
+  const firstName = profile?.first_name ?? "";
+  const lastName = profile?.last_name ?? "";
+  
+  if (firstName || lastName) {
+    const composed = `${firstName} ${lastName}`.trim();
     if (composed) {
       return composed;
     }
@@ -177,7 +180,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       userRole,
       refreshProfile,
     };
-  }, [isLoading, isLoadingProfile, isRefreshingProfile, profile, refreshProfile, session, userRole]);
+  }, [isLoading, isLoadingProfile, isRefreshingProfile, profile, session, userRole, refreshProfile]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

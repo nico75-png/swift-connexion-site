@@ -19,22 +19,16 @@ export const fetchClientProfileByUserId = async (userId: string): Promise<Client
 
 export const upsertClientProfile = async (input: {
   userId: string;
-  contactName: string;
-  company: string;
+  companyName: string;
   siret: string;
-  sector: ClientProfile["sector"];
-  defaultPickupAddress?: string | null;
-  defaultDeliveryAddress?: string | null;
+  industry?: string | null;
 }): Promise<ClientProfile | null> => {
   const { error } = await supabase.from("client_profiles").upsert(
     {
       user_id: input.userId,
-      contact_name: input.contactName,
-      company: input.company,
+      company_name: input.companyName,
       siret: input.siret,
-      sector: input.sector,
-      default_pickup_address: input.defaultPickupAddress ?? null,
-      default_delivery_address: input.defaultDeliveryAddress ?? null,
+      industry: input.industry ?? null,
     },
     { onConflict: "user_id" },
   );

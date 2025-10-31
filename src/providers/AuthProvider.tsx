@@ -164,16 +164,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const fallbackEmail = session?.user?.email ?? null;
     const isProfileComplete = Boolean(profile?.display_name?.trim());
     const isAuthenticated = Boolean(session);
-    // Inclure isLoadingProfile dans le calcul du status pour éviter les redirections prématurées
-    const status: AuthStatus = (isLoading || isLoadingProfile) ? "loading" : isAuthenticated ? "authenticated" : "unauthenticated";
+    // Ne pas inclure isLoadingProfile dans le status - seulement pour le chargement initial
+    const status: AuthStatus = isLoading ? "loading" : isAuthenticated ? "authenticated" : "unauthenticated";
 
     return {
       session,
       profile,
       status,
       isAuthenticated,
-      isLoading: isLoading || isLoadingProfile,
-      isRefreshingProfile,
+      isLoading, // Le vrai isLoading pour l'écran de chargement initial
+      isRefreshingProfile: isRefreshingProfile || isLoadingProfile, // Combiner les deux pour les refreshes
       resolvedDisplayName,
       fallbackEmail,
       isProfileComplete,

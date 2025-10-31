@@ -28,7 +28,11 @@ const Login = () => {
   const [signUpSuccess, setSignUpSuccess] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
-  const { session, status, refreshProfile, userRole } = useAuth();
+  const { session, status, refreshProfile, userRole, isRefreshingProfile } = useAuth();
+  
+  // Attendre que le profil soit chargé avant de rediriger pour utiliser le bon rôle
+  const isRoleLoaded = !isRefreshingProfile;
+  
   const redirectTarget = useMemo(() => {
     const redirectParam = searchParams.get("redirect");
     if (!redirectParam) {
@@ -55,7 +59,8 @@ const Login = () => {
     return <AuthLoadingScreen />;
   }
 
-  if (status === "authenticated" && session) {
+  // Attendre que le rôle soit chargé avant de rediriger
+  if (status === "authenticated" && session && isRoleLoaded) {
     return <Navigate to={redirectTarget} replace />;
   }
   const handleToggle = (next: boolean) => {

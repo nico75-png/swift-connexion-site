@@ -135,9 +135,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     initialise();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_, nextSession) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_, nextSession) => {
       setSession(nextSession);
-      await loadProfileForSession(nextSession ?? null);
+      
+      // Defer Supabase calls with setTimeout to prevent deadlock
+      setTimeout(() => {
+        loadProfileForSession(nextSession ?? null);
+      }, 0);
     });
 
     return () => {

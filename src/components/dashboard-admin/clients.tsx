@@ -5,6 +5,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/components/ui/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Filter, Plus, Search, UsersRound } from "lucide-react";
 
 const clients = [
@@ -23,6 +27,9 @@ const statusMap: Record<string, string> = {
 const Clients = () => {
   const [searchValue, setSearchValue] = useState("");
   const [segment, setSegment] = useState("tous");
+  const [sort, setSort] = useState<"recent" | "orders" | "name">("recent");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [formState, setFormState] = useState({ name: "", company: "", email: "", segment: "standard" });
 
   const segments = useMemo(
     () => [
@@ -33,6 +40,31 @@ const Clients = () => {
     ],
     [],
   );
+
+  const filteredClients = useMemo(() => {
+    const base = clients
+      .filter((client) => `${client.name}${client.company}`.toLowerCase().includes(searchValue.toLowerCase()))
+      .filter((client) => (segment === "tous" ? true : client.segment.toLowerCase() === segment));
+
+    return [...base].sort((a, b) => {
+      if (sort === "name") {
+        return a.name.localeCompare(b.name);
+      }
+      if (sort === "orders") {
+        return b.orders - a.orders;
+      }
+      return b.id.localeCompare(a.id);
+    });
+  }, [searchValue, segment, sort]);
+
+  const handleSubmit = () => {
+    setIsDialogOpen(false);
+    toast({
+      title: "Client enregistré",
+      description: `${formState.name || "Client"} sera contacté à ${formState.email || "l'adresse indiquée"}.`,
+    });
+    setFormState({ name: "", company: "", email: "", segment: "standard" });
+  };
 
   return (
     <div className="space-y-8">
@@ -51,7 +83,10 @@ const Clients = () => {
           >
             <Filter className="mr-2 h-4 w-4" /> Filtres avancés
           </Button>
-          <Button className="rounded-2xl bg-[#2563EB] px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-[#1D4ED8]">
+          <Button
+            className="rounded-2xl bg-[#2563EB] px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-[#1D4ED8]"
+            onClick={() => setIsDialogOpen(true)}
+          >
             <Plus className="mr-2 h-4 w-4" /> Ajouter un client
           </Button>
         </div>
@@ -87,6 +122,16 @@ const Clients = () => {
                 </button>
               ))}
             </div>
+            <Select value={sort} onValueChange={(value: "recent" | "orders" | "name") => setSort(value)}>
+              <SelectTrigger className="h-11 w-48 rounded-2xl border-slate-200 text-sm text-slate-600">
+                <SelectValue placeholder="Trier" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recent">Plus récents</SelectItem>
+                <SelectItem value="orders">Commandes</SelectItem>
+                <SelectItem value="name">Nom</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardHeader>
         <CardContent className="space-y-6 pt-6">
@@ -102,43 +147,38 @@ const Clients = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clients
-                  .filter((client) =>
-                    `${client.name}${client.company}`.toLowerCase().includes(searchValue.toLowerCase()),
-                  )
-                  .filter((client) => (segment === "tous" ? true : client.segment.toLowerCase() === segment))
-                  .map((client) => (
-                    <TableRow key={client.id} className="text-sm text-slate-700">
-                      <TableCell className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9">
-                            <AvatarFallback className="bg-[#2563EB]/10 text-xs font-semibold text-[#2563EB]">
-                              {client.name
-                                .split(" ")
-                                .map((part) => part[0])
-                                .join("")}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-semibold text-slate-900">{client.name}</p>
-                            <p className="text-xs text-slate-500">{client.id}</p>
-                          </div>
+                {filteredClients.map((client) => (
+                  <TableRow key={client.id} className="text-sm text-slate-700">
+                    <TableCell className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9">
+                          <AvatarFallback className="bg-[#2563EB]/10 text-xs font-semibold text-[#2563EB]">
+                            {client.name
+                              .split(" ")
+                              .map((part) => part[0])
+                              .join("")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-semibold text-slate-900">{client.name}</p>
+                          <p className="text-xs text-slate-500">{client.id}</p>
                         </div>
-                      </TableCell>
-                      <TableCell className="px-6 py-4">{client.company}</TableCell>
-                      <TableCell className="px-6 py-4">
-                        <Badge className={`rounded-2xl px-3 py-1 text-xs font-semibold ${statusMap[client.status]}`}>
-                          {client.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="px-6 py-4 font-semibold text-slate-900">{client.orders}</TableCell>
-                      <TableCell className="px-6 py-4 text-right">
-                        <Badge className="rounded-2xl bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                          {client.segment}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-6 py-4">{client.company}</TableCell>
+                    <TableCell className="px-6 py-4">
+                      <Badge className={`rounded-2xl px-3 py-1 text-xs font-semibold ${statusMap[client.status]}`}>
+                        {client.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="px-6 py-4 font-semibold text-slate-900">{client.orders}</TableCell>
+                    <TableCell className="px-6 py-4 text-right">
+                      <Badge className="rounded-2xl bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                        {client.segment}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>
@@ -180,6 +220,69 @@ const Clients = () => {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-lg rounded-3xl border border-slate-200/70 bg-white/95 p-6 shadow-xl">
+          <DialogHeader>
+            <DialogTitle>Ajouter un client</DialogTitle>
+            <DialogDescription>Créez un compte client avec attribution automatique d'un segment.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid gap-2">
+              <Label htmlFor="client-name">Nom complet</Label>
+              <Input
+                id="client-name"
+                value={formState.name}
+                onChange={(event) => setFormState((previous) => ({ ...previous, name: event.target.value }))}
+                className="rounded-2xl border-slate-200"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="client-company">Entreprise</Label>
+              <Input
+                id="client-company"
+                value={formState.company}
+                onChange={(event) => setFormState((previous) => ({ ...previous, company: event.target.value }))}
+                className="rounded-2xl border-slate-200"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="client-email">Email</Label>
+              <Input
+                id="client-email"
+                type="email"
+                value={formState.email}
+                onChange={(event) => setFormState((previous) => ({ ...previous, email: event.target.value }))}
+                className="rounded-2xl border-slate-200"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Segment</Label>
+              <Select
+                value={formState.segment}
+                onValueChange={(value: string) => setFormState((previous) => ({ ...previous, segment: value }))}
+              >
+                <SelectTrigger className="rounded-2xl border-slate-200">
+                  <SelectValue placeholder="Segment" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="premium">Premium</SelectItem>
+                  <SelectItem value="standard">Standard</SelectItem>
+                  <SelectItem value="starter">Starter</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="mt-6 flex items-center justify-between gap-3">
+            <Button variant="outline" className="rounded-2xl border-slate-200" onClick={() => setIsDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button className="rounded-2xl bg-[#2563EB] text-white hover:bg-[#1D4ED8]" onClick={handleSubmit}>
+              Créer le client
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

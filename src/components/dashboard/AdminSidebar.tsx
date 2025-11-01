@@ -1,23 +1,32 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  BarChart3,
-  CalendarClock,
-  ClipboardList,
-  HelpCircle,
+  AnimatePresence,
+  motion,
+  useScroll,
+  useTransform,
+} from "framer-motion";
+import type { LucideIcon } from "lucide-react";
+import {
+  CalendarCheck2,
+  ChartPie,
   LayoutDashboard,
-  LifeBuoy,
   LogOut,
   Menu,
   MessageSquare,
   Settings,
+  Share2,
   Truck,
   Users,
-  Wallet,
+  Waypoints,
   X,
+  ClipboardList,
+  Bell,
+  FileText,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -26,6 +35,8 @@ export type AdminSectionKey =
   | "commandes"
   | "clients"
   | "chauffeurs"
+  | "suivi"
+  | "planification"
   | "factures"
   | "statistiques"
   | "messages"
@@ -41,20 +52,24 @@ interface AdminSidebarProps {
   adminRole?: string;
 }
 
+const SIDEBAR_BG = "bg-[rgba(11,45,85,0.35)]";
+const SIDEBAR_BORDER = "border-white/10";
+
 const NAV_ITEMS: Array<{
   id: AdminSectionKey;
   label: string;
-  icon: React.ComponentType<{ className?: string }> | string;
-  isEmoji?: boolean;
+  icon: LucideIcon;
 }> = [
-  { id: "dashboard", label: "Tableau de bord", icon: "🏠", isEmoji: true },
-  { id: "commandes", label: "Commandes", icon: "📦", isEmoji: true },
-  { id: "clients", label: "Clients", icon: Users, isEmoji: false },
-  { id: "chauffeurs", label: "Chauffeurs", icon: Truck, isEmoji: false },
-  { id: "statistiques", label: "Suivi", icon: "📍", isEmoji: true },
-  { id: "factures", label: "Factures", icon: "📄", isEmoji: true },
-  { id: "messages", label: "Messages", icon: "💬", isEmoji: true },
-  { id: "parametres", label: "Paramètres", icon: Settings, isEmoji: false },
+  { id: "dashboard", label: "Tableau de bord", icon: LayoutDashboard },
+  { id: "commandes", label: "Commandes", icon: ClipboardList },
+  { id: "clients", label: "Clients", icon: Users },
+  { id: "chauffeurs", label: "Chauffeurs", icon: Truck },
+  { id: "suivi", label: "Suivi", icon: Waypoints },
+  { id: "planification", label: "Planification", icon: CalendarCheck2 },
+  { id: "factures", label: "Factures", icon: FileText },
+  { id: "statistiques", label: "Analytique", icon: ChartPie },
+  { id: "messages", label: "Messages", icon: MessageSquare },
+  { id: "parametres", label: "Paramètres", icon: Settings },
 ];
 
 /**
@@ -72,6 +87,20 @@ const AdminSidebar = ({
   const navigate = useNavigate();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(min-width: 768px)").matches : false,
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const query = window.matchMedia("(min-width: 768px)");
+    const update = () => setIsDesktop(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
 
   const unreadLabel = unreadMessages > 9 ? "9+" : String(unreadMessages);
 
@@ -105,152 +134,232 @@ const AdminSidebar = ({
     navigate("/login");
   };
 
-  const toggleMobileSidebar = () => {
-    setIsMobileOpen((previous) => !previous);
-  };
-
-  const closeMobileSidebar = () => {
-    setIsMobileOpen(false);
-  };
-
-  const toggleCollapse = () => {
-    setIsCollapsed((previous) => !previous);
-  };
+  const toggleMobileSidebar = () => setIsMobileOpen((value) => !value);
+  const closeMobileSidebar = () => setIsMobileOpen(false);
+  const toggleCollapse = () => setIsCollapsed((value) => !value);
 
   const showLabels = !isCollapsed || isMobileOpen;
+  const { scrollYProgress } = useScroll();
+  const parallaxY = useTransform(scrollYProgress, [0, 1], [0, 12]);
+
+  const SidebarContent = (
+    <motion.aside
+      key="admin-sidebar"
+      data-collapsed={isCollapsed}
+      initial={{ x: -320, opacity: 0 }}
+      animate={{ x: isMobileOpen || isDesktop ? 0 : -320, opacity: 1 }}
+      exit={{ x: -320, opacity: 0 }}
+      transition={{ type: "spring", stiffness: 260, damping: 32 }}
+      className={cn(
+        "glassmorphic fixed inset-y-0 left-0 z-40 flex h-screen flex-col border border-transparent md:top-4 md:left-4",
+        "md:h-[calc(100vh-2rem)]",
+        "rounded-[20px] shadow-[0_8px_24px_rgba(0,0,0,0.15)]",
+        SIDEBAR_BG,
+        SIDEBAR_BORDER,
+        "text-[#F2F6FA] backdrop-blur-2xl transition-[width] duration-300",
+        isCollapsed ? "w-[92px]" : "w-[236px]",
+      )}
+      aria-label="Navigation administrateur"
+    >
+      <div className="relative flex h-full flex-col overflow-hidden">
+        <motion.div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-white/5" initial={{ opacity: 0 }} animate={{ opacity: 0.75 }} />
+
+        <div className="relative flex items-center justify-between gap-2 px-6 pb-4 pt-6">
+          <div className={cn("flex items-center gap-3", isCollapsed && "md:hidden")}
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-white/10 text-xl font-semibold text-white shadow-inner">
+              {initials}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs uppercase tracking-[0.3em] text-white/60">Swift Connexion</p>
+              <p className="text-lg font-semibold text-white">{adminName ?? "Administrateur"}</p>
+              <p className="text-[11px] text-white/60">{roleLabel}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleCollapse}
+              className="hidden h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white transition hover:scale-105 hover:border-[#FFCC00]/60 hover:bg-[#FFCC00]/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FFCC00] md:flex"
+              aria-label={isCollapsed ? "Déplier la barre latérale" : "Réduire la barre latérale"}
+            >
+              {isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+            </button>
+
+            <button
+              type="button"
+              onClick={closeMobileSidebar}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white transition hover:scale-105 hover:border-[#FFCC00]/60 hover:bg-[#FFCC00]/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FFCC00] md:hidden"
+              aria-label="Fermer la navigation"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="relative mx-6 mb-4 mt-2 h-px bg-white/20" />
+
+        <motion.nav className="relative flex-1 overflow-y-auto px-3" style={{ y: parallaxY }}>
+          <motion.ul
+            className="space-y-2"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: { opacity: 0, y: 16 },
+              visible: {
+                opacity: 1,
+                y: 0,
+                transition: { staggerChildren: 0.05, delayChildren: 0.12 },
+              },
+            }}
+          >
+            {NAV_ITEMS.map((item) => {
+              const link = (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSectionChange(item.id);
+                    closeMobileSidebar();
+                  }}
+                  className={cn(
+                    "group flex w-full items-center gap-3 rounded-2xl border border-transparent px-4 py-3 text-left text-sm font-medium text-white/80 transition-all duration-300",
+                    "hover:border-[#FFCC00]/60 hover:bg-[rgba(255,204,0,0.08)] hover:text-white",
+                    isCollapsed && "justify-center px-0",
+                    activeSection === item.id && "border-[#FFCC00] bg-[rgba(255,204,0,0.2)] text-white",
+                  )}
+                  aria-current={activeSection === item.id ? "page" : undefined}
+                >
+                  <span
+                    className={cn(
+                      "flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white transition-all duration-300",
+                      "group-hover:border-[#FFCC00] group-hover:bg-[#FFCC00]/20 group-hover:text-[#FFCC00]",
+                      isCollapsed && "h-12 w-12",
+                      "shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]",
+                      activeSection === item.id && "border-[#FFCC00] bg-[#FFCC00]/15 text-[#FFCC00]",
+                    )}
+                  >
+                    <item.icon className="h-5 w-5" />
+                  </span>
+                  <span className={cn("truncate text-base tracking-wide", isCollapsed && "hidden")}>{item.label}</span>
+                  {item.id === "messages" && unreadMessages > 0 && !isCollapsed && (
+                    <span className="ml-auto inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[#EF4444] px-1.5 text-[11px] font-semibold text-white">
+                      {unreadLabel}
+                    </span>
+                  )}
+                </button>
+              );
+
+              return (
+                <motion.li
+                  key={item.id}
+                  variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0 } }}
+                  whileHover={{ scale: 1.04, boxShadow: "0 0 12px rgba(255,204,0,0.35)" }}
+                >
+                  {isCollapsed ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>{link}</TooltipTrigger>
+                      <TooltipContent side="right">{item.label}</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    link
+                  )}
+                </motion.li>
+              );
+            })}
+          </motion.ul>
+
+          {upcomingMeetings && upcomingMeetings.length > 0 && (
+            <motion.div
+              className={cn("mt-6 space-y-3 rounded-3xl border border-white/10 bg-white/5 p-4 text-xs text-white/80", isCollapsed && "hidden")}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-white/60">
+                <CalendarCheck2 className="h-4 w-4" /> Agenda
+              </p>
+              <ul className="space-y-2">
+                {upcomingMeetings.map((meeting) => (
+                  <li key={meeting.id} className="rounded-2xl bg-white/10 px-3 py-2">
+                    <p className="text-sm font-semibold text-white">{meeting.title}</p>
+                    <p className="text-[11px] text-white/60">{meeting.schedule}</p>
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+          )}
+        </motion.nav>
+
+        <div className="relative mt-auto px-4 pb-6 pt-4">
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-4 shadow-inner">
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <div className={cn("flex items-center gap-3", isCollapsed && "hidden")}
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-[#0B2D55]/60 text-white shadow-inner">
+                  <Bell className="h-4 w-4" />
+                </span>
+                <div className="text-left text-white">
+                  <p className="text-sm font-semibold">Alertes smart dispatch</p>
+                  <p className="text-xs text-white/60">Activez les notifications critiques</p>
+                </div>
+              </div>
+              {!isCollapsed && (
+                <button
+                  type="button"
+                  className="rounded-full border border-[#FFCC00]/40 bg-[#FFCC00]/10 px-3 py-1 text-xs font-semibold text-[#FFCC00] transition hover:border-[#FFCC00] hover:bg-[#FFCC00]/20"
+                  onClick={() => onSectionChange("suivi")}
+                >
+                  Voir
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className={cn(
+                "mt-4 flex w-full items-center justify-between gap-3 rounded-2xl border border-transparent bg-[rgba(255,204,0,0.12)] px-4 py-3 text-sm font-semibold text-[#FFCC00] transition-all duration-300 hover:bg-[rgba(255,204,0,0.2)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FFCC00]",
+                isCollapsed && "justify-center px-0",
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[#FFCC00]/40 bg-[#FFCC00]/10 text-[#FFCC00]">
+                  <LogOut className="h-5 w-5" />
+                </span>
+                {!isCollapsed && <span className="text-base">Déconnexion</span>}
+              </div>
+              {!isCollapsed && <Share2 className="h-4 w-4 text-[#FFCC00]" />}
+            </button>
+          </div>
+        </div>
+      </div>
+    </motion.aside>
+  );
 
   return (
-    <>
+    <TooltipProvider delayDuration={0}>
       <button
         type="button"
         onClick={toggleMobileSidebar}
-        className="fixed left-4 top-4 z-30 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#2563EB] text-white shadow-lg transition hover:bg-[#1D4ED8] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2563EB]/40 md:hidden"
+        className="fixed left-4 top-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-[#0B2D55] text-white shadow-lg shadow-black/20 transition hover:scale-105 hover:bg-[#0a274b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FFCC00] md:hidden"
         aria-label="Ouvrir la navigation"
       >
-        <Menu className="h-5 w-5" />
+        <Menu className="h-6 w-6" />
       </button>
-      {isMobileOpen && (
-        <div
-          className="fixed inset-0 z-20 bg-slate-900/40 backdrop-blur-sm md:hidden"
-          onClick={closeMobileSidebar}
-          role="presentation"
-        />
-      )}
-      <aside
-        data-collapsed={isCollapsed}
-              className={cn(
-                "group/sidebar fixed inset-y-0 left-0 z-40 flex h-screen flex-col text-white/90",
-                "bg-[#2C4A7C] transition-all duration-300 ease-out",
-                "w-[280px]",
-                isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
-                isCollapsed && !isMobileOpen ? "md:w-[80px]" : "",
-              )}
-        aria-label="Navigation administrateur"
-      >
-        <div className="px-6 py-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#4A6FA5] text-xl font-bold text-white">
-              {initials}
-            </div>
-            {showLabels && (
-              <div className="leading-tight">
-                <p className="text-xs font-medium uppercase tracking-wider text-white/60">UNE CONNEXION</p>
-                <p className="mt-1 flex items-center gap-1 text-base font-semibold text-white">
-                  👑 Espace
-                </p>
-                <p className="text-base font-semibold text-white">Administrateur</p>
-              </div>
-            )}
-          </div>
-          <button
-            type="button"
+
+      <AnimatePresence>{(isMobileOpen || isDesktop) && SidebarContent}</AnimatePresence>
+
+      <AnimatePresence>
+        {isMobileOpen && (
+          <motion.div
+            className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm md:hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             onClick={closeMobileSidebar}
-            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center text-white/60 transition hover:text-white md:hidden"
-            aria-label="Fermer la navigation"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <nav className="flex-1 overflow-y-auto px-4 py-2" aria-label="Sections administrateur">
-            <ul className="space-y-2">
-              {NAV_ITEMS.map((item) => {
-                const isActive = activeSection === item.id;
-                const IconComponent = !item.isEmoji ? item.icon as React.ComponentType<{ className?: string }> : null;
-                
-                return (
-                  <li key={item.id}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onSectionChange(item.id);
-                        closeMobileSidebar();
-                      }}
-                      className={cn(
-                        "group flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-base font-medium transition-all duration-200",
-                        isActive
-                          ? "bg-[#4A6FA5] text-white"
-                          : "text-white/80 hover:bg-white/10 hover:text-white",
-                        !showLabels ? "justify-center" : "",
-                      )}
-                      aria-current={isActive ? "page" : undefined}
-                    >
-                      {item.isEmoji ? (
-                        <span className="text-xl" aria-hidden="true">{item.icon as string}</span>
-                      ) : IconComponent ? (
-                        <IconComponent className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
-                      ) : null}
-                      {showLabels && <span className="flex-1 truncate">{item.label}</span>}
-                      {item.id === "messages" && unreadMessages > 0 && showLabels && (
-                        <span className="ml-auto inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-semibold text-white">
-                          {unreadLabel}
-                        </span>
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-            
-            {showLabels && (
-              <div className="mt-6">
-                <button
-                  type="button"
-                  onClick={() => {}}
-                  className="group flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-base font-medium text-white/80 transition-all duration-200 hover:bg-white/10 hover:text-white"
-                >
-                  <HelpCircle className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
-                  <span className="flex-1 truncate">Centre d'aide</span>
-                </button>
-              </div>
-            )}
-          </nav>
-
-          {showLabels && (
-            <div className="mt-auto border-t border-white/10 px-4 py-6">
-              <div className="space-y-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-white/50">ASSISTANCE</p>
-                  <p className="mt-2 text-sm text-white/70">
-                    Support disponible 7j/7 via le centre d'aide Une connexion.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-white/10 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/15"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Se déconnecter
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </aside>
-    </>
+          />
+        )}
+      </AnimatePresence>
+    </TooltipProvider>
   );
 };
 

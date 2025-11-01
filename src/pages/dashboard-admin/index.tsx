@@ -1,8 +1,9 @@
 import { useCallback, useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import AdminSidebar, { AdminSectionKey } from "@/components/dashboard/AdminSidebar";
 import Topbar from "@/components/dashboard/Topbar";
-import TableauDeBord from "@/components/dashboard-admin/tableau-de-bord";
+import TableauDeBord, { type MessageComposerPreset } from "@/components/dashboard-admin/tableau-de-bord";
 import Commandes from "@/components/dashboard-admin/commandes";
 import Clients from "@/components/dashboard-admin/clients";
 import Chauffeurs from "@/components/dashboard-admin/chauffeurs";
@@ -30,6 +31,10 @@ const notifications = [
   { id: "notif-3", message: "Facture FAC-2025-125 en retard", time: "Il y a 32 min", read: true },
 ];
 
+const DEFAULT_MESSAGE_SUBJECT = "Suivi de commande express";
+const DEFAULT_MESSAGE_TEMPLATE =
+  "Bonjour,\nVotre commande est en préparation et sera expédiée dans l'heure.\n— Swift Connexion";
+
 const SECTION_LABELS: Record<AdminSectionKey, string> = {
   dashboard: "Tableau de bord",
   commandes: "Commandes",
@@ -44,16 +49,15 @@ const SECTION_LABELS: Record<AdminSectionKey, string> = {
 };
 
 const DashboardAdmin = () => {
-  const { resolvedDisplayName, fallbackEmail } = useAuth();
+  const { resolvedDisplayName, fallbackEmail, session } = useAuth();
   const [activeSection, setActiveSection] = useState<AdminSectionKey>("dashboard");
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
   const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
   const [recipientType, setRecipientType] = useState<"client" | "chauffeur" | "admin">("client");
-  const [messageSubject, setMessageSubject] = useState("Suivi de commande express");
+  const [messageSubject, setMessageSubject] = useState(DEFAULT_MESSAGE_SUBJECT);
   const [messageEmail, setMessageEmail] = useState("");
-  const [messageContent, setMessageContent] = useState(
-    "Bonjour,\nVotre commande est en préparation et sera expédiée dans l'heure.\n— Swift Connexion",
-  );
+  const [messageContent, setMessageContent] = useState(DEFAULT_MESSAGE_TEMPLATE);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
   const displayName = resolvedDisplayName ?? fallbackEmail ?? "Administrateur";
 
   const greeting = useMemo(() => {
@@ -61,6 +65,14 @@ const DashboardAdmin = () => {
     if (hour < 12) return "Bonjour";
     if (hour < 18) return "Bon après-midi";
     return "Bonsoir";
+  }, []);
+
+  const openMessageComposer = useCallback((preset?: MessageComposerPreset) => {
+    setRecipientType(preset?.recipientType ?? "client");
+    setMessageSubject(preset?.subject ?? DEFAULT_MESSAGE_SUBJECT);
+    setMessageEmail(preset?.email ?? "");
+    setMessageContent(preset?.content ?? DEFAULT_MESSAGE_TEMPLATE);
+    setIsMessageDialogOpen(true);
   }, []);
 
   const upcomingMeetings = useMemo(
@@ -71,10 +83,48 @@ const DashboardAdmin = () => {
     [],
   );
 
+  const resolveRecipientIdentifier = useCallback(
+    async (raw: string) => {
+      const trimmed = raw.trim();
+
+      if (recipientType === "chauffeur" && !trimmed.includes("@")) {
+        return `driver:${trimmed}`;
+      }
+
+      if (!trimmed.includes("@")) {
+        return `external:${trimmed}`;
+      }
+
+      const normalized = trimmed.toLowerCase();
+      const { data: userRecord, error } = await supabase
+        .from<{ user_id: string; metadata: Record<string, unknown> | null }>("app_users" as never)
+        .select("user_id, metadata")
+        .eq("metadata->>email", normalized)
+        .maybeSingle();
+
+      if (error && error.code !== "PGRST116") {
+        console.warn("Impossible de résoudre le destinataire", error);
+      }
+
+      if (userRecord?.user_id) {
+        return userRecord.user_id;
+      }
+
+      return `external:${normalized}`;
+    },
+    [recipientType],
+  );
+
   const renderSection = useMemo(() => {
     switch (activeSection) {
       case "dashboard":
-        return <TableauDeBord onOpenOrderForm={() => setIsOrderDialogOpen(true)} />;
+        return (
+          <TableauDeBord
+            onOpenOrderForm={() => setIsOrderDialogOpen(true)}
+            onOpenMessageComposer={openMessageComposer}
+            onOpenIncidentReport={() => setActiveSection("suivi")}
+          />
+        );
       case "commandes":
         return <Commandes onCreateOrder={() => setIsOrderDialogOpen(true)} />;
       case "clients":
@@ -82,7 +132,7 @@ const DashboardAdmin = () => {
       case "chauffeurs":
         return <Chauffeurs />;
       case "suivi":
-        return <Suivi onCreateOrder={() => setIsOrderDialogOpen(true)} onSendMessage={() => setIsMessageDialogOpen(true)} />;
+        return <Suivi onCreateOrder={() => setIsOrderDialogOpen(true)} onSendMessage={() => openMessageComposer()} />;
       case "planification":
         return <Planification onDispatch={() => setActiveSection("commandes")} />;
       case "factures":
@@ -94,9 +144,15 @@ const DashboardAdmin = () => {
       case "parametres":
         return <Parametres />;
       default:
-        return <TableauDeBord onOpenOrderForm={() => setIsOrderDialogOpen(true)} />;
+        return (
+          <TableauDeBord
+            onOpenOrderForm={() => setIsOrderDialogOpen(true)}
+            onOpenMessageComposer={openMessageComposer}
+            onOpenIncidentReport={() => setActiveSection("suivi")}
+          />
+        );
     }
-  }, [activeSection]);
+  }, [activeSection, openMessageComposer]);
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -105,19 +161,143 @@ const DashboardAdmin = () => {
     }
   };
 
-  const handleMessageSubmit = useCallback(() => {
-    toast({
-      title: "Message envoyé",
-      description:
-        recipientType === "client"
-          ? "Le client a été notifié."
-          : recipientType === "chauffeur"
-            ? "Le chauffeur reçoit votre consigne."
-            : "Les administrateurs ont reçu votre message.",
-    });
-    setIsMessageDialogOpen(false);
-    setMessageEmail("");
-  }, [recipientType]);
+  const handleMessageSubmit = useCallback(async () => {
+    if (isSendingMessage) {
+      return;
+    }
+
+    const trimmedEmail = messageEmail.trim();
+    const trimmedSubject = messageSubject.trim();
+    const trimmedContent = messageContent.trim();
+
+    if (!session?.user) {
+      toast({
+        title: "Session expirée",
+        description: "Reconnectez-vous pour envoyer un message.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!trimmedSubject || !trimmedContent) {
+      toast({
+        title: "Contenu requis",
+        description: "Renseignez l'objet et le message avant l'envoi.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!trimmedEmail) {
+      toast({
+        title: "Destinataire manquant",
+        description: "Veuillez préciser un contact ou une adresse.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSendingMessage(true);
+
+    try {
+      const recipientIdentifier = await resolveRecipientIdentifier(trimmedEmail);
+      const participants = [session.user.id, recipientIdentifier];
+
+      const threadResponse = await supabase
+        .from("message_threads")
+        .select("id, participants")
+        .contains("participants", participants)
+        .order("last_message_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (threadResponse.error && threadResponse.error.code !== "PGRST116") {
+        throw threadResponse.error;
+      }
+
+      let threadId = threadResponse.data?.id ??
+        (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`);
+
+      if (!threadResponse.data) {
+        const { error: threadInsertError } = await supabase.from("message_threads").insert({
+          id: threadId,
+          participants,
+          last_message_at: new Date().toISOString(),
+        });
+
+        if (threadInsertError) {
+          if (threadInsertError.code === "23505") {
+            const retry = await supabase
+              .from("message_threads")
+              .select("id")
+              .contains("participants", participants)
+              .maybeSingle();
+            if (retry.data?.id) {
+              threadId = retry.data.id;
+            } else {
+              throw threadInsertError;
+            }
+          } else {
+            throw threadInsertError;
+          }
+        }
+      } else {
+        const { error: threadUpdateError } = await supabase
+          .from("message_threads")
+          .update({ last_message_at: new Date().toISOString() })
+          .eq("id", threadId);
+        if (threadUpdateError) {
+          console.warn("Impossible de mettre à jour le fil de discussion", threadUpdateError);
+        }
+      }
+
+      const finalContent = `Objet : ${trimmedSubject}\n\n${trimmedContent}`;
+
+      const { data: insertedMessage, error: messageError } = await supabase
+        .from("messages")
+        .insert({
+          thread_id: threadId,
+          sender_id: session.user.id,
+          recipient_id: recipientIdentifier,
+          content: finalContent,
+          read: false,
+        })
+        .select("id")
+        .single();
+
+      if (messageError) {
+        throw messageError;
+      }
+
+      toast({
+        title: "Message envoyé",
+        description: insertedMessage?.id
+          ? `Conversation synchronisée (#${insertedMessage.id.slice(0, 8)})`
+          : "Le message a été transmis via Supabase.",
+      });
+
+      setIsMessageDialogOpen(false);
+      setMessageEmail("");
+      setMessageSubject(DEFAULT_MESSAGE_SUBJECT);
+      setMessageContent(DEFAULT_MESSAGE_TEMPLATE);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "L'envoi a échoué.";
+      toast({
+        title: "Envoi impossible",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingMessage(false);
+    }
+  }, [
+    isSendingMessage,
+    messageEmail,
+    messageSubject,
+    messageContent,
+    resolveRecipientIdentifier,
+    session,
+  ]);
 
   const handleOrderSubmit = useCallback(
     (values: QuickOrderFormValues) => {
@@ -150,7 +330,7 @@ const DashboardAdmin = () => {
           notifications={notifications}
           onCreateOrder={() => setIsOrderDialogOpen(true)}
           onScheduleReview={() => setActiveSection("statistiques")}
-          onSendMessage={() => setIsMessageDialogOpen(true)}
+          onSendMessage={() => openMessageComposer()}
           className="border-none bg-transparent px-0"
         />
       }
@@ -178,7 +358,7 @@ const DashboardAdmin = () => {
               </div>
               <Button
                 className="inline-flex items-center gap-2 rounded-2xl bg-[#0B2D55] px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-[#091a33]"
-                onClick={() => setIsMessageDialogOpen(true)}
+                onClick={() => openMessageComposer()}
               >
                 Envoyer un message
               </Button>
@@ -190,7 +370,19 @@ const DashboardAdmin = () => {
         </div>
       </div>
 
-      <Dialog open={isMessageDialogOpen} onOpenChange={setIsMessageDialogOpen}>
+      <Dialog
+        open={isMessageDialogOpen}
+        onOpenChange={(open) => {
+          setIsMessageDialogOpen(open);
+          if (!open) {
+            setIsSendingMessage(false);
+            setMessageEmail("");
+            setMessageSubject(DEFAULT_MESSAGE_SUBJECT);
+            setMessageContent(DEFAULT_MESSAGE_TEMPLATE);
+            setRecipientType("client");
+          }
+        }}
+      >
         <DialogContent className="max-w-lg rounded-3xl border border-slate-200/70 bg-white/95 p-6 shadow-xl">
           <DialogHeader>
             <DialogTitle>Envoyer un message</DialogTitle>
@@ -251,8 +443,19 @@ const DashboardAdmin = () => {
             <Button variant="outline" className="rounded-2xl border-slate-200" onClick={() => setIsMessageDialogOpen(false)}>
               Annuler
             </Button>
-            <Button className="rounded-2xl bg-[#0B2D55] text-white hover:bg-[#091a33]" onClick={handleMessageSubmit}>
-              Envoyer
+            <Button
+              className="rounded-2xl bg-[#0B2D55] text-white hover:bg-[#091a33]"
+              onClick={handleMessageSubmit}
+              disabled={isSendingMessage}
+            >
+              {isSendingMessage ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Envoi…
+                </>
+              ) : (
+                "Envoyer"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

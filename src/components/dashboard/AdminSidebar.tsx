@@ -49,6 +49,8 @@ const NAV_ITEMS: Array<{
 }> = [
   { id: "dashboard", label: "Tableau de bord", icon: "🏠", isEmoji: true },
   { id: "commandes", label: "Commandes", icon: "📦", isEmoji: true },
+  { id: "clients", label: "Clients", icon: Users, isEmoji: false },
+  { id: "chauffeurs", label: "Chauffeurs", icon: Truck, isEmoji: false },
   { id: "statistiques", label: "Suivi", icon: "📍", isEmoji: true },
   { id: "factures", label: "Factures", icon: "📄", isEmoji: true },
   { id: "messages", label: "Messages", icon: "💬", isEmoji: true },

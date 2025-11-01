@@ -28,6 +28,9 @@ const Login = () => {
   const [signUpSuccess, setSignUpSuccess] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
+  const [isSendingMagicLink, setIsSendingMagicLink] = useState(false);
+  const [magicLinkSuccess, setMagicLinkSuccess] = useState<string | null>(null);
+  const [magicLinkError, setMagicLinkError] = useState<string | null>(null);
   const { session, status, refreshProfile, userRole, isRefreshingProfile } = useAuth();
   
   // Attendre que le profil soit chargé avant de rediriger pour utiliser le bon rôle
@@ -67,6 +70,8 @@ const Login = () => {
     setIsSignUp(next);
     setLoginError(null);
     setSignUpError(null);
+    setMagicLinkSuccess(null);
+    setMagicLinkError(null);
     if (next) {
       setSignUpSuccess(null);
     }
@@ -79,12 +84,47 @@ const Login = () => {
     }
     setSearchParams(params);
   };
+  const handleMagicLinkSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (isSendingMagicLink) {
+      return;
+    }
+    setMagicLinkError(null);
+    setMagicLinkSuccess(null);
+    const formData = new FormData(event.currentTarget);
+    const email = String(formData.get("email") ?? "").trim();
+    if (!email) {
+      setMagicLinkError("Veuillez renseigner votre email.");
+      return;
+    }
+    setIsSendingMagicLink(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/dashboard-client`
+        }
+      });
+      if (error) {
+        throw error;
+      }
+      setMagicLinkSuccess("Un email de connexion vous a été envoyé. Vérifiez votre boîte mail.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "L'envoi de l'email a échoué.";
+      setMagicLinkError(message);
+    } finally {
+      setIsSendingMagicLink(false);
+    }
+  };
+
   const handleLoginSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isLoggingIn) {
       return;
     }
     setLoginError(null);
+    setMagicLinkSuccess(null);
+    setMagicLinkError(null);
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
@@ -322,6 +362,20 @@ const Login = () => {
                 <button type="submit" className="onecx-auth__primary" disabled={isLoggingIn}>
                   {isLoggingIn ? "Connexion…" : "Se connecter"}
                 </button>
+
+                <form onSubmit={handleMagicLinkSubmit} style={{ marginTop: '1rem' }}>
+                  <button type="submit" className="onecx-auth__primary" disabled={isSendingMagicLink} style={{ background: 'hsl(var(--secondary))', opacity: 0.9 }}>
+                    {isSendingMagicLink ? "Envoi en cours…" : "📧 Connexion par email (sans mot de passe)"}
+                  </button>
+                  
+                  {magicLinkSuccess && <p className="onecx-auth__feedback onecx-auth__feedback--success" role="status" style={{ marginTop: '0.5rem' }}>
+                      {magicLinkSuccess}
+                    </p>}
+                  
+                  {magicLinkError && <p className="onecx-auth__feedback onecx-auth__feedback--error" role="alert" style={{ marginTop: '0.5rem' }}>
+                      {magicLinkError}
+                    </p>}
+                </form>
 
                 <div className="onecx-auth__aux">
                   <span>Pas encore de compte ?</span>

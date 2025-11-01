@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
+import { AuthError } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { upsertProfile } from "@/lib/api/profiles";
 import { useAuth } from "@/providers/AuthProvider";
@@ -91,26 +92,51 @@ const Login = () => {
     }
     setMagicLinkError(null);
     setMagicLinkSuccess(null);
+
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
+
     if (!email) {
       setMagicLinkError("Veuillez renseigner votre email.");
       return;
     }
+
     setIsSendingMagicLink(true);
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard-client`
+          emailRedirectTo:
+            typeof window !== "undefined"
+              ? `${window.location.origin}/dashboard-client`
+              : undefined,
+          shouldCreateUser: false
         }
       });
+
       if (error) {
         throw error;
       }
-      setMagicLinkSuccess("Un email de connexion vous a été envoyé. Vérifiez votre boîte mail.");
+
+      setMagicLinkSuccess(
+        "Un email de connexion vous a été envoyé. Vérifiez votre boîte mail."
+      );
+      (event.currentTarget as HTMLFormElement).reset();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "L'envoi de l'email a échoué.";
+      let message = "L'envoi de l'email a échoué.";
+
+      if (error instanceof AuthError) {
+        if (error.message.toLowerCase().includes("user not found")) {
+          message = "Aucun compte n'est associé à cet email. Veuillez vous inscrire.";
+        } else if (error.status === 429) {
+          message = "Vous avez demandé trop de liens en peu de temps. Réessayez plus tard.";
+        } else {
+          message = error.message;
+        }
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
+
       setMagicLinkError(message);
     } finally {
       setIsSendingMagicLink(false);
@@ -335,70 +361,108 @@ const Login = () => {
 
           <div className="onecx-auth__forms-wrapper" aria-live="polite">
             <div className={`onecx-auth__forms ${isSignUp ? "is-signup" : ""}`}>
-              <form className={`onecx-auth__form ${!isSignUp ? "is-active" : ""}`} onSubmit={handleLoginSubmit} aria-hidden={isSignUp} noValidate>
-                <div className="onecx-auth__form-headline">
-                  <h3>Bienvenue</h3>
-                  <p>Connectez-vous pour poursuivre vos opérations en temps réel.</p>
-                </div>
+              <div
+                className={`onecx-auth__form ${!isSignUp ? "is-active" : ""}`}
+                aria-hidden={isSignUp}
+              >
+                <form onSubmit={handleLoginSubmit} noValidate>
+                  <div className="onecx-auth__form-headline">
+                    <h3>Bienvenue</h3>
+                    <p>Connectez-vous pour poursuivre vos opérations en temps réel.</p>
+                  </div>
 
-                <label className="onecx-auth__field" htmlFor="login-email">
-                  <span>Email professionnel</span>
-                  <input id="login-email" type="email" name="email" autoComplete="email" placeholder="exemple@oneconnexion.fr" required />
-                </label>
+                  <label className="onecx-auth__field" htmlFor="login-email">
+                    <span>Email professionnel</span>
+                    <input
+                      id="login-email"
+                      type="email"
+                      name="email"
+                      autoComplete="email"
+                      placeholder="exemple@oneconnexion.fr"
+                      required
+                    />
+                  </label>
 
-                <label className="onecx-auth__field" htmlFor="login-password">
-                  <span>Mot de passe</span>
-                  <input id="login-password" type="password" name="password" autoComplete="current-password" placeholder="Votre mot de passe" required />
-                </label>
+                  <label className="onecx-auth__field" htmlFor="login-password">
+                    <span>Mot de passe</span>
+                    <input
+                      id="login-password"
+                      type="password"
+                      name="password"
+                      autoComplete="current-password"
+                      placeholder="Votre mot de passe"
+                      required
+                    />
+                  </label>
 
-                {loginError && <p className="onecx-auth__feedback onecx-auth__feedback--error" role="alert">
-                    {loginError}
-                  </p>}
+                  {loginError ? (
+                    <p className="onecx-auth__feedback onecx-auth__feedback--error" role="alert">
+                      {loginError}
+                    </p>
+                  ) : null}
 
-                {signUpSuccess && !isSignUp && <p className="onecx-auth__feedback onecx-auth__feedback--success" role="status">
-                    {signUpSuccess}
-                  </p>}
+                  {!isSignUp && signUpSuccess ? (
+                    <p className="onecx-auth__feedback onecx-auth__feedback--success" role="status">
+                      {signUpSuccess}
+                    </p>
+                  ) : null}
 
-                <button type="submit" className="onecx-auth__primary" disabled={isLoggingIn}>
-                  {isLoggingIn ? "Connexion…" : "Se connecter"}
-                </button>
-
-                <div className="onecx-auth__aux">
-                  <span>Pas encore de compte ?</span>
-                  <button type="button" className="onecx-auth__link" onClick={() => handleToggle(true)}>
-                    Inscrivez-vous
+                  <button type="submit" className="onecx-auth__primary" disabled={isLoggingIn}>
+                    {isLoggingIn ? "Connexion…" : "Se connecter"}
                   </button>
-                </div>
+
+                  <div className="onecx-auth__aux">
+                    <span>Pas encore de compte ?</span>
+                    <button type="button" className="onecx-auth__link" onClick={() => handleToggle(true)}>
+                      Inscrivez-vous
+                    </button>
+                  </div>
+                </form>
 
                 <div className="onecx-auth__divider" role="separator" aria-hidden="true">
                   <span>ou</span>
                 </div>
 
                 <form onSubmit={handleMagicLinkSubmit}>
-                  <div className="onecx-auth__form-headline" style={{ marginBottom: '1rem' }}>
-                    <h4 style={{ fontSize: '0.95rem', fontWeight: '600' }}>Connexion par email</h4>
-                    <p style={{ fontSize: '0.85rem', opacity: 0.8 }}>Recevez un lien de connexion sans mot de passe</p>
+                  <div className="onecx-auth__form-headline" style={{ marginBottom: "1rem" }}>
+                    <h4 style={{ fontSize: "0.95rem", fontWeight: "600" }}>Connexion par email</h4>
+                    <p style={{ fontSize: "0.85rem", opacity: 0.8 }}>Recevez un lien de connexion sans mot de passe</p>
                   </div>
 
                   <label className="onecx-auth__field" htmlFor="magic-link-email">
                     <span>Email professionnel</span>
-                    <input id="magic-link-email" type="email" name="email" autoComplete="email" placeholder="exemple@oneconnexion.fr" required />
+                    <input
+                      id="magic-link-email"
+                      type="email"
+                      name="email"
+                      autoComplete="email"
+                      placeholder="exemple@oneconnexion.fr"
+                      required
+                    />
                   </label>
 
-                  {magicLinkSuccess && <p className="onecx-auth__feedback onecx-auth__feedback--success" role="status">
+                  {magicLinkSuccess ? (
+                    <p className="onecx-auth__feedback onecx-auth__feedback--success" role="status">
                       {magicLinkSuccess}
-                    </p>}
-                  
-                  {magicLinkError && <p className="onecx-auth__feedback onecx-auth__feedback--error" role="alert">
-                      {magicLinkError}
-                    </p>}
+                    </p>
+                  ) : null}
 
-                  <button type="submit" className="onecx-auth__primary" disabled={isSendingMagicLink} style={{ background: 'hsl(var(--secondary))' }}>
+                  {magicLinkError ? (
+                    <p className="onecx-auth__feedback onecx-auth__feedback--error" role="alert">
+                      {magicLinkError}
+                    </p>
+                  ) : null}
+
+                  <button
+                    type="submit"
+                    className="onecx-auth__primary"
+                    disabled={isSendingMagicLink}
+                    style={{ background: "hsl(var(--secondary))" }}
+                  >
                     {isSendingMagicLink ? "Envoi en cours…" : "📧 Recevoir le lien de connexion"}
                   </button>
                 </form>
-
-              </form>
+              </div>
 
               <form className={`onecx-auth__form ${isSignUp ? "is-active" : ""}`} onSubmit={handleSignUpSubmit} aria-hidden={!isSignUp} noValidate>
                 <div className="onecx-auth__form-headline">

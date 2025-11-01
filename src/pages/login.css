@@ -160,7 +160,8 @@
   gap: 0.75rem;
 }
 
-.onecx-auth__test-drive-button {
+.onecx-auth__test-drive-button,
+.onecx-auth__test-button {
   border: none;
   border-radius: 999px;
   padding: 0.95rem 1.5rem;
@@ -177,12 +178,14 @@
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
-.onecx-auth__test-drive-button:hover {
+.onecx-auth__test-drive-button:hover,
+.onecx-auth__test-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 32px 60px rgba(37, 99, 235, 0.45);
 }
 
-.onecx-auth__test-drive-button:focus-visible {
+.onecx-auth__test-drive-button:focus-visible,
+.onecx-auth__test-button:focus-visible {
   outline: 3px solid rgba(56, 189, 248, 0.75);
   outline-offset: 3px;
 }

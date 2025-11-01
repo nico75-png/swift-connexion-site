@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 import { cn } from "@/lib/utils";
@@ -341,6 +341,7 @@ export const useLiveTrackingStore = () => {
   });
   const [lastRefreshAt, setLastRefreshAt] = useState(() => Date.now());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const summary: SummaryCounts = useMemo(
     () => ({
@@ -436,11 +437,25 @@ export const useLiveTrackingStore = () => {
 
   const refresh = useCallback(() => {
     setIsRefreshing(true);
-    setTimeout(() => {
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+    }
+    refreshTimeoutRef.current = setTimeout(() => {
       setLastRefreshAt(Date.now());
       setIsRefreshing(false);
+      refreshTimeoutRef.current = null;
     }, 600);
   }, []);
+
+  useEffect(
+    () => () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+        refreshTimeoutRef.current = null;
+      }
+    },
+    [],
+  );
 
   return {
     orders,

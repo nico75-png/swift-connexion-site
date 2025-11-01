@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 
 import { cn } from "@/lib/utils";
 
-import type { FitBoundsOptions, LatLngBoundsExpression, ZoomPanOptions } from "leaflet";
 import type { TrackingOrder } from "./LiveTrackingSection";
 
 type LeafletModule = typeof import("leaflet");
@@ -98,10 +97,10 @@ const createClientIcon = (leaflet: LeafletModule) =>
 
 const TrackingMap = ({ order, lastUpdateLabel, className, disableInteractions }: TrackingMapProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<import("leaflet").Map | null>(null);
-  const routeRef = useRef<import("leaflet").Polyline | null>(null);
-  const driverRef = useRef<import("leaflet").Marker | null>(null);
-  const clientRef = useRef<import("leaflet").Marker | null>(null);
+  const mapRef = useRef<any>(null);
+  const routeRef = useRef<any>(null);
+  const driverRef = useRef<any>(null);
+  const clientRef = useRef<any>(null);
   const { leaflet, error, setError } = useLeaflet();
 
   useEffect(() => {
@@ -118,7 +117,7 @@ const TrackingMap = ({ order, lastUpdateLabel, className, disableInteractions }:
       });
       mapRef.current = map;
 
-      const tileLayer = leaflet.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      const tileLayer: any = leaflet.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap",
         maxZoom: 19,
       });
@@ -200,14 +199,15 @@ const TrackingMap = ({ order, lastUpdateLabel, className, disableInteractions }:
 
     const bounds = leaflet.latLngBounds([...latLngs, driverLatLng]);
     const padded = bounds.pad(0.35);
-    if (typeof mapRef.current.fitBounds === "function") {
+    if (mapRef.current && typeof (mapRef.current as any).fitBounds === "function") {
       try {
-        const fitOptions: FitBoundsOptions = { padding: [48, 48] };
-        mapRef.current.fitBounds(padded as LatLngBoundsExpression, fitOptions);
+        const fitOptions = { padding: [48, 48] };
+        (mapRef.current as any).fitBounds(padded, fitOptions);
       } catch (exception) {
         console.warn("fitBounds fallback", exception);
-        const zoomOptions: ZoomPanOptions = { animate: true };
-        mapRef.current.setView(padded.getCenter(), mapRef.current.getZoom() ?? 12, zoomOptions);
+        const zoomOptions = { animate: true };
+        const currentZoom = typeof (mapRef.current as any).getZoom === "function" ? (mapRef.current as any).getZoom() : 12;
+        (mapRef.current as any).setView(padded.getCenter(), currentZoom, zoomOptions);
       }
     }
   }, [leaflet, order]);

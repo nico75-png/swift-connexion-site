@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   BarChart3,
   CalendarClock,
@@ -67,6 +68,7 @@ const AdminSidebar = ({
   adminName,
   adminRole,
 }: AdminSidebarProps) => {
+  const navigate = useNavigate();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -102,12 +104,14 @@ const AdminSidebar = ({
   const handleLogout = async () => {
     if (onLogout) {
       await onLogout();
-      return;
+    } else {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Erreur lors de la déconnexion", error);
+        return;
+      }
     }
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Erreur lors de la déconnexion", error);
-    }
+    navigate("/login");
   };
 
   const toggleMobileSidebar = () => {

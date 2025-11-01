@@ -32,7 +32,7 @@ const SECTION_LABELS: Record<AdminSectionKey, string> = {
 };
 
 const DashboardAdmin = () => {
-  const { resolvedDisplayName, fallbackEmail, avatarUrl } = useAuth();
+  const { resolvedDisplayName, fallbackEmail } = useAuth();
   const [activeSection, setActiveSection] = useState<AdminSectionKey>("dashboard");
   const displayName = resolvedDisplayName ?? fallbackEmail ?? "Administrateur";
 
@@ -67,7 +67,10 @@ const DashboardAdmin = () => {
   }, [activeSection]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("Erreur lors de la déconnexion", error);
+    }
   };
 
   return (
@@ -87,7 +90,6 @@ const DashboardAdmin = () => {
           userName={displayName}
           title={`${greeting}, ${displayName}`}
           notifications={notifications}
-          avatarUrl={avatarUrl}
           onCreateOrder={() => setActiveSection("commandes")}
           onScheduleReview={() => setActiveSection("statistiques")}
           className="border-none bg-transparent px-0"

@@ -1,9 +1,9 @@
 declare module "leaflet" {
   export type LatLngExpression = [number, number] | { lat: number; lng: number };
-  export type Polyline = any;
-  export type Marker = any;
-  export type Map = any;
-  export type TileLayer = any;
+  export type Polyline = unknown;
+  export type Marker = unknown;
+  export type Map = unknown;
+  export type TileLayer = unknown;
   export interface MapOptions {
     zoom?: number;
     center?: LatLngExpression;

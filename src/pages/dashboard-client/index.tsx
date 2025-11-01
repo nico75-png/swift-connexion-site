@@ -150,6 +150,15 @@ const PRIORITY_VALUE: Record<NotificationPriority, number> = {
   medium: 2,
   low: 1,
 };
+const SECTION_COMPONENTS: Record<SectionKey, () => JSX.Element> = {
+  dashboard: DashboardHome,
+  commandes: Commandes,
+  suivi: Suivi,
+  factures: Factures,
+  messages: Messages,
+  parametres: Parametres,
+  aide: Aide,
+};
 const DashboardClient = () => {
   const [activeSection, setActiveSection] = useState<SectionKey>("dashboard");
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -401,73 +410,88 @@ const DashboardClient = () => {
   }, [isNotificationsOpen]);
   useEffect(() => {
     let isMounted = true;
-    async function resolveRole() {
+    const resolveRole = async () => {
       try {
-        const adminStatus = await isAdmin();
+        const [adminResult, clientResult] = await Promise.allSettled([
+          isAdmin(),
+          isClient(),
+        ]);
+
         if (!isMounted) {
           return;
         }
+
+        const adminStatus =
+          adminResult.status === "fulfilled" ? adminResult.value : false;
+        const clientStatus =
+          clientResult.status === "fulfilled" ? clientResult.value : false;
+
         if (adminStatus) {
           setRole("admin");
-          return;
-        }
-        const clientStatus = await isClient();
-        if (!isMounted) {
-          return;
-        }
-        if (clientStatus) {
+        } else if (clientStatus) {
+          setRole("client");
+        } else {
           setRole("client");
         }
       } catch (error) {
         console.error("Failed to resolve user role", error);
       }
-    }
+    };
+
     void resolveRole();
+
     return () => {
       isMounted = false;
     };
   }, []);
   const handleSectionChange = useCallback((section: SectionKey) => {
-    setActiveSection(section);
+    setIsNotificationsOpen(false);
+    setActiveSection((current) => {
+      if (current === section) {
+        return current;
+      }
+      return section;
+    });
     if (sidebarRef.current) {
       const activeButton = sidebarRef.current.querySelector<HTMLButtonElement>(
         `button[data-section="${section}"]`,
       );
-      activeButton?.focus({
-        preventScroll: true,
-      });
+      if (activeButton) {
+        if (typeof window !== "undefined") {
+          window.requestAnimationFrame(() => {
+            activeButton.focus({
+              preventScroll: true,
+            });
+          });
+        } else {
+          activeButton.focus({
+            preventScroll: true,
+          });
+        }
+      }
     }
   }, []);
-  const renderSection = () => {
-    switch (activeSection) {
-      case "dashboard":
-        return <DashboardHome />;
-      case "commandes":
-        return <Commandes />;
-      case "suivi":
-        return <Suivi />;
-      case "factures":
-        return <Factures />;
-      case "messages":
-        return <Messages />;
-      case "parametres":
-        return <Parametres />;
-      case "aide":
-        return <Aide />;
-      default:
-        return <DashboardHome />;
+  const { roleTitle, roleDescription, roleBadgeClassName } = useMemo(() => {
+    if (role === "admin") {
+      return {
+        roleTitle: "👑 Espace Administrateur",
+        roleDescription:
+          "Gérez l'ensemble de la plateforme, des utilisateurs et des opérations clés.",
+        roleBadgeClassName:
+          "bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white shadow-[0_12px_28px_-18px_rgba(217,119,6,0.55)]",
+      };
     }
-  };
-  const roleTitle =
-    role === "admin" ? "👑 Espace Administrateur" : "👤 Espace Utilisateur";
-  const roleDescription =
-    role === "admin"
-      ? "Gérez l'ensemble de la plateforme, des utilisateurs et des opérations clés."
-      : "Retrouvez vos commandes, messages et outils personnalisés en un clin d'œil.";
-  const roleBadgeClassName =
-    role === "admin"
-      ? "bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white shadow-[0_12px_28px_-18px_rgba(217,119,6,0.55)]"
-      : "bg-slate-900 text-white shadow-[0_12px_28px_-18px_rgba(15,23,42,0.55)]";
+
+    return {
+      roleTitle: "👤 Espace Utilisateur",
+      roleDescription:
+        "Retrouvez vos commandes, messages et outils personnalisés en un clin d'œil.",
+      roleBadgeClassName:
+        "bg-slate-900 text-white shadow-[0_12px_28px_-18px_rgba(15,23,42,0.55)]",
+    };
+  }, [role]);
+  const ActiveSectionComponent =
+    SECTION_COMPONENTS[activeSection] ?? DashboardHome;
   return (
     <div className="flex h-screen bg-slate-100 text-slate-900">
       {/* Sidebar */}
@@ -987,7 +1011,7 @@ const DashboardClient = () => {
                 }}
                 className="h-full"
               >
-                {renderSection()}
+                <ActiveSectionComponent />
               </motion.div>
             </AnimatePresence>
           </div>

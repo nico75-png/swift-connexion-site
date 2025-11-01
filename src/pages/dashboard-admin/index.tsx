@@ -78,6 +78,8 @@ const DashboardAdmin = () => {
           onSectionChange={setActiveSection}
           unreadMessages={3}
           onLogout={handleLogout}
+          adminName={displayName}
+          adminRole="Gestion opérationnelle"
         />
       }
       topbar={

@@ -44,16 +44,15 @@ interface AdminSidebarProps {
 const NAV_ITEMS: Array<{
   id: AdminSectionKey;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string }> | string;
+  isEmoji?: boolean;
 }> = [
-  { id: "dashboard", label: "Tableau de bord", icon: LayoutDashboard },
-  { id: "commandes", label: "Commandes", icon: ClipboardList },
-  { id: "clients", label: "Clients", icon: Users },
-  { id: "chauffeurs", label: "Chauffeurs", icon: Truck },
-  { id: "factures", label: "Factures", icon: Wallet },
-  { id: "statistiques", label: "Statistiques", icon: BarChart3 },
-  { id: "messages", label: "Messages", icon: MessageSquare },
-  { id: "parametres", label: "Paramètres", icon: Settings },
+  { id: "dashboard", label: "Tableau de bord", icon: "🏠", isEmoji: true },
+  { id: "commandes", label: "Commandes", icon: "📦", isEmoji: true },
+  { id: "statistiques", label: "Suivi", icon: "📍", isEmoji: true },
+  { id: "factures", label: "Factures", icon: "📄", isEmoji: true },
+  { id: "messages", label: "Messages", icon: "💬", isEmoji: true },
+  { id: "parametres", label: "Paramètres", icon: Settings, isEmoji: false },
 ];
 
 /**
@@ -71,16 +70,6 @@ const AdminSidebar = ({
   const navigate = useNavigate();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-
-  const meetings = useMemo(
-    () =>
-      upcomingMeetings ?? [
-        { id: "1", title: "Briefing logistique Express", schedule: "Aujourd'hui • 14:00" },
-        { id: "2", title: "Revue incidents région Nord", schedule: "Aujourd'hui • 17:30" },
-        { id: "3", title: "Point facturation mensuel", schedule: "Demain • 09:30" },
-      ],
-    [upcomingMeetings],
-  );
 
   const unreadLabel = unreadMessages > 9 ? "9+" : String(unreadMessages);
 
@@ -147,58 +136,47 @@ const AdminSidebar = ({
       )}
       <aside
         data-collapsed={isCollapsed}
-        className={cn(
-          "group/sidebar fixed inset-y-0 left-0 z-40 flex h-screen flex-col border-r border-white/10 text-white/90 shadow-[32px_0_90px_-40px_rgba(8,12,24,0.65)]",
-          "bg-gradient-to-b from-[#0F172A] via-[#101B2F] to-[#1E293B] transition-all duration-300 ease-out",
-          "w-[88%] max-w-[300px] md:left-4 md:top-4 md:h-[calc(100vh-2rem)] md:w-[320px] md:rounded-[28px]",
-          isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
-          isCollapsed && !isMobileOpen ? "md:w-[104px]" : "",
-        )}
+              className={cn(
+                "group/sidebar fixed inset-y-0 left-0 z-40 flex h-screen flex-col text-white/90",
+                "bg-[#2C4A7C] transition-all duration-300 ease-out",
+                "w-[280px]",
+                isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+                isCollapsed && !isMobileOpen ? "md:w-[80px]" : "",
+              )}
         aria-label="Navigation administrateur"
       >
-        <div className="flex items-center justify-between px-5 pb-6 pt-7 md:px-6">
+        <div className="px-6 py-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-white/10 text-base font-semibold text-white">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#4A6FA5] text-xl font-bold text-white">
               {initials}
             </div>
             {showLabels && (
               <div className="leading-tight">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-white/60">Swift Connexion</p>
-                <p className="text-lg font-semibold text-white">Espace Admin</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-white/60">UNE CONNEXION</p>
+                <p className="mt-1 flex items-center gap-1 text-base font-semibold text-white">
+                  👑 Espace
+                </p>
+                <p className="text-base font-semibold text-white">Administrateur</p>
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={toggleCollapse}
-              className="hidden h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white/80 transition hover:bg-white/10 hover:text-white md:flex"
-              aria-label={isCollapsed ? "Déployer la barre latérale" : "Réduire la barre latérale"}
-            >
-              {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-            </button>
-            <button
-              type="button"
-              onClick={closeMobileSidebar}
-              className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3B82F6] md:hidden"
-              aria-label="Fermer la navigation"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={closeMobileSidebar}
+            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center text-white/60 transition hover:text-white md:hidden"
+            aria-label="Fermer la navigation"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
         <div className="flex flex-1 flex-col overflow-hidden">
-          <div className="px-5 md:px-6">
-            <div className="rounded-3xl border border-white/10 bg-white/5 px-4 py-4 text-xs text-white/70">
-              <p className="text-sm font-semibold text-white">{adminName ?? "Administrateur"}</p>
-              {showLabels && <p className="mt-1 text-[11px] uppercase tracking-[0.28em] text-white/50">{roleLabel}</p>}
-            </div>
-          </div>
-          <nav className="mt-6 flex-1 overflow-y-auto px-3 py-2 md:px-4" aria-label="Sections administrateur">
-            <ul className="space-y-1.5">
+          <nav className="flex-1 overflow-y-auto px-4 py-2" aria-label="Sections administrateur">
+            <ul className="space-y-2">
               {NAV_ITEMS.map((item) => {
                 const isActive = activeSection === item.id;
+                const IconComponent = !item.isEmoji ? item.icon as React.ComponentType<{ className?: string }> : null;
+                
                 return (
                   <li key={item.id}>
                     <button
@@ -208,24 +186,22 @@ const AdminSidebar = ({
                         closeMobileSidebar();
                       }}
                       className={cn(
-                        "group flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-medium tracking-tight transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3B82F6]",
+                        "group flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-base font-medium transition-all duration-200",
                         isActive
-                          ? "bg-[#2563EB]/90 text-white shadow-[0_16px_40px_-20px_rgba(59,130,246,0.85)]"
+                          ? "bg-[#4A6FA5] text-white"
                           : "text-white/80 hover:bg-white/10 hover:text-white",
                         !showLabels ? "justify-center" : "",
                       )}
                       aria-current={isActive ? "page" : undefined}
                     >
-                      <item.icon
-                        className={cn(
-                          "h-5 w-5 flex-shrink-0 transition-colors",
-                          isActive ? "text-white" : "text-white/75 group-hover:text-white",
-                        )}
-                        aria-hidden="true"
-                      />
-                      {showLabels && <span className="flex-1 truncate text-[15px]">{item.label}</span>}
-                      {item.id === "messages" && unreadMessages > 0 && (
-                        <span className="ml-auto inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-white/15 px-2 text-[11px] font-semibold text-white">
+                      {item.isEmoji ? (
+                        <span className="text-xl" aria-hidden="true">{item.icon as string}</span>
+                      ) : IconComponent ? (
+                        <IconComponent className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
+                      ) : null}
+                      {showLabels && <span className="flex-1 truncate">{item.label}</span>}
+                      {item.id === "messages" && unreadMessages > 0 && showLabels && (
+                        <span className="ml-auto inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-semibold text-white">
                           {unreadLabel}
                         </span>
                       )}
@@ -234,53 +210,40 @@ const AdminSidebar = ({
                 );
               })}
             </ul>
+            
+            {showLabels && (
+              <div className="mt-6">
+                <button
+                  type="button"
+                  onClick={() => {}}
+                  className="group flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-base font-medium text-white/80 transition-all duration-200 hover:bg-white/10 hover:text-white"
+                >
+                  <HelpCircle className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
+                  <span className="flex-1 truncate">Centre d'aide</span>
+                </button>
+              </div>
+            )}
           </nav>
 
           {showLabels && (
-            <div className="mt-2 space-y-4 px-5 pb-6 pt-2 md:px-6">
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-5 text-sm text-white/80 shadow-[0_18px_32px_-24px_rgba(15,23,42,0.8)]">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/50">Agenda</p>
-                    <h3 className="mt-2 text-lg font-semibold text-white">À venir</h3>
-                  </div>
-                  <CalendarClock className="h-5 w-5 text-white/70" aria-hidden="true" />
+            <div className="mt-auto border-t border-white/10 px-4 py-6">
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-white/50">ASSISTANCE</p>
+                  <p className="mt-2 text-sm text-white/70">
+                    Support disponible 7j/7 via le centre d'aide Une connexion.
+                  </p>
                 </div>
-                <ul className="mt-4 space-y-3">
-                  {meetings.map((meeting) => (
-                    <li key={meeting.id} className="rounded-2xl border border-white/5 bg-black/20 px-3 py-3">
-                      <p className="text-sm font-medium text-white">{meeting.title}</p>
-                      <p className="text-xs text-white/60">{meeting.schedule}</p>
-                    </li>
-                  ))}
-                </ul>
-              </div>
 
-              <div className="rounded-3xl border border-white/10 bg-black/20 px-4 py-4 text-xs text-white/60">
-                <div className="flex items-center gap-3 text-white/70">
-                  <LifeBuoy className="h-5 w-5 text-white/60" aria-hidden="true" />
-                  <div>
-                    <p className="text-sm font-semibold text-white">Assistance dédiée</p>
-                    <p className="text-xs text-white/60">Contactez le support One Connexion à tout moment.</p>
-                  </div>
-                </div>
                 <button
                   type="button"
-                  className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
+                  onClick={handleLogout}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-white/10 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/15"
                 >
-                  <HelpCircle className="h-4 w-4" aria-hidden="true" />
-                  Contacter l'assistance
+                  <LogOut className="h-4 w-4" />
+                  Se déconnecter
                 </button>
               </div>
-
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3B82F6]"
-              >
-                <LogOut className="h-4 w-4" />
-                Se déconnecter
-              </button>
             </div>
           )}
         </div>

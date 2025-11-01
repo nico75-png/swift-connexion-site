@@ -4,6 +4,11 @@ import { AuthError } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { upsertProfile } from "@/lib/api/profiles";
 import { useAuth } from "@/providers/AuthProvider";
+
+const TEST_CLIENT_EMAIL = import.meta.env.VITE_TEST_CLIENT_EMAIL ?? "keisha.khotothinu@gmail.com";
+const TEST_CLIENT_PASSWORD = import.meta.env.VITE_TEST_CLIENT_PASSWORD ?? "TestUser2024!";
+const TEST_ADMIN_EMAIL = import.meta.env.VITE_TEST_ADMIN_EMAIL ?? "cherkinicolas@gmail.com";
+const TEST_ADMIN_PASSWORD = import.meta.env.VITE_TEST_ADMIN_PASSWORD ?? "AdminTest2024!";
 import "./login.css";
 
 const AuthLoadingScreen = () => (
@@ -179,8 +184,8 @@ const Login = () => {
     setIsLoggingIn(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email: 'test@rapideexpress.fr',
-        password: 'TestUser2024!'
+        email: TEST_CLIENT_EMAIL,
+        password: TEST_CLIENT_PASSWORD
       });
       if (error) {
         throw error;
@@ -198,8 +203,8 @@ const Login = () => {
     setIsLoggingIn(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email: 'admin@rapideexpress.fr',
-        password: 'AdminTest2024!'
+        email: TEST_ADMIN_EMAIL,
+        password: TEST_ADMIN_PASSWORD
       });
       if (error) {
         throw error;

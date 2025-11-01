@@ -76,6 +76,33 @@ const applyAuthState = (session: Session | null, profile: Profile | null, userRo
   syncClientParticipantIdentity();
 };
 
+const coerceSessionRoles = (value: unknown): UserRole[] => {
+  if (!value) {
+    return [];
+  }
+
+  const source = Array.isArray(value) ? value : [value];
+  return source
+    .map((entry) => (typeof entry === "string" ? entry.toLowerCase().trim() : ""))
+    .filter((entry): entry is UserRole => ["admin", "client", "driver", "dispatch"].includes(entry as UserRole));
+};
+
+const extractRolesFromSession = (session: Session | null): UserRole[] => {
+  if (!session?.user) {
+    return [];
+  }
+
+  const roles = new Set<UserRole>();
+  const { user } = session;
+
+  coerceSessionRoles(user.user_metadata?.role).forEach((role) => roles.add(role));
+  coerceSessionRoles(user.user_metadata?.roles).forEach((role) => roles.add(role));
+  coerceSessionRoles((user.app_metadata as Record<string, unknown> | undefined)?.role).forEach((role) => roles.add(role));
+  coerceSessionRoles((user.app_metadata as Record<string, unknown> | undefined)?.roles).forEach((role) => roles.add(role));
+
+  return Array.from(roles);
+};
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -99,8 +126,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         fetchProfileByUserId(nextSession.user.id),
         fetchUserRoles(nextSession.user.id),
       ]);
-      
-      const primaryRole = getPrimaryRole(roles.length > 0 ? roles : ["client"]);
+
+      const sessionRoles = extractRolesFromSession(nextSession);
+      const combinedRoles = [...roles, ...sessionRoles];
+      const primaryRole = getPrimaryRole(combinedRoles.length > 0 ? combinedRoles : ["client"]);
       
       setProfile(profileData ?? null);
       setUserRole(primaryRole);

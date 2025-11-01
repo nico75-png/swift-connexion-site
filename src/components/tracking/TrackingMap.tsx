@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 
 import { cn } from "@/lib/utils";
 
+import type { FitBoundsOptions, LatLngBoundsExpression, ZoomPanOptions } from "leaflet";
 import type { TrackingOrder } from "./LiveTrackingSection";
 
 type LeafletModule = typeof import("leaflet");
@@ -201,11 +202,12 @@ const TrackingMap = ({ order, lastUpdateLabel, className, disableInteractions }:
     const padded = bounds.pad(0.35);
     if (typeof mapRef.current.fitBounds === "function") {
       try {
-        mapRef.current.fitBounds(padded as unknown as any, { padding: [48, 48] } as any);
+        const fitOptions: FitBoundsOptions = { padding: [48, 48] };
+        mapRef.current.fitBounds(padded as LatLngBoundsExpression, fitOptions);
       } catch (exception) {
         console.warn("fitBounds fallback", exception);
-        const center = padded.getCenter() as unknown as [number, number];
-        mapRef.current.setView(center, mapRef.current.getZoom() ?? 12, { animate: true } as any);
+        const zoomOptions: ZoomPanOptions = { animate: true };
+        mapRef.current.setView(padded.getCenter(), mapRef.current.getZoom() ?? 12, zoomOptions);
       }
     }
   }, [leaflet, order]);

@@ -418,6 +418,41 @@ export type Database = {
             foreignKeyName: "order_status_history_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
+          referencedRelation: "orders"
+          referencedColumns: ["id"]
+        },
+      ]
+    }
+      order_events: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          event: string
+          id: string
+          metadata: Json | null
+          order_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          event: string
+          id?: string
+          metadata?: Json | null
+          order_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          event?: string
+          id?: string
+          metadata?: Json | null
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_events_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },

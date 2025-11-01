@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMatch, useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import AdminSidebar, { AdminSectionKey } from "@/components/dashboard/AdminSidebar";
 import Topbar from "@/components/dashboard/Topbar";
@@ -15,14 +16,28 @@ import Parametres from "@/components/dashboard-admin/parametres";
 import { useAuth } from "@/providers/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
-import { QuickOrderDialog, type QuickOrderFormValues } from "@/components/dashboard-client/QuickOrderDialog";
+import { useOrders } from "@/hooks/useOrders";
+import AdminOrderDialog from "@/components/dashboard-admin/AdminOrderDialog";
 
 const notifications = [
   { id: "notif-1", message: "3 commandes express en cours", time: "Il y a 5 min", read: false },
@@ -43,9 +58,25 @@ const SECTION_LABELS: Record<AdminSectionKey, string> = {
   parametres: "Paramètres",
 };
 
+const VALID_SECTIONS = new Set<AdminSectionKey>([
+  "dashboard",
+  "commandes",
+  "clients",
+  "chauffeurs",
+  "suivi",
+  "planification",
+  "factures",
+  "statistiques",
+  "messages",
+  "parametres",
+]);
+
 const DashboardAdmin = () => {
-  const { resolvedDisplayName, fallbackEmail } = useAuth();
-  const [activeSection, setActiveSection] = useState<AdminSectionKey>("dashboard");
+  const { resolvedDisplayName, fallbackEmail, userRole } = useAuth();
+  const navigate = useNavigate();
+  const sectionMatch = useMatch("/dashboard-admin/:section");
+  const ordersState = useOrders();
+
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
   const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
   const [recipientType, setRecipientType] = useState<"client" | "chauffeur" | "admin">("client");
@@ -54,7 +85,34 @@ const DashboardAdmin = () => {
   const [messageContent, setMessageContent] = useState(
     "Bonjour,\nVotre commande est en préparation et sera expédiée dans l'heure.\n— Swift Connexion",
   );
+
   const displayName = resolvedDisplayName ?? fallbackEmail ?? "Administrateur";
+
+  useEffect(() => {
+    const verifySession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session || userRole !== "admin") {
+        navigate("/login", { replace: true });
+      }
+    };
+    void verifySession();
+  }, [navigate, userRole]);
+
+  const sectionParam = sectionMatch?.params?.section ?? null;
+  const activeSection: AdminSectionKey = useMemo(() => {
+    if (sectionParam && VALID_SECTIONS.has(sectionParam as AdminSectionKey)) {
+      return sectionParam as AdminSectionKey;
+    }
+    return "dashboard";
+  }, [sectionParam]);
+
+  const navigateToSection = useCallback(
+    (section: AdminSectionKey) => {
+      const target = section === "dashboard" ? "/dashboard-admin" : `/dashboard-admin/${section}`;
+      navigate(target);
+    },
+    [navigate],
+  );
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -70,33 +128,6 @@ const DashboardAdmin = () => {
     ],
     [],
   );
-
-  const renderSection = useMemo(() => {
-    switch (activeSection) {
-      case "dashboard":
-        return <TableauDeBord onOpenOrderForm={() => setIsOrderDialogOpen(true)} />;
-      case "commandes":
-        return <Commandes onCreateOrder={() => setIsOrderDialogOpen(true)} />;
-      case "clients":
-        return <Clients />;
-      case "chauffeurs":
-        return <Chauffeurs />;
-      case "suivi":
-        return <Suivi onCreateOrder={() => setIsOrderDialogOpen(true)} onSendMessage={() => setIsMessageDialogOpen(true)} />;
-      case "planification":
-        return <Planification onDispatch={() => setActiveSection("commandes")} />;
-      case "factures":
-        return <Factures />;
-      case "statistiques":
-        return <Statistiques />;
-      case "messages":
-        return <Messages />;
-      case "parametres":
-        return <Parametres />;
-      default:
-        return <TableauDeBord onOpenOrderForm={() => setIsOrderDialogOpen(true)} />;
-    }
-  }, [activeSection]);
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -119,23 +150,39 @@ const DashboardAdmin = () => {
     setMessageEmail("");
   }, [recipientType]);
 
-  const handleOrderSubmit = useCallback(
-    (values: QuickOrderFormValues) => {
-      setIsOrderDialogOpen(false);
-      toast({
-        title: "Commande créée",
-        description: `Course ${values.packageType} programmée pour ${values.deliveryAddress || "destination à confirmer"}.`,
-      });
-    },
-    [],
-  );
+  const renderSection = () => {
+    switch (activeSection) {
+      case "dashboard":
+        return <TableauDeBord onOpenOrderForm={() => setIsOrderDialogOpen(true)} />;
+      case "commandes":
+        return <Commandes onCreateOrder={() => setIsOrderDialogOpen(true)} ordersState={ordersState} />;
+      case "clients":
+        return <Clients />;
+      case "chauffeurs":
+        return <Chauffeurs />;
+      case "suivi":
+        return <Suivi onCreateOrder={() => setIsOrderDialogOpen(true)} onSendMessage={() => setIsMessageDialogOpen(true)} />;
+      case "planification":
+        return <Planification onDispatch={() => navigateToSection("commandes")} />;
+      case "factures":
+        return <Factures />;
+      case "statistiques":
+        return <Statistiques />;
+      case "messages":
+        return <Messages />;
+      case "parametres":
+        return <Parametres />;
+      default:
+        return <TableauDeBord onOpenOrderForm={() => setIsOrderDialogOpen(true)} />;
+    }
+  };
 
   return (
     <DashboardLayout
       sidebar={
         <AdminSidebar
           activeSection={activeSection}
-          onSectionChange={setActiveSection}
+          onSectionChange={navigateToSection}
           unreadMessages={3}
           onLogout={handleLogout}
           adminName={displayName}
@@ -149,7 +196,7 @@ const DashboardAdmin = () => {
           title={`${greeting}, ${displayName}`}
           notifications={notifications}
           onCreateOrder={() => setIsOrderDialogOpen(true)}
-          onScheduleReview={() => setActiveSection("statistiques")}
+          onScheduleReview={() => navigateToSection("statistiques")}
           onSendMessage={() => setIsMessageDialogOpen(true)}
           className="border-none bg-transparent px-0"
         />
@@ -161,9 +208,7 @@ const DashboardAdmin = () => {
           <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-white/10 bg-white/95 px-6 py-5 shadow-[0_24px_70px_-40px_rgba(15,23,42,0.65)] backdrop-blur">
             <div className="max-w-xl">
               <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#0B2D55]">Espace administrateur</p>
-              <h1 className="mt-2 font-['Inter'] text-3xl font-semibold text-slate-900">
-                {SECTION_LABELS[activeSection]}
-              </h1>
+              <h1 className="mt-2 font-['Inter'] text-3xl font-semibold text-slate-900">{SECTION_LABELS[activeSection]}</h1>
               <p className="mt-2 text-sm text-slate-600">
                 Survolez l'activité opérationnelle, gérez les urgences en temps réel et maintenez la qualité de service.
               </p>
@@ -185,7 +230,7 @@ const DashboardAdmin = () => {
             </div>
           </div>
           <ScrollArea className="max-h-[calc(100vh-220px)] rounded-[32px] border border-white/20 bg-white/80 p-6 shadow-[0_30px_90px_-40px_rgba(7,18,38,0.65)] backdrop-blur">
-            <div className="space-y-8 pb-10">{renderSection}</div>
+            <div className="space-y-8 pb-10">{renderSection()}</div>
           </ScrollArea>
         </div>
       </div>
@@ -258,11 +303,13 @@ const DashboardAdmin = () => {
         </DialogContent>
       </Dialog>
 
-      <QuickOrderDialog
+      <AdminOrderDialog
         open={isOrderDialogOpen}
         onOpenChange={setIsOrderDialogOpen}
-        onSubmit={handleOrderSubmit}
-        defaultValues={{ packageType: "standard", pickupAddress: "HUB Paris Nord", serviceLevel: "express" }}
+        clients={ordersState.clients}
+        drivers={ordersState.drivers}
+        isSubmitting={ordersState.isCreating}
+        onSubmit={ordersState.createOrder}
       />
     </DashboardLayout>
   );

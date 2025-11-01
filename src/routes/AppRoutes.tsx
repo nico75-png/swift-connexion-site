@@ -116,7 +116,7 @@ export function AppRoutes() {
         <Route path="dashboard-client" element={withGuards(DashboardClient, { requiresAuth: true })} />
 
         {/* C - ESPACE ADMIN */}
-        <Route path="dashboard-admin" element={withGuards(DashboardAdmin, { requiresAuth: true, roles: ["admin"] })} />
+        <Route path="dashboard-admin/*" element={withGuards(DashboardAdmin, { requiresAuth: true, roles: ["admin"] })} />
 
         {/* 404 */}
         <Route path="404" element={withGuards(NotFound)} />

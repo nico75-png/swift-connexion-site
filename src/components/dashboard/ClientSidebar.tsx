@@ -21,6 +21,7 @@ import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion"
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
+import { resetAuthState } from "@/lib/stores/auth.store";
 import {
   Tooltip,
   TooltipContent,
@@ -92,6 +93,7 @@ const ClientSidebar = () => {
       return;
     }
 
+    resetAuthState();
     setIsMobileOpen(false);
     navigate("/login");
   };

@@ -29,6 +29,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { resetAuthState } from "@/lib/stores/auth.store";
 
 export type AdminSectionKey =
   | "dashboard"
@@ -131,6 +132,7 @@ const AdminSidebar = ({
         return;
       }
     }
+    resetAuthState();
     navigate("/login");
   };
 

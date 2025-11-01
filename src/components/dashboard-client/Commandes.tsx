@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   CheckCircle2,
@@ -283,6 +283,39 @@ const Commandes = () => {
   const [loadingRowId, setLoadingRowId] = useState<string | null>(null);
   const { toast } = useToast();
   const hasLoggedRef = useRef(false);
+  const timeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelTimeout = useCallback((timer?: ReturnType<typeof setTimeout> | null) => {
+    if (!timer) {
+      return;
+    }
+    clearTimeout(timer);
+    timeoutsRef.current.delete(timer);
+  }, []);
+
+  const scheduleTimeout = useCallback(
+    (callback: () => void, delay: number) => {
+      const timer = setTimeout(() => {
+        timeoutsRef.current.delete(timer);
+        callback();
+      }, delay);
+      timeoutsRef.current.add(timer);
+      return timer;
+    },
+    [],
+  );
+
+  useEffect(
+    () => () => {
+      timeoutsRef.current.forEach((timer) => {
+        clearTimeout(timer);
+      });
+      timeoutsRef.current.clear();
+      loadingTimeoutRef.current = null;
+    },
+    [],
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -292,7 +325,9 @@ const Commandes = () => {
       setError(null);
 
       try {
-        await new Promise((resolve) => setTimeout(resolve, 320));
+        await new Promise<void>((resolve) => {
+          scheduleTimeout(() => resolve(), 320);
+        });
 
         if (isMounted) {
           setOrders(MOCK_ORDERS);
@@ -314,7 +349,7 @@ const Commandes = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [scheduleTimeout]);
 
   const kpis = useKpiCounters({ orders, isLoading });
 
@@ -466,8 +501,12 @@ const Commandes = () => {
     setLoadingRowId(order.id);
     setSelectedOrder(order);
     setIsDetailsOpen(true);
-    setTimeout(() => {
+    if (loadingTimeoutRef.current) {
+      cancelTimeout(loadingTimeoutRef.current);
+    }
+    loadingTimeoutRef.current = scheduleTimeout(() => {
       setLoadingRowId(null);
+      loadingTimeoutRef.current = null;
     }, 260);
   };
 
@@ -703,7 +742,7 @@ const Commandes = () => {
                 className="mt-3 h-10 rounded-full border-[#FBBF24] text-[#B45309] hover:bg-[#FDE68A]"
                 onClick={() => {
                   setIsLoading(true);
-                  setTimeout(() => {
+                  scheduleTimeout(() => {
                     setOrders(MOCK_ORDERS);
                     setIsLoading(false);
                     setError(null);
@@ -815,7 +854,7 @@ const Commandes = () => {
                   className="self-start rounded-full border-[#FBBF24] text-[#B45309] hover:bg-[#FDE68A]"
                   onClick={() => {
                     setIsLoading(true);
-                    setTimeout(() => {
+                    scheduleTimeout(() => {
                       setOrders(MOCK_ORDERS);
                       setIsLoading(false);
                       setError(null);

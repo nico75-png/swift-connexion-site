@@ -68,6 +68,8 @@ const Parametres = () => {
   const profileTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const preferencesTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const avatarObjectUrl = useRef<string | null>(null);
+  const profilePulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const preferencesPulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const autosaveBadge = useCallback(
     (status: AutosaveStatus) => (
@@ -121,6 +123,14 @@ const Parametres = () => {
       if (avatarObjectUrl.current) {
         URL.revokeObjectURL(avatarObjectUrl.current);
       }
+      if (profilePulseTimer.current) {
+        clearTimeout(profilePulseTimer.current);
+        profilePulseTimer.current = null;
+      }
+      if (preferencesPulseTimer.current) {
+        clearTimeout(preferencesPulseTimer.current);
+        preferencesPulseTimer.current = null;
+      }
     };
   }, []);
 
@@ -160,7 +170,13 @@ const Parametres = () => {
     (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       setProfileButtonPulse(true);
-      setTimeout(() => setProfileButtonPulse(false), 600);
+      if (profilePulseTimer.current) {
+        clearTimeout(profilePulseTimer.current);
+      }
+      profilePulseTimer.current = setTimeout(() => {
+        setProfileButtonPulse(false);
+        profilePulseTimer.current = null;
+      }, 600);
       toast({
         title: "Modifications enregistrées avec succès ✅",
         description: "Votre profil a bien été mis à jour.",
@@ -173,7 +189,13 @@ const Parametres = () => {
     (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       setPreferencesButtonPulse(true);
-      setTimeout(() => setPreferencesButtonPulse(false), 600);
+      if (preferencesPulseTimer.current) {
+        clearTimeout(preferencesPulseTimer.current);
+      }
+      preferencesPulseTimer.current = setTimeout(() => {
+        setPreferencesButtonPulse(false);
+        preferencesPulseTimer.current = null;
+      }, 600);
       toast({
         title: "Modifications enregistrées avec succès ✅",
         description: "Vos préférences de communication ont été sauvegardées.",

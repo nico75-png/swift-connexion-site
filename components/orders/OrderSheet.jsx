@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -6,6 +6,7 @@ import { Loader2, Truck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
+import { safeRemoveNode, useSafeRemove } from "@/hooks/use-safe-remove";
 import OrderActionsBar from "./OrderActionsBar";
 import DeliveryInfoCard from "./OrderSections/DeliveryInfoCard";
 import DriverInfoCard from "./OrderSections/DriverInfoCard";
@@ -293,6 +294,7 @@ const OrderSheet = ({ orderId, initialData, onClose = () => {}, onOpenMap = () =
   const [order, setOrder] = useState(() => normalizeOrder(initialData) ?? FALLBACK_ORDER);
   const [isLoading, setIsLoading] = useState(Boolean(orderId) && !initialData);
   const [isDownloading, setIsDownloading] = useState(false);
+  const downloadLinkRef = useRef(null);
 
   useEffect(() => {
     setOrder(normalizeOrder(initialData));
@@ -341,6 +343,14 @@ const OrderSheet = ({ orderId, initialData, onClose = () => {}, onOpenMap = () =
   const statusKey = normalizeStatusKey(order.status);
   const statusBadge = STATUS_BADGES[statusKey] ?? STATUS_BADGES.transit;
   const pdfPayload = useMemo(() => buildPdfPayload(order), [order]);
+  useSafeRemove(downloadLinkRef);
+
+  const cleanupDownloadLink = () => {
+    if (downloadLinkRef.current) {
+      safeRemoveNode(downloadLinkRef.current);
+      downloadLinkRef.current = null;
+    }
+  };
 
   const handleDownloadPdf = async () => {
     if (typeof window === "undefined") return;
@@ -351,13 +361,15 @@ const OrderSheet = ({ orderId, initialData, onClose = () => {}, onOpenMap = () =
       const link = document.createElement("a");
       link.href = url;
       link.download = `bon-commande-${order.number}.pdf`;
+      downloadLinkRef.current = link;
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      cleanupDownloadLink();
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error("PDF generation failed", error);
     } finally {
+      cleanupDownloadLink();
       setIsDownloading(false);
     }
   };

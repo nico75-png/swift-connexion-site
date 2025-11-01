@@ -108,7 +108,7 @@ const Login = () => {
         options: {
           emailRedirectTo:
             typeof window !== "undefined"
-              ? `${window.location.origin}/dashboard-client`
+              ? `${window.location.origin}/login`
               : undefined,
           shouldCreateUser: false
         }
@@ -240,7 +240,7 @@ const Login = () => {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard-client`,
+          emailRedirectTo: `${window.location.origin}/login`,
           data: {
             full_name: fullName,
             first_name: firstName,

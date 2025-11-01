@@ -101,6 +101,40 @@ const SESSION_BADGE_CLASSES: Record<"info" | "warning", string> = {
   warning: "bg-[#F97316]/10 text-[#B45309]",
 };
 
+type TeamLoadState = "stable" | "charge" | "sature";
+
+const TEAM_STATUS_STYLES: Record<
+  TeamLoadState,
+  { label: string; badge: string; ring: string; icon: string }
+> = {
+  stable: {
+    label: "Stable",
+    badge: "bg-emerald-100 text-emerald-600",
+    ring: "ring-emerald-200/60",
+    icon: "bg-emerald-500/15 text-emerald-600",
+  },
+  charge: {
+    label: "Chargé",
+    badge: "bg-amber-100 text-amber-600",
+    ring: "ring-amber-200/60",
+    icon: "bg-amber-500/15 text-amber-600",
+  },
+  sature: {
+    label: "Saturé",
+    badge: "bg-rose-100 text-rose-600",
+    ring: "ring-rose-200/60",
+    icon: "bg-rose-500/15 text-rose-600",
+  },
+};
+
+type HighlightImpact = "mineur" | "modere" | "majeur";
+
+const IMPACT_BADGE_CLASSES: Record<HighlightImpact, string> = {
+  mineur: "bg-sky-100 text-sky-600",
+  modere: "bg-amber-100 text-amber-600",
+  majeur: "bg-rose-100 text-rose-600",
+};
+
 const ALERT_ACTION_LABEL: Record<AlertEntry["action"], string> = {
   dispatch: "Contacter le dispatch",
   note: "Consulter la note",
@@ -220,6 +254,114 @@ const TableauDeBord = ({
       metric: summaryMap.get(style.id),
     }));
   }, [data?.summary]);
+
+  const resolveTeamLoadState = useCallback((rate: number): TeamLoadState => {
+    if (rate >= 0.75) {
+      return "stable";
+    }
+    if (rate >= 0.5) {
+      return "charge";
+    }
+    return "sature";
+  }, []);
+
+  const teamStatusEntries = useMemo(
+    () =>
+      (data?.activity.driverAvailability ?? []).map((entry) => {
+        const state = resolveTeamLoadState(entry.availabilityRate ?? 0);
+        const status = TEAM_STATUS_STYLES[state];
+
+        return {
+          id: entry.id,
+          label: entry.label,
+          available: entry.available,
+          total: entry.total,
+          status,
+        };
+      }),
+    [data?.activity.driverAvailability, resolveTeamLoadState],
+  );
+
+  const highlightItems = useMemo(() => {
+    if (!data) {
+      return [] as Array<{
+        id: string;
+        title: string;
+        description: string;
+        impact: HighlightImpact;
+        meta?: string;
+      }>;
+    }
+
+    const items: Array<{
+      id: string;
+      title: string;
+      description: string;
+      impact: HighlightImpact;
+      meta?: string;
+    }> = [];
+
+    const headline = data.highlights.headline;
+    if (headline) {
+      const impact: HighlightImpact =
+        headline.trendDirection === "down"
+          ? "majeur"
+          : headline.trendDirection === "neutral"
+          ? "modere"
+          : "mineur";
+
+      items.push({
+        id: `headline-${headline.title}`,
+        title: headline.title,
+        description: headline.description,
+        impact,
+        meta: headline.trendLabel,
+      });
+    }
+
+    data.highlights.sessions.forEach((session) => {
+      const impact: HighlightImpact = session.tone === "warning" ? "modere" : "mineur";
+      items.push({
+        id: session.id,
+        title: session.label,
+        description: session.scheduleLabel,
+        impact,
+        meta: session.tone === "warning" ? "Surveillance" : "Information",
+      });
+    });
+
+    const pickup = data.highlights.pickup;
+    if (pickup && pickup.averageMinutes !== null && pickup.averageMinutes !== undefined) {
+      const impact: HighlightImpact =
+        pickup.trendDirection === "down"
+          ? "majeur"
+          : pickup.trendDirection === "neutral"
+          ? "modere"
+          : "mineur";
+
+      let meta: string | undefined;
+      if (pickup.trendMinutes !== null && pickup.trendMinutes !== undefined) {
+        if (pickup.trendMinutes === 0) {
+          meta = "Évolution stable";
+        } else {
+          const formatted = Math.abs(pickup.trendMinutes).toFixed(1);
+          meta = pickup.trendDirection === "down"
+            ? `${formatted} min de plus qu'hier`
+            : `${formatted} min de mieux qu'hier`;
+        }
+      }
+
+      items.push({
+        id: "pickup",
+        title: "Temps de prise en charge",
+        description: `Moyenne actuelle : ${pickup.averageMinutes.toFixed(1)} min`,
+        impact,
+        meta,
+      });
+    }
+
+    return items;
+  }, [data]);
 
   const handleAlertAction = useCallback(
     (alert: AlertEntry) => {
@@ -418,14 +560,16 @@ const TableauDeBord = ({
           </CardContent>
         </Card>
 
-        <Card className="rounded-3xl border-none bg-white/90 shadow-md">
-          <CardHeader>
-            <CardTitle className="text-xl">Alertes système</CardTitle>
-            <CardDescription>Retards, incidents et anomalies à surveiller</CardDescription>
+        <Card className="rounded-2xl border border-white/40 bg-white/60 backdrop-blur-md shadow-sm transition-shadow duration-300 hover:shadow-lg">
+          <CardHeader className="p-4 md:p-6 pb-3">
+            <CardTitle className="text-lg font-semibold text-gray-800">Alertes système</CardTitle>
+            <CardDescription className="text-sm text-gray-500">
+              Retards, incidents et anomalies à surveiller
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 p-4 md:p-6 pt-0">
             {(data?.alerts ?? []).length === 0 ? (
-              <p className="rounded-2xl bg-slate-50/80 px-4 py-5 text-sm text-slate-500">
+              <p className="rounded-2xl border border-dashed border-white/40 bg-white/50 px-4 py-5 text-sm text-gray-500">
                 Aucune alerte critique détectée sur les 30 derniers jours.
               </p>
             ) : (
@@ -436,24 +580,21 @@ const TableauDeBord = ({
                   : "À l'instant";
 
                 return (
-                  <div
-                    key={alert.id}
-                    className="rounded-3xl border border-slate-200/70 bg-slate-50/80 p-4"
-                  >
+                  <div key={alert.id} className="rounded-2xl border border-white/30 bg-white/70 p-4 shadow-sm">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <span className={cn("flex h-10 w-10 items-center justify-center rounded-2xl", levelClass)}>
+                        <span className={cn("flex h-10 w-10 items-center justify-center rounded-xl", levelClass)}>
                           <ShieldAlert className="h-5 w-5" />
                         </span>
                         <div>
-                          <p className="text-sm font-semibold text-slate-900">{alert.title}</p>
-                          <p className="text-xs text-slate-500">{alert.description}</p>
-                          <p className="mt-1 text-xs text-slate-400">{createdAtLabel}</p>
+                          <p className="text-sm font-semibold text-gray-800">{alert.title}</p>
+                          <p className="text-xs text-gray-500">{alert.description}</p>
+                          <p className="mt-1 text-xs text-gray-400">{createdAtLabel}</p>
                         </div>
                       </div>
                       <Button
                         variant="ghost"
-                        className="rounded-2xl border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-[#2563EB] shadow-sm hover:border-[#2563EB]/30 hover:bg-[#2563EB]/10"
+                        className="rounded-xl border border-white/60 bg-white px-3 py-1 text-xs font-semibold text-[#2563EB] shadow-sm transition hover:border-[#2563EB]/40 hover:bg-[#2563EB]/10"
                         onClick={() => handleAlertAction(alert)}
                       >
                         {ALERT_ACTION_LABEL[alert.action]}
@@ -463,11 +604,11 @@ const TableauDeBord = ({
                 );
               })
             )}
-            <div className="flex items-center justify-between rounded-3xl bg-[#2563EB]/10 px-4 py-3 text-sm text-[#1D4ED8]">
+            <div className="flex items-center justify-between rounded-2xl bg-[#2563EB]/10 px-4 py-3 text-sm text-[#1D4ED8]">
               <span>{realtimeEnabled ? "Alertes temps réel activées" : "Activer les alertes temps réel"}</span>
               <Button
                 className={cn(
-                  "rounded-2xl px-3 py-1 text-xs font-semibold",
+                  "rounded-xl px-3 py-1 text-xs font-semibold",
                   realtimeEnabled ? "bg-[#1D4ED8] text-white" : "bg-white text-[#2563EB]",
                 )}
                 variant={realtimeEnabled ? "default" : "secondary"}
@@ -480,178 +621,182 @@ const TableauDeBord = ({
         </Card>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-3">
-        <Card className="rounded-3xl border-none bg-white/90 shadow-md lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-xl">Activité des équipes</CardTitle>
-              <CardDescription>Livraisons et niveau de charge des équipes terrain</CardDescription>
-            </div>
-            <Badge
-              className={cn(
-                "rounded-2xl px-3 py-1",
-                data ? FLUX_TONE_CLASSES[data.activity.flux.tone] : FLUX_TONE_CLASSES.positive,
-              )}
-            >
-              {data ? data.activity.flux.label : "Flux stable"}
-            </Badge>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-3xl border border-slate-200 bg-slate-50/80 p-5">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#2563EB]/10 text-[#2563EB]">
-                  <Truck className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Livraisons express</p>
-                  <p className="text-xs text-slate-500">
-                    {data ? `${Math.round(data.activity.flux.ratio * 100)}% livrées` : "Synchronisation"}
-                  </p>
-                </div>
+      <section className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+        <Card className="h-full rounded-2xl border border-white/40 bg-white/60 backdrop-blur-md shadow-sm transition-shadow duration-300 hover:shadow-lg">
+          <CardHeader className="flex flex-col gap-3 p-4 md:p-6 pb-3">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <CardTitle className="text-lg font-semibold text-gray-800">Activité des équipes</CardTitle>
+                <CardDescription className="text-sm text-gray-500">
+                  Livraisons et niveau de charge des équipes terrain
+                </CardDescription>
               </div>
-              <ul className="mt-5 space-y-3">
-                {(data?.activity.segments ?? []).length === 0 ? (
-                  <li className="rounded-2xl bg-white px-4 py-3 text-xs text-slate-500">
-                    Aucune donnée segmentée disponible pour ce mois.
-                  </li>
-                ) : (
-                  data?.activity.segments.map((item) => (
-                    <li key={item.id} className="flex items-center justify-between rounded-2xl bg-white px-4 py-3 shadow-sm">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">{item.name}</p>
-                        <p className="text-xs text-slate-500">
-                          {`${item.orders} livraison${item.orders > 1 ? "s" : ""}`}
-                        </p>
-                      </div>
-                      <span className="rounded-2xl bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
-                        {`${Math.round(item.deliveredRatio * 100)}%`}
-                      </span>
-                    </li>
-                  ))
+              <Badge
+                className={cn(
+                  "rounded-xl px-3 py-1 text-xs font-semibold",
+                  data ? FLUX_TONE_CLASSES[data.activity.flux.tone] : FLUX_TONE_CLASSES.positive,
                 )}
-              </ul>
+              >
+                {data ? data.activity.flux.label : "Flux stable"}
+              </Badge>
             </div>
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#6366F1]/15 text-[#4338CA]">
-                  <UsersRound className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Disponibilité chauffeurs</p>
-                  <p className="text-xs text-slate-500">Mise à jour en temps réel</p>
-                </div>
+            {data ? (
+              <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                <span className="flex items-center gap-2 font-medium text-gray-600">
+                  <Truck className="h-4 w-4 text-[#2563EB]" />
+                  {`${data.activity.flux.delivered}/${data.activity.flux.total} courses livrées`}
+                </span>
+                <span className="rounded-full border border-[#2563EB]/20 bg-[#2563EB]/10 px-2 py-0.5 text-[#2563EB]">
+                  {`${Math.round(data.activity.flux.ratio * 100)}% de réussite`}
+                </span>
               </div>
-              <div className="mt-6 space-y-4">
-                {(data?.activity.driverAvailability ?? []).length === 0 ? (
-                  <p className="rounded-2xl bg-slate-50 px-4 py-3 text-xs text-slate-500">
-                    Aucune donnée de disponibilité collectée.
-                  </p>
-                ) : (
-                  data?.activity.driverAvailability.map((region) => (
-                    <div key={region.id} className="rounded-2xl bg-slate-50 px-4 py-3">
-                      <div className="flex items-center justify-between text-sm font-semibold text-slate-900">
-                        <span>{region.label}</span>
-                        <span>{`${region.available}/${region.total}`}</span>
+            ) : null}
+          </CardHeader>
+          <CardContent className="space-y-6 p-4 md:p-6 pt-0">
+            {teamStatusEntries.length === 0 && (data?.activity.segments ?? []).length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-white/50 bg-white/50 px-6 py-8 text-center text-sm text-gray-500">
+                Aucune activité enregistrée aujourd'hui.
+              </div>
+            ) : (
+              <>
+                {teamStatusEntries.length > 0 ? (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {teamStatusEntries.map((team, index) => (
+                      <motion.div
+                        key={team.id}
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.08, type: "spring", stiffness: 160, damping: 22 }}
+                      >
+                        <div
+                          className={cn(
+                            "flex items-start justify-between gap-3 rounded-2xl border border-white/40 bg-white/70 p-4 shadow-sm ring-1",
+                            team.status.ring,
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className={cn("flex h-10 w-10 items-center justify-center rounded-xl", team.status.icon)}>
+                              <UsersRound className="h-5 w-5" />
+                            </span>
+                            <div>
+                              <p className="text-sm font-semibold text-gray-800">{team.label}</p>
+                              <p className="text-xs text-gray-500">
+                                {team.available} disponibles sur {team.total}
+                              </p>
+                            </div>
+                          </div>
+                          <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", team.status.badge)}>
+                            {team.status.label}
+                          </span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : null}
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div className="space-y-3 rounded-2xl border border-white/40 bg-white/70 p-4 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-gray-800">Segments opérationnels</p>
+                      <span className="text-xs text-gray-400">Top 3</span>
+                    </div>
+                    <ul className="space-y-3">
+                      {(data?.activity.segments ?? []).length === 0 ? (
+                        <li className="rounded-xl border border-dashed border-white/50 bg-white/40 px-3 py-2 text-xs text-gray-500">
+                          Aucune donnée segmentée disponible pour ce mois.
+                        </li>
+                      ) : (
+                        data?.activity.segments.map((item) => (
+                          <li key={item.id} className="flex items-center justify-between gap-3 rounded-xl bg-white/80 px-3 py-2 text-sm shadow-sm">
+                            <div>
+                              <p className="font-semibold text-gray-800">{item.name}</p>
+                              <p className="text-xs text-gray-500">{item.orders} commandes</p>
+                            </div>
+                            <span className="text-xs font-semibold text-[#2563EB]">
+                              {Math.round(item.deliveredRatio * 100)}%
+                            </span>
+                          </li>
+                        ))
+                      )}
+                    </ul>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border border-white/40 bg-white/70 p-4 shadow-sm">
+                      <p className="text-sm font-semibold text-gray-800">Progression des livraisons</p>
+                      <p className="mt-1 text-xs text-gray-500">Ratio de réussite des équipes aujourd'hui</p>
+                      <div className="mt-4 h-2 w-full rounded-full bg-gray-200/70">
+                        <div
+                          className="h-full rounded-full bg-[#2563EB]"
+                          style={{ width: `${Math.min(100, Math.round((data?.activity.flux.ratio ?? 0) * 100))}%` }}
+                        />
                       </div>
-                      <p className="text-xs text-slate-500">
-                        {`${Math.round(region.availabilityRate * 100)}% de disponibilité`}
+                      <p className="mt-2 text-xs font-semibold text-gray-600">
+                        {data ? `${Math.round(data.activity.flux.ratio * 100)}% des courses finalisées` : "Synchronisation"}
                       </p>
                     </div>
-                  ))
-                )}
-              </div>
-            </div>
+
+                    <div className="rounded-2xl border border-white/40 bg-white/70 p-4 shadow-sm">
+                      <p className="text-sm font-semibold text-gray-800">Sessions à confirmer</p>
+                      <ul className="mt-3 space-y-2 text-xs text-gray-500">
+                        {(data?.highlights.sessions ?? []).length === 0 ? (
+                          <li className="rounded-xl border border-dashed border-white/50 bg-white/50 px-3 py-2 text-gray-400">
+                            Aucune session en attente.
+                          </li>
+                        ) : (
+                          data?.highlights.sessions.map((session) => (
+                            <li key={session.id} className="flex items-center justify-between gap-3">
+                              <span className="font-medium text-gray-600">{session.label}</span>
+                              <span className={cn("rounded-full px-2 py-0.5", SESSION_BADGE_CLASSES[session.tone])}>
+                                {session.scheduleLabel}
+                              </span>
+                            </li>
+                          ))
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
-        <Card className="rounded-3xl border-none bg-white/90 shadow-md">
-          <CardHeader>
-            <CardTitle className="text-xl">Temps forts du jour</CardTitle>
-            <CardDescription>Suivi des points opérationnels essentiels</CardDescription>
+        <Card className="h-full rounded-2xl border border-white/40 bg-white/60 backdrop-blur-md shadow-sm transition-shadow duration-300 hover:shadow-lg">
+          <CardHeader className="p-4 md:p-6 pb-3">
+            <CardTitle className="text-lg font-semibold text-gray-800">Temps forts du jour</CardTitle>
+            <CardDescription className="text-sm text-gray-500">
+              Suivi des points opérationnels essentiels
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-3xl border border-slate-200 bg-slate-50/80 p-4">
-              <p className="text-sm font-semibold text-slate-900">
-                {data?.highlights.headline?.title ?? "Aucun indicateur"}
-              </p>
-              <p className="text-xs text-slate-500">
-                {data?.highlights.headline?.description ?? "Les informations du jour seront affichées ici."}
-              </p>
-              <div
-                className={cn(
-                  "mt-3 flex items-center gap-2 text-xs",
-                  data?.highlights.headline?.trendDirection === "down"
-                    ? "text-rose-500"
-                    : data?.highlights.headline?.trendDirection === "up"
-                      ? "text-[#10B981]"
-                      : "text-slate-400",
-                )}
-              >
-                {data?.highlights.headline ? (
-                  <>
-                    {data.highlights.headline.trendDirection === "down" ? (
-                      <ArrowDownRight className="h-4 w-4" />
-                    ) : data.highlights.headline.trendDirection === "up" ? (
-                      <ArrowUpRight className="h-4 w-4" />
-                    ) : (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    )}
-                    {data.highlights.headline.trendLabel}
-                  </>
-                ) : (
-                  <span className="text-slate-400">En attente des premières données</span>
-                )}
+          <CardContent className="space-y-4 p-4 md:p-6 pt-0">
+            {highlightItems.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-white/50 bg-white/50 px-6 py-10 text-center text-sm text-gray-500">
+                Aucun événement signalé aujourd'hui.
               </div>
-            </div>
-            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="text-sm font-semibold text-slate-900">Sessions à confirmer</p>
-              <ul className="mt-3 space-y-2 text-xs text-slate-500">
-                {(data?.highlights.sessions ?? []).length === 0 ? (
-                  <li className="rounded-2xl bg-slate-50 px-3 py-2 text-slate-400">
-                    Aucune session en attente.
-                  </li>
-                ) : (
-                  data?.highlights.sessions.map((session) => (
-                    <li key={session.id} className="flex items-center justify-between">
-                      <span>{session.label}</span>
-                      <span className={cn("rounded-full px-2 py-0.5", SESSION_BADGE_CLASSES[session.tone])}>
-                        {session.scheduleLabel}
+            ) : (
+              highlightItems.map((item, index) => (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.08, type: "spring", stiffness: 160, damping: 24 }}
+                >
+                  <div className="group rounded-2xl border border-white/40 bg-white/70 p-4 shadow-sm transition hover:shadow-md">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800">{item.title}</p>
+                        <p className="text-xs text-gray-500">{item.description}</p>
+                        {item.meta ? <p className="mt-2 text-xs text-gray-400">{item.meta}</p> : null}
+                      </div>
+                      <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", IMPACT_BADGE_CLASSES[item.impact])}>
+                        {item.impact === "modere" ? "Modéré" : item.impact.charAt(0).toUpperCase() + item.impact.slice(1)}
                       </span>
-                    </li>
-                  ))
-                )}
-              </ul>
-            </div>
-            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="text-sm font-semibold text-slate-900">Temps moyen de prise en charge</p>
-              <div className="mt-2 flex items-baseline gap-2">
-                {data?.highlights.pickup?.averageMinutes !== null && data?.highlights.pickup?.averageMinutes !== undefined ? (
-                  <>
-                    <span className="text-3xl font-bold text-slate-900">
-                      {data.highlights.pickup.averageMinutes.toFixed(1)}
-                    </span>
-                    <span className="text-sm text-slate-500">minutes</span>
-                  </>
-                ) : (
-                  <span className="text-sm text-slate-400">Mesure indisponible</span>
-                )}
-              </div>
-              <div className="mt-2 flex items-center gap-2 text-xs text-[#2563EB]">
-                <Clock3 className="h-4 w-4" />
-                {data?.highlights.pickup?.trendMinutes !== null &&
-                data?.highlights.pickup?.trendMinutes !== undefined ? (
-                  data.highlights.pickup.trendDirection === "up" ? (
-                    `${Math.abs(data.highlights.pickup.trendMinutes).toFixed(1)} min de mieux qu'hier`
-                  ) : data.highlights.pickup.trendDirection === "down" ? (
-                    `${Math.abs(data.highlights.pickup.trendMinutes).toFixed(1)} min de plus qu'hier`
-                  ) : (
-                    "Temps de prise en charge stable"
-                  )
-                ) : (
-                  "Tendance en attente"
-                )}
-              </div>
-            </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))
+            )}
           </CardContent>
         </Card>
       </section>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 
 import { cn } from "@/lib/utils";
+import { safeRemoveNode } from "@/hooks/use-safe-remove";
 
 import type { TrackingOrder } from "./LiveTrackingSection";
 
@@ -23,14 +24,15 @@ const LEAFLET_CSS_URL = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
 const LEAFLET_MODULE_URL = "https://esm.sh/leaflet@1.9.4";
 
 const ensureLeafletStyles = () => {
-  if (typeof document === "undefined") return;
+  if (typeof document === "undefined") return null;
   const existing = document.querySelector(`link[href="${LEAFLET_CSS_URL}"]`);
-  if (!existing) {
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = LEAFLET_CSS_URL;
-    document.head.appendChild(link);
-  }
+  if (existing) return existing;
+  
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = LEAFLET_CSS_URL;
+  document.head.appendChild(link);
+  return link;
 };
 
 const useLeaflet = () => {
@@ -106,7 +108,18 @@ const TrackingMap = ({ order, lastUpdateLabel, className, disableInteractions }:
   const routeRef = useRef<LeafletPolylineInstance | null>(null);
   const driverRef = useRef<LeafletMarkerInstance | null>(null);
   const clientRef = useRef<LeafletMarkerInstance | null>(null);
+  const cssLinkRef = useRef<HTMLLinkElement | null>(null);
   const { leaflet, error, setError } = useLeaflet();
+
+  useEffect(() => {
+    cssLinkRef.current = ensureLeafletStyles() as HTMLLinkElement | null;
+    return () => {
+      if (cssLinkRef.current) {
+        safeRemoveNode(cssLinkRef.current);
+        cssLinkRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!leaflet || mapRef.current || !containerRef.current) {
@@ -136,11 +149,18 @@ const TrackingMap = ({ order, lastUpdateLabel, className, disableInteractions }:
     }
 
     return () => {
-      mapRef.current?.remove();
-      mapRef.current = null;
-      routeRef.current = null;
-      driverRef.current = null;
-      clientRef.current = null;
+      try {
+        if (mapRef.current && containerRef.current?.parentNode) {
+          mapRef.current.remove();
+        }
+      } catch (exception) {
+        console.warn("Map cleanup warning", exception);
+      } finally {
+        mapRef.current = null;
+        routeRef.current = null;
+        driverRef.current = null;
+        clientRef.current = null;
+      }
     };
   }, [leaflet, setError]);
 

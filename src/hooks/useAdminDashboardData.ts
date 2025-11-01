@@ -550,42 +550,42 @@ const fetchAdminDashboardData = async (userId?: string | null): Promise<AdminDas
     eventsResponse,
   ] = await Promise.all([
     supabase
-      .from<OrderRow>("orders")
+      .from("orders")
       .select(
         "id, created_at, total_amount, amount, status, package_type, sector, driver_id, driver_assigned_at, schedule_start, schedule_end, customer_company",
       )
       .gte("created_at", startOfPeriod.toISOString())
       .order("created_at", { ascending: false }),
     supabase
-      .from<ClientProfileRow>("client_profiles")
+      .from("client_profiles")
       .select("id, created_at, sector")
       .gte("created_at", startOfPreviousMonth.toISOString()),
     supabase
-      .from<DriverRow>("drivers")
+      .from("drivers")
       .select("id, availability, vehicle_type, created_at"),
     supabase
-      .from<SystemAlertRow>("system_alerts" as never)
+      .from("system_alerts" as never)
       .select("*")
       .gte("created_at", subDays(now, 30).toISOString())
       .order("created_at", { ascending: false }),
     supabase
-      .from<IncidentRow>("incidents" as never)
+      .from("incidents" as never)
       .select("*")
       .gte("created_at", subDays(now, 30).toISOString())
       .order("created_at", { ascending: false }),
     supabase
-      .from<MaintenanceRow>("maintenance_events" as never)
+      .from("maintenance_events" as never)
       .select("*")
       .gte("created_at", subDays(now, 30).toISOString())
       .order("created_at", { ascending: false }),
     supabase
-      .from<DailyEventRow>("daily_highlights" as never)
+      .from("daily_highlights" as never)
       .select("*")
       .gte("created_at", startToday.toISOString())
       .lte("created_at", endToday.toISOString())
       .order("created_at", { ascending: false }),
     supabase
-      .from<DailyEventRow>("events" as never)
+      .from("events" as never)
       .select("*")
       .gte("created_at", startToday.toISOString())
       .lte("created_at", endToday.toISOString())
@@ -593,7 +593,7 @@ const fetchAdminDashboardData = async (userId?: string | null): Promise<AdminDas
   ]);
 
   const notificationsQuery = supabase
-    .from<NotificationRow>("notifications")
+    .from("notifications")
     .select("id, title, content, notification_type, created_at, user_id")
     .gte("created_at", subDays(now, 30).toISOString())
     .order("created_at", { ascending: false });
@@ -760,7 +760,7 @@ const fetchAdminDashboardData = async (userId?: string | null): Promise<AdminDas
     },
   };
 
-  const systemAlertEntries: AlertEntry[] = systemAlerts.map((alert) => {
+  const systemAlertEntries: AlertEntry[] = (systemAlerts as any[]).map((alert) => {
     const metadataAction = alert.metadata?.["action"];
     const metadataTitle = alert.metadata?.["title"];
     const metadataMessage = alert.metadata?.["message"] ?? alert.metadata?.["description"];
@@ -803,7 +803,7 @@ const fetchAdminDashboardData = async (userId?: string | null): Promise<AdminDas
     } satisfies AlertEntry;
   });
 
-  const incidentAlertEntries: AlertEntry[] = incidentRows.map((incident) => {
+  const incidentAlertEntries: AlertEntry[] = (incidentRows as any[]).map((incident) => {
     const severitySource = firstNonEmpty(incident.severity, incident.impact_level, incident.status);
     const level = normaliseAlertLevelFromSeverity(severitySource);
     const createdAtSource = firstNonEmpty(incident.created_at, incident.reported_at);
@@ -819,7 +819,7 @@ const fetchAdminDashboardData = async (userId?: string | null): Promise<AdminDas
     } satisfies AlertEntry;
   });
 
-  const maintenanceAlertEntries: AlertEntry[] = maintenanceRows.map((task) => {
+  const maintenanceAlertEntries: AlertEntry[] = (maintenanceRows as any[]).map((task) => {
     const severitySource = firstNonEmpty(task.severity, task.priority, task.status, task.impact_level);
     const level = normaliseAlertLevelFromSeverity(severitySource);
     const createdAtSource = firstNonEmpty(task.scheduled_at, task.scheduled_for, task.created_at);

@@ -50,7 +50,7 @@ export const fetchUserRoles = async (userId: string): Promise<UserRole[]> => {
   }
 
   const { data: adminRecord, error: adminError } = await supabase
-    .from<{ user_id: string }>("admin_users" as never)
+    .from("admin_users" as never)
     .select("user_id")
     .eq("user_id", userId)
     .maybeSingle();
@@ -60,13 +60,13 @@ export const fetchUserRoles = async (userId: string): Promise<UserRole[]> => {
   }
 
   const { data: baseUser, error: baseUserError } = await supabase
-    .from<{ metadata: Record<string, unknown> | null }>("app_users" as never)
+    .from("app_users" as never)
     .select("metadata")
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (!baseUserError && baseUser?.metadata) {
-    parseMetadataRoles(baseUser.metadata).forEach((role) => roles.add(role));
+  if (!baseUserError && baseUser) {
+    parseMetadataRoles((baseUser as any).metadata).forEach((role) => roles.add(role));
   }
 
   return Array.from(roles);

@@ -1,9 +1,10 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Navigate, useSearchParams } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { AuthError } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { upsertProfile } from "@/lib/api/profiles";
 import { useAuth } from "@/providers/AuthProvider";
+import { setAuthState } from "@/lib/stores/auth.store";
 
 const TEST_CLIENT_EMAIL = import.meta.env.VITE_TEST_CLIENT_EMAIL ?? "keisha.khotothinu@gmail.com";
 const TEST_CLIENT_PASSWORD = import.meta.env.VITE_TEST_CLIENT_PASSWORD ?? "TestUser2024!";
@@ -27,6 +28,7 @@ const AuthLoadingScreen = () => (
 );
 
 const Login = () => {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [isSignUp, setIsSignUp] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -179,42 +181,35 @@ const Login = () => {
       setIsLoggingIn(false);
     }
   };
-  const handleLoginAsTestClient = async () => {
-    setLoginError(null);
-    setIsLoggingIn(true);
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: TEST_CLIENT_EMAIL,
-        password: TEST_CLIENT_PASSWORD
-      });
-      if (error) {
-        throw error;
+  const handleLoginAsTestClient = () => {
+    setAuthState({
+      currentUser: {
+        id: "test-client-001",
+        name: "Client Test",
+        role: "client",
+        email: "client.test@example.com"
+      },
+      currentClient: {
+        id: "test-client-001",
+        contactName: "Client Test",
+        company: "Entreprise Test",
+        sector: "Santé"
       }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "La connexion a échoué.";
-      setLoginError(message);
-    } finally {
-      setIsLoggingIn(false);
-    }
+    });
+    navigate("/dashboard-client");
   };
 
-  const handleLoginAsTestAdmin = async () => {
-    setLoginError(null);
-    setIsLoggingIn(true);
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: TEST_ADMIN_EMAIL,
-        password: TEST_ADMIN_PASSWORD
-      });
-      if (error) {
-        throw error;
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "La connexion a échoué.";
-      setLoginError(message);
-    } finally {
-      setIsLoggingIn(false);
-    }
+  const handleLoginAsTestAdmin = () => {
+    setAuthState({
+      currentUser: {
+        id: "test-admin-001",
+        name: "Admin Test",
+        role: "admin",
+        email: "admin.test@example.com"
+      },
+      currentClient: null
+    });
+    navigate("/dashboard-admin");
   };
 
   const handleSignUpSubmit = async (event: FormEvent<HTMLFormElement>) => {

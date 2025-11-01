@@ -97,7 +97,7 @@ const DashboardAdmin = () => {
 
       const normalized = trimmed.toLowerCase();
       const { data: userRecord, error } = await supabase
-        .from<{ user_id: string; metadata: Record<string, unknown> | null }>("app_users" as never)
+        .from("app_users" as never)
         .select("user_id, metadata")
         .eq("metadata->>email", normalized)
         .maybeSingle();
@@ -106,8 +106,8 @@ const DashboardAdmin = () => {
         console.warn("Impossible de résoudre le destinataire", error);
       }
 
-      if (userRecord?.user_id) {
-        return userRecord.user_id;
+      if (userRecord && (userRecord as any).user_id) {
+        return (userRecord as any).user_id;
       }
 
       return `external:${normalized}`;

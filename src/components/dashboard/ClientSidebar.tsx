@@ -107,45 +107,45 @@ const ClientSidebar = () => {
     {
       icon: LayoutDashboard,
       label: "Tableau de bord",
-      path: "/dashboard-client",
+      path: "/dashboard-client/tableau-de-bord",
     },
     {
       icon: Package,
       label: "Mes commandes",
-      path: "/dashboard-client?tab=commandes",
+      path: "/dashboard-client/commandes",
     },
     {
       icon: Truck,
       label: "Suivi en temps réel",
-      path: "/dashboard-client?tab=suivi",
+      path: "/dashboard-client/suivi",
     },
     {
       icon: FileText,
       label: "Mes factures",
-      path: "/dashboard-client?tab=factures",
+      path: "/dashboard-client/factures",
     },
     {
       icon: MessageSquare,
       label: "Messages",
-      path: "/dashboard-client?tab=messages",
+      path: "/dashboard-client/messages",
     },
     {
       icon: Settings,
       label: "Paramètres",
-      path: "/dashboard-client?tab=parametres",
+      path: "/dashboard-client/parametres",
     },
   ];
 
   const secondaryNavigation = [
     {
-      icon: PhoneCall,
-      label: "Client d'assistance",
-      path: "/contact",
-    },
-    {
       icon: HelpCircle,
       label: "Centre d'aide",
-      path: "/faq",
+      path: "/dashboard-client/aide",
+    },
+    {
+      icon: PhoneCall,
+      label: "Contact",
+      path: "/contact",
     },
   ];
 
@@ -262,7 +262,7 @@ const ClientSidebar = () => {
                       const link = (
                         <NavLink
                           to={item.path}
-                          end={item.path === "/dashboard-client"}
+                          end
                           className={({ isActive }) =>
                             cn(
                               "group flex items-center gap-3 rounded-2xl border border-transparent px-4 py-3 text-sm font-medium text-white/80 transition-all duration-300",

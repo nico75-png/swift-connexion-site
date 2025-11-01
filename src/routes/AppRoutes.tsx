@@ -20,11 +20,26 @@ const CGV = lazy(() => import("@/pages/cgv"));
 const Cookies = lazy(() => import("@/pages/cookies"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
-// Pages Espace Client (une seule page principale)
+// Pages Espace Client
 const DashboardClient = lazy(() => import("@/pages/dashboard-client"));
+const TableauDeBordClient = lazy(() => import("@/pages/dashboard-client/tableau-de-bord"));
+const CommandesClient = lazy(() => import("@/pages/dashboard-client/commandes"));
+const SuiviClient = lazy(() => import("@/pages/dashboard-client/suivi"));
+const FacturesClient = lazy(() => import("@/pages/dashboard-client/factures"));
+const MessagesClient = lazy(() => import("@/pages/dashboard-client/messages"));
+const ParametresClient = lazy(() => import("@/pages/dashboard-client/parametres"));
+const AideClient = lazy(() => import("@/pages/dashboard-client/aide"));
 
-// Pages Espace Admin (une seule page principale)
+// Pages Espace Admin
 const DashboardAdmin = lazy(() => import("@/pages/dashboard-admin"));
+const TableauDeBordAdmin = lazy(() => import("@/pages/dashboard-admin/tableau-de-bord"));
+const CommandesAdmin = lazy(() => import("@/pages/dashboard-admin/commandes"));
+const ChauffeursAdmin = lazy(() => import("@/pages/dashboard-admin/chauffeurs"));
+const ClientsAdmin = lazy(() => import("@/pages/dashboard-admin/clients"));
+const StatistiquesAdmin = lazy(() => import("@/pages/dashboard-admin/statistiques"));
+const FacturesAdmin = lazy(() => import("@/pages/dashboard-admin/factures"));
+const MessagerieAdmin = lazy(() => import("@/pages/dashboard-admin/messagerie"));
+const ParametresAdmin = lazy(() => import("@/pages/dashboard-admin/parametres"));
 
 const Layout = () => <Outlet />;
 
@@ -114,9 +129,24 @@ export function AppRoutes() {
         <Route path="cookies" element={withGuards(Cookies)} />
         {/* B - ESPACE CLIENT */}
         <Route path="dashboard-client" element={withGuards(DashboardClient, { requiresAuth: true })} />
+        <Route path="dashboard-client/tableau-de-bord" element={withGuards(TableauDeBordClient, { requiresAuth: true })} />
+        <Route path="dashboard-client/commandes" element={withGuards(CommandesClient, { requiresAuth: true })} />
+        <Route path="dashboard-client/suivi" element={withGuards(SuiviClient, { requiresAuth: true })} />
+        <Route path="dashboard-client/factures" element={withGuards(FacturesClient, { requiresAuth: true })} />
+        <Route path="dashboard-client/messages" element={withGuards(MessagesClient, { requiresAuth: true })} />
+        <Route path="dashboard-client/parametres" element={withGuards(ParametresClient, { requiresAuth: true })} />
+        <Route path="dashboard-client/aide" element={withGuards(AideClient, { requiresAuth: true })} />
 
         {/* C - ESPACE ADMIN */}
         <Route path="dashboard-admin" element={withGuards(DashboardAdmin, { requiresAuth: true, roles: ["admin"] })} />
+        <Route path="dashboard-admin/tableau-de-bord" element={withGuards(TableauDeBordAdmin, { requiresAuth: true, roles: ["admin"] })} />
+        <Route path="dashboard-admin/commandes" element={withGuards(CommandesAdmin, { requiresAuth: true, roles: ["admin"] })} />
+        <Route path="dashboard-admin/chauffeurs" element={withGuards(ChauffeursAdmin, { requiresAuth: true, roles: ["admin"] })} />
+        <Route path="dashboard-admin/clients" element={withGuards(ClientsAdmin, { requiresAuth: true, roles: ["admin"] })} />
+        <Route path="dashboard-admin/statistiques" element={withGuards(StatistiquesAdmin, { requiresAuth: true, roles: ["admin"] })} />
+        <Route path="dashboard-admin/factures" element={withGuards(FacturesAdmin, { requiresAuth: true, roles: ["admin"] })} />
+        <Route path="dashboard-admin/messagerie" element={withGuards(MessagerieAdmin, { requiresAuth: true, roles: ["admin"] })} />
+        <Route path="dashboard-admin/parametres" element={withGuards(ParametresAdmin, { requiresAuth: true, roles: ["admin"] })} />
 
         {/* 404 */}
         <Route path="404" element={withGuards(NotFound)} />

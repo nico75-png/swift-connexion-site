@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   AnimatePresence,
   motion,
@@ -44,8 +44,8 @@ export type AdminSectionKey =
   | "parametres";
 
 interface AdminSidebarProps {
-  activeSection: AdminSectionKey;
-  onSectionChange: (section: AdminSectionKey) => void;
+  activeSection?: AdminSectionKey;
+  onSectionChange?: (section: AdminSectionKey) => void;
   onLogout?: () => Promise<void> | void;
   unreadMessages?: number;
   upcomingMeetings?: Array<{ id: string; title: string; schedule: string }>;
@@ -60,17 +60,16 @@ const NAV_ITEMS: Array<{
   id: AdminSectionKey;
   label: string;
   icon: LucideIcon;
+  path: string;
 }> = [
-  { id: "dashboard", label: "Tableau de bord", icon: LayoutDashboard },
-  { id: "commandes", label: "Commandes", icon: ClipboardList },
-  { id: "clients", label: "Clients", icon: Users },
-  { id: "chauffeurs", label: "Chauffeurs", icon: Truck },
-  { id: "suivi", label: "Suivi", icon: Waypoints },
-  { id: "planification", label: "Planification", icon: CalendarCheck2 },
-  { id: "factures", label: "Factures", icon: FileText },
-  { id: "statistiques", label: "Analytique", icon: ChartPie },
-  { id: "messages", label: "Messages", icon: MessageSquare },
-  { id: "parametres", label: "Paramètres", icon: Settings },
+  { id: "dashboard", label: "Tableau de bord", icon: LayoutDashboard, path: "/dashboard-admin/tableau-de-bord" },
+  { id: "commandes", label: "Commandes", icon: ClipboardList, path: "/dashboard-admin/commandes" },
+  { id: "chauffeurs", label: "Chauffeurs", icon: Truck, path: "/dashboard-admin/chauffeurs" },
+  { id: "clients", label: "Clients", icon: Users, path: "/dashboard-admin/clients" },
+  { id: "statistiques", label: "Statistiques", icon: ChartPie, path: "/dashboard-admin/statistiques" },
+  { id: "factures", label: "Factures", icon: FileText, path: "/dashboard-admin/factures" },
+  { id: "messages", label: "Messagerie", icon: MessageSquare, path: "/dashboard-admin/messagerie" },
+  { id: "parametres", label: "Paramètres", icon: Settings, path: "/dashboard-admin/parametres" },
 ];
 
 /**
@@ -218,19 +217,18 @@ const AdminSidebar = ({
           >
             {NAV_ITEMS.map((item) => {
               const link = (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onSectionChange(item.id);
-                    closeMobileSidebar();
-                  }}
-                  className={cn(
-                    "group flex w-full items-center gap-3 rounded-2xl border border-transparent px-4 py-3 text-left text-sm font-medium text-white/80 transition-all duration-300",
-                    "hover:border-[#FFCC00]/60 hover:bg-[rgba(255,204,0,0.08)] hover:text-white",
-                    isCollapsed && "justify-center px-0",
-                    activeSection === item.id && "border-[#FFCC00] bg-[rgba(255,204,0,0.2)] text-white",
-                  )}
-                  aria-current={activeSection === item.id ? "page" : undefined}
+                <NavLink
+                  to={item.path}
+                  end
+                  className={({ isActive }) =>
+                    cn(
+                      "group flex w-full items-center gap-3 rounded-2xl border border-transparent px-4 py-3 text-left text-sm font-medium text-white/80 transition-all duration-300",
+                      "hover:border-[#FFCC00]/60 hover:bg-[rgba(255,204,0,0.08)] hover:text-white",
+                      isCollapsed && "justify-center px-0",
+                      isActive && "border-[#FFCC00] bg-[rgba(255,204,0,0.2)] text-white",
+                    )
+                  }
+                  onClick={closeMobileSidebar}
                 >
                   <span
                     className={cn(
@@ -238,7 +236,6 @@ const AdminSidebar = ({
                       "group-hover:border-[#FFCC00] group-hover:bg-[#FFCC00]/20 group-hover:text-[#FFCC00]",
                       isCollapsed && "h-12 w-12",
                       "shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]",
-                      activeSection === item.id && "border-[#FFCC00] bg-[#FFCC00]/15 text-[#FFCC00]",
                     )}
                   >
                     <item.icon className="h-5 w-5" />
@@ -249,7 +246,7 @@ const AdminSidebar = ({
                       {unreadLabel}
                     </span>
                   )}
-                </button>
+                </NavLink>
               );
 
               return (
@@ -309,7 +306,7 @@ const AdminSidebar = ({
                 <button
                   type="button"
                   className="rounded-full border border-[#FFCC00]/40 bg-[#FFCC00]/10 px-3 py-1 text-xs font-semibold text-[#FFCC00] transition hover:border-[#FFCC00] hover:bg-[#FFCC00]/20"
-                  onClick={() => onSectionChange("suivi")}
+                  onClick={closeMobileSidebar}
                 >
                   Voir
                 </button>

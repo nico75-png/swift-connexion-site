@@ -1,7 +1,6 @@
 import {
   Bell,
   CalendarClock,
-  CircleHelp,
   LogOut,
   MessageSquare,
   Plus,
@@ -38,6 +37,7 @@ interface TopbarProps {
   avatarUrl?: string | null;
   onCreateOrder?: () => void;
   onScheduleReview?: () => void;
+  onSendMessage?: () => void;
   className?: string;
 }
 
@@ -51,6 +51,7 @@ const Topbar = ({
   avatarUrl,
   onCreateOrder,
   onScheduleReview,
+  onSendMessage,
   className,
 }: TopbarProps) => {
   const unreadCount = notifications.filter((notification) => !notification.read).length;
@@ -93,6 +94,13 @@ const Topbar = ({
       </div>
 
       <div className="flex flex-shrink-0 items-center gap-3">
+        <Button
+          className="hidden items-center gap-2 rounded-2xl border border-transparent bg-[#0B2D55] px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-[#0a274b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFCC00] lg:inline-flex"
+          onClick={onSendMessage}
+        >
+          <MessageSquare className="h-4 w-4" />
+          Envoyer un message
+        </Button>
         <Button
           variant="outline"
           className="hidden items-center gap-2 rounded-2xl border-[#2563EB]/20 bg-[#2563EB]/10 px-4 py-2 text-sm font-semibold text-[#2563EB] shadow-sm transition hover:border-[#2563EB]/40 hover:bg-[#2563EB]/20 md:inline-flex"
@@ -196,10 +204,6 @@ const Topbar = ({
             <DropdownMenuSeparator className="my-2" />
             <DropdownMenuItem className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-rose-600">
               <LogOut className="h-4 w-4" /> Déconnexion
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="my-2" />
-            <DropdownMenuItem className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs text-slate-500">
-              <CircleHelp className="h-4 w-4 text-[#2563EB]" /> Besoin d'aide ? Contact support
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

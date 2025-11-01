@@ -1,16 +1,15 @@
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-} from "recharts";
+import { motion } from "framer-motion";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { ArrowUpRight, Clock3, ShieldAlert, Truck, UsersRound } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import AnimatedCounter from "@/components/dashboard-client/AnimatedCounter";
+
+interface TableauDeBordProps {
+  onOpenOrderForm?: () => void;
+}
 
 const monthlyPerformance = [
   { month: "Jan", commandes: 320, revenus: 42_000 },
@@ -55,7 +54,9 @@ const summaryMetrics = [
   {
     id: "orders",
     title: "Commandes du mois",
-    value: "568",
+    numericValue: 568,
+    decimals: 0,
+    suffix: "",
     delta: "+18% vs mois dernier",
     accent: "bg-[#2563EB]/15 text-[#2563EB]",
     ring: "ring-[#2563EB]/30",
@@ -63,7 +64,9 @@ const summaryMetrics = [
   {
     id: "clients",
     title: "Nouveaux clients",
-    value: "42",
+    numericValue: 42,
+    decimals: 0,
+    suffix: "",
     delta: "+12 inscrits",
     accent: "bg-[#10B981]/15 text-[#047857]",
     ring: "ring-[#10B981]/30",
@@ -71,7 +74,9 @@ const summaryMetrics = [
   {
     id: "drivers",
     title: "Chauffeurs actifs",
-    value: "128",
+    numericValue: 128,
+    decimals: 0,
+    suffix: "",
     delta: "94% disponibilité",
     accent: "bg-[#F59E0B]/15 text-[#B45309]",
     ring: "ring-[#F59E0B]/30",
@@ -79,7 +84,9 @@ const summaryMetrics = [
   {
     id: "revenue",
     title: "Revenus",
-    value: "72,4 k€",
+    numericValue: 72.4,
+    decimals: 1,
+    suffix: " k€",
     delta: "+6,8%",
     accent: "bg-[#6366F1]/15 text-[#4338CA]",
     ring: "ring-[#6366F1]/30",
@@ -110,29 +117,42 @@ const activityHighlights = [
   },
 ];
 
-const TableauDeBord = () => (
+const TableauDeBord = ({ onOpenOrderForm }: TableauDeBordProps) => (
   <div className="space-y-8">
     <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-      {summaryMetrics.map((metric) => (
-        <Card
+      {summaryMetrics.map((metric, index) => (
+        <motion.div
           key={metric.id}
-          className={cn(
-            "group rounded-3xl border-none bg-white/80 p-6 shadow-[0_20px_45px_-28px_rgba(15,23,42,0.45)] ring-1 transition hover:shadow-[0_32px_65px_-30px_rgba(37,99,235,0.35)]",
-            metric.ring,
-          )}
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.08, type: "spring", stiffness: 140, damping: 20 }}
         >
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-500">{metric.title}</p>
-              <p className="mt-3 text-3xl font-bold text-slate-900">{metric.value}</p>
-              <p className="mt-2 flex items-center gap-1 text-xs font-semibold text-[#10B981]">
-                <ArrowUpRight className="h-4 w-4" />
-                {metric.delta}
-              </p>
+          <Card
+            className={cn(
+              "group rounded-3xl border-none bg-white/85 p-6 shadow-[0_20px_45px_-28px_rgba(15,23,42,0.45)] ring-1 transition hover:-translate-y-1 hover:shadow-[0_32px_65px_-30px_rgba(37,99,235,0.35)]",
+              metric.ring,
+            )}
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-500">{metric.title}</p>
+                <div className="mt-3 flex items-baseline gap-1">
+                  <AnimatedCounter
+                    value={metric.numericValue}
+                    decimals={metric.decimals}
+                    className="text-3xl font-bold text-slate-900"
+                    suffix={metric.suffix}
+                  />
+                </div>
+                <p className="mt-2 flex items-center gap-1 text-xs font-semibold text-[#10B981]">
+                  <ArrowUpRight className="h-4 w-4" />
+                  {metric.delta}
+                </p>
+              </div>
+              <div className={cn("rounded-2xl px-3 py-2 text-xs font-semibold", metric.accent)}>Focus</div>
             </div>
-            <div className={cn("rounded-2xl px-3 py-2 text-xs font-semibold", metric.accent)}>Focus</div>
-          </div>
-        </Card>
+          </Card>
+        </motion.div>
       ))}
     </section>
 
@@ -143,7 +163,16 @@ const TableauDeBord = () => (
             <CardTitle className="text-xl">Performances mensuelles</CardTitle>
             <CardDescription>Suivi des commandes et revenus consolidés</CardDescription>
           </div>
-          <Badge className="rounded-2xl bg-[#2563EB]/10 px-3 py-1 text-[#2563EB]">Mise à jour 5 min</Badge>
+          <div className="flex items-center gap-3">
+            <Badge className="rounded-2xl bg-[#2563EB]/10 px-3 py-1 text-[#2563EB]">Mise à jour 5 min</Badge>
+            <Button
+              variant="outline"
+              className="rounded-2xl border-slate-200 px-3 py-1 text-xs text-slate-600 transition hover:border-[#2563EB]/40 hover:text-[#2563EB]"
+              onClick={onOpenOrderForm}
+            >
+              Planifier une course
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="h-[280px] w-full">

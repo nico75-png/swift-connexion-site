@@ -7,6 +7,11 @@ import type { TrackingOrder } from "./LiveTrackingSection";
 
 type LeafletModule = typeof import("leaflet");
 
+type LeafletMapInstance = ReturnType<LeafletModule["map"]>;
+type LeafletPolylineInstance = ReturnType<LeafletModule["polyline"]>;
+type LeafletMarkerInstance = ReturnType<LeafletModule["marker"]>;
+type LeafletTileLayerInstance = ReturnType<LeafletModule["tileLayer"]>;
+
 type TrackingMapProps = {
   order: TrackingOrder | null;
   lastUpdateLabel: string;
@@ -97,10 +102,10 @@ const createClientIcon = (leaflet: LeafletModule) =>
 
 const TrackingMap = ({ order, lastUpdateLabel, className, disableInteractions }: TrackingMapProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<any>(null);
-  const routeRef = useRef<any>(null);
-  const driverRef = useRef<any>(null);
-  const clientRef = useRef<any>(null);
+  const mapRef = useRef<LeafletMapInstance | null>(null);
+  const routeRef = useRef<LeafletPolylineInstance | null>(null);
+  const driverRef = useRef<LeafletMarkerInstance | null>(null);
+  const clientRef = useRef<LeafletMarkerInstance | null>(null);
   const { leaflet, error, setError } = useLeaflet();
 
   useEffect(() => {
@@ -117,7 +122,7 @@ const TrackingMap = ({ order, lastUpdateLabel, className, disableInteractions }:
       });
       mapRef.current = map;
 
-      const tileLayer: any = leaflet.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      const tileLayer: LeafletTileLayerInstance = leaflet.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap",
         maxZoom: 19,
       });
@@ -199,15 +204,15 @@ const TrackingMap = ({ order, lastUpdateLabel, className, disableInteractions }:
 
     const bounds = leaflet.latLngBounds([...latLngs, driverLatLng]);
     const padded = bounds.pad(0.35);
-    if (mapRef.current && typeof (mapRef.current as any).fitBounds === "function") {
+    if (mapRef.current) {
       try {
         const fitOptions = { padding: [48, 48] };
-        (mapRef.current as any).fitBounds(padded, fitOptions);
+        mapRef.current.fitBounds(padded, fitOptions);
       } catch (exception) {
         console.warn("fitBounds fallback", exception);
         const zoomOptions = { animate: true };
-        const currentZoom = typeof (mapRef.current as any).getZoom === "function" ? (mapRef.current as any).getZoom() : 12;
-        (mapRef.current as any).setView(padded.getCenter(), currentZoom, zoomOptions);
+        const currentZoom = typeof mapRef.current.getZoom === "function" ? mapRef.current.getZoom() : 12;
+        mapRef.current.setView(padded.getCenter(), currentZoom, zoomOptions);
       }
     }
   }, [leaflet, order]);
